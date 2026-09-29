@@ -1,0 +1,95 @@
+/* Outdoor Escape — stiluri minime pentru fundație. Nu este designul final. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f7f5ef;
+  color: #1a1a1a;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.5;
+}
+
+.container {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(1.5rem, env(safe-area-inset-bottom));
+}
+
+h1 {
+  margin: 0.5rem 0 1rem;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+.badge {
+  display: inline-block;
+  margin: 0;
+  padding: 0.25rem 0.625rem;
+  border: 2px solid #1f3a2e;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.status dt {
+  font-weight: 700;
+}
+
+.status dd {
+  margin: 0;
+}
+
+.warning {
+  padding: 0.75rem;
+  border: 2px solid #8a1c1c;
+  background: #fff;
+}
+
+/* Buton/link: țintă mare pentru atingere (min. 48 px), contrast ridicat. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  min-width: 3rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  background: #1f3a2e;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.button:hover {
+  background: #2c5242;
+}
+
+a:focus-visible,
+.button:focus-visible {
+  outline: 3px solid #d98e04;
+  outline-offset: 3px;
+}

@@ -1,0 +1,12 @@
+{
+  "name": "Outdoor Escape (fundație)",
+  "short_name": "Outdoor Escape",
+  "description": "Schelet tehnic provizoriu. Nu conține încă jocul.",
+  "lang": "ro",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f5ef",
+  "theme_color": "#1f3a2e"
+}

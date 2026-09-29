@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Outdoor Escape — redirecționare</title>
+  <!--
+    D-036: această pagină NU este aplicația. Doar redirecționează către src/.
+    Fără manifest, fără service worker, fără dependențe.
+    Calea este relativă (src/), deci funcționează identic la
+    http://localhost:8000/ și la https://rezervari.github.io/outdoor-escape/.
+  -->
+  <script>
+    // location.replace(): rădăcina nu rămâne în istoricul „Back”.
+    // Se păstrează query string-ul și hash-ul.
+    location.replace("src/" + location.search + location.hash);
+  </script>
+  <noscript>
+    <!-- Rezervă fără JavaScript. Este static, deci nu poate păstra query/hash. -->
+    <meta http-equiv="refresh" content="0; url=src/">
+  </noscript>
+</head>
+<body>
+  <p>Se deschide Outdoor Escape…</p>
+  <p><a href="src/">Deschide aplicația</a></p>
+</body>
+</html>
