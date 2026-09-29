@@ -138,7 +138,7 @@ For game features, test both:
 
 When architecture or behavior changes:
 - update the relevant documentation;
-- update DECISIONS_LOG.md when the change is an actual project decision.
+- update 04_DECISIONS_LOG.md when the change is an actual project decision.
 
 ## Communication format
 

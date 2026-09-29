@@ -30,7 +30,8 @@ Persistence:
 - IndexedDB only if actual requirements justify it
 
 Hosting:
-- GitHub Pages or another static host compatible with the architecture
+- GitHub Pages (CONFIRMED — vezi D-014 în 04_DECISIONS_LOG.md)
+- Structura exactă a publicării pe GitHub Pages este încă deschisă (PROPOSED — vezi D-020).
 
 Version control:
 - GitHub
@@ -42,7 +43,8 @@ AI development:
 
 /
 ├── README.md
-├── LICENSE
+├── LICENSE                 (MIT — doar codul aplicației, vezi D-016)
+├── LICENSE-CONTENT.md      (conținutul jocului — NU este MIT)
 ├── docs/
 │   ├── 00_PROJECT_MASTER_CONTEXT.md
 │   ├── 01_ROADMAP_AND_PHASES.md
@@ -51,7 +53,11 @@ AI development:
 │   ├── 04_DECISIONS_LOG.md
 │   ├── 05_GAME_DESIGN_SPEC.md
 │   ├── 06_GIT_WORKFLOW.md
-│   └── 07_TESTING.md
+│   ├── 07_TESTING.md
+│   ├── 08_CLAUDE_START_PROMPT.md
+│   ├── 09_CLAUDE_PROMPT_TEMPLATES.md
+│   ├── 10_LOCAL_DEVELOPMENT.md
+│   └── README_CONTEXT_PACK.md
 │
 ├── src/
 │   ├── index.html
@@ -83,6 +89,8 @@ AI development:
 
 This is a starting structure, not an instruction to create every file immediately.
 
+Notă: GitHub Pages poate publica fie rădăcina repository-ului, fie folderul `/docs`, fie un artefact construit printr-un workflow GitHub Actions. Folderul `/docs` este deja folosit pentru documentație, iar `src/` și `content/` sunt foldere separate. Modul de publicare este o decizie deschisă (PROPOSED — vezi D-020) și nu este stabilit de această structură.
+
 ## 4. Game state model
 
 The application should have explicit states.
@@ -102,6 +110,8 @@ NEW
 → COMPLETE
 
 Error/recovery states should be handled without losing progress.
+
+Notă (PROPOSED — vezi D-030, neaprobat): `HINT_USED` descrie mai degrabă un eveniment decât o stare. Folosirea unui indiciu nu schimbă ce poate face jucătorul (puzzle-ul rămâne activ), ci modifică datele puzzle-ului (câte indicii au fost folosite, penalizarea). Propunerea este ca indiciile să fie înregistrate ca date/evenimente în starea `PUZZLE_ACTIVE`, nu ca stare separată. Lista de mai sus rămâne neschimbată până la aprobare.
 
 ## 5. Separation of concerns
 

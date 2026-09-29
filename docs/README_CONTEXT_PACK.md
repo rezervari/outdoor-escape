@@ -14,6 +14,7 @@ This directory is the controlled project context for Claude.
 8. 07_TESTING.md
 9. 08_CLAUDE_START_PROMPT.md
 10. 09_CLAUDE_PROMPT_TEMPLATES.md
+11. 10_LOCAL_DEVELOPMENT.md
 
 ## Important
 
