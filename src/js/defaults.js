@@ -42,3 +42,34 @@ export const DEFAULT_GEOLOCATION_OPTIONS = Object.freeze({
   timeout: 20000, // ms — cât așteaptă browserul o poziție înainte de eroarea TIMEOUT
   maximumAge: 5000, // ms — cât de veche poate fi o poziție din cache-ul browserului
 });
+
+/*
+ * Harta (M-003.2 — D-046, D-049-J). Configurație de afișare, separată de logica jocului
+ * și de schema aventurii. Schimbarea providerului de tile-uri = altă valoare aici.
+ * Nimic de aici nu influențează GPS-ul, progresul sau evenimentele.
+ */
+
+/** Versiunea Leaflet inclusă local în src/vendor/leaflet/ (pin exact, D-046). */
+export const MAP_LIBRARY_VERSION = "1.9.4";
+
+/**
+ * Providerul de tile-uri: OpenStreetMap standard tiles (HTTPS), doar utilizare interactivă
+ * normală — fără prefetch, fără descărcare în bloc, fără cache offline (politica OSM).
+ * Atribuirea este obligatorie și rămâne vizibilă pe hartă.
+ */
+export const DEFAULT_MAP_TILES = Object.freeze({
+  urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19,
+});
+
+/** Valori strict vizuale pentru hartă (docs/12_MAP_SPECIFICATION_M-003.2.md, §5 și §12). */
+export const DEFAULT_MAP_VIEW = Object.freeze({
+  minZoom: 3,
+  fitPadding: 48, // px — marginea la încadrarea obiectivelor
+  maxFitZoom: 17, // zoom maxim la încadrările automate
+  playerZoom: 17, // „Centrează pe mine” când zoom-ul curent < centerKeepZoomFrom
+  centerKeepZoomFrom: 15, // „Centrează pe mine” păstrează zoom-ul curent dacă este cel puțin atât
+  accuracyCircleMax: 1000, // m — peste această precizie cercul nu se desenează (limită DOAR de desen)
+  tileErrorThreshold: 3, // erori consecutive de tile, fără nicio reușită, până la mesajul „fundal indisponibil”
+});

@@ -1,0 +1,4 @@
+# Biblioteci terțe incluse local (D-046, D-049-A): fișierele se păstrează byte cu byte,
+# fără conversia terminațiilor de linie și fără verificări de whitespace, ca suma
+# SHA-256 documentată în docs/03_ARCHITECTURE.md să rămână valabilă pe orice sistem.
+src/vendor/** -text -diff

@@ -8,12 +8,12 @@ Primul joc este gândit pentru **Brașov**. Titlul de lucru este „Tainele Bres
 
 ## Stare
 
-**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. **M-003.1:** poziția reală a telefonului (Browser Geolocation API, doar cu aplicația deschisă) este conectată la motor: stare GPS, permisiune explicată, obiectivul misiunii și „Am ajuns” ca rezervă. Aventura demo publică nu are încă locații, deci pe ea GPS-ul este doar informativ. Pregătit, dar încă fără interfață: misiunile partener, secrete și cu timp, naratorul, audio, harta, GPS-ul în fundal și notificările — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
+**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. **M-003.1:** poziția reală a telefonului (Browser Geolocation API, doar cu aplicația deschisă) este conectată la motor: stare GPS, permisiune explicată, obiectivul misiunii și „Am ajuns” ca rezervă. Aventura demo publică nu are încă locații, deci pe ea GPS-ul este doar informativ. **M-003.2:** harta Leaflet (1.9.4, inclusă local) + OpenStreetMap, doar pentru orientare, afișată în joc numai pentru aventurile cu locații — implementată, în review. Pregătit, dar încă fără interfață: misiunile partener, secrete și cu timp, naratorul, audio, GPS-ul în fundal și notificările — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
 
 Milestone-uri curente:
 
 - M-003.1 — Browser Geolocation: COMPLETED
-- M-003.2 — Map: SPECIFICATION APPROVED / IMPLEMENTATION PENDING (D-046–D-049; harta nu este încă în aplicație)
+- M-003.2 — Map: IMPLEMENTED — PENDING OWNER REVIEW (D-046–D-049; necomis; test pe telefon cu locații reale amânat, D-049-M)
 
 Traseul, locațiile și puzzle-urile jocului real nu sunt finale până nu sunt verificate pe teren.
 
@@ -31,7 +31,7 @@ Traseul, locațiile și puzzle-urile jocului real nu sunt finale până nu sunt 
 - HTML, CSS și JavaScript, fără framework și **fără pas de build**;
 - Web App Manifest și Service Worker;
 - conținut în JSON;
-- Browser Geolocation API; Leaflet + OpenStreetMap doar unde o hartă este cu adevărat utilă;
+- Browser Geolocation API; Leaflet 1.9.4 (inclus local, fără CDN) + OpenStreetMap standard tiles, doar pentru orientare;
 - găzduire statică pe **GitHub Pages**, publicată printr-un workflow GitHub Actions care publică doar fișierele aplicației (fără framework de build).
 
 Deocamdată **nu** există backend, plăți (Stripe), conturi de utilizator sau analytics. Acestea vor fi introduse doar când vor exista cerințe clare. Vezi [`docs/04_DECISIONS_LOG.md`](docs/04_DECISIONS_LOG.md).
@@ -71,6 +71,7 @@ Teste: `npm test` (Node.js 20+, fără `npm install`).
 | [`09_CLAUDE_PROMPT_TEMPLATES.md`](docs/09_CLAUDE_PROMPT_TEMPLATES.md) | șabloane de prompturi |
 | [`10_LOCAL_DEVELOPMENT.md`](docs/10_LOCAL_DEVELOPMENT.md) | dezvoltare locală și testare pe telefon (HTTPS) |
 | [`11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md) | schema aventurii V2 și contractele motorului |
+| [`12_MAP_SPECIFICATION_M-003.2.md`](docs/12_MAP_SPECIFICATION_M-003.2.md) | specificația hărții (M-003.2, D-046–D-049) și criteriile de acceptare |
 | [`README_CONTEXT_PACK.md`](docs/README_CONTEXT_PACK.md) | ordinea de citire a documentației |
 
 Documentația nouă se scrie în limba română (D-017). Unele documente existente sunt încă în engleză.

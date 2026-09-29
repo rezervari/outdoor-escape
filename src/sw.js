@@ -12,6 +12,7 @@
  *   SHELL_FILES), cu aceeași strategie network-first; restul conținutului
  *   nu este interceptat;
  * - NU pune în cache răspunsuri dinamice, cereri către alte domenii
+ *   (inclusiv tile-urile hărții — politica OpenStreetMap, D-046)
  *   sau orice fișier care nu este în SHELL_FILES;
  * - NU folosește biblioteci.
  *
@@ -25,7 +26,7 @@
  */
 
 const CACHE_PREFIX = "outdoor-escape:shell:";
-const CACHE_VERSION = "v5";
+const CACHE_VERSION = "v6";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 // Relative la sw.js, adică la src/.
@@ -42,8 +43,13 @@ const SHELL_FILES = [
   "js/game.js",
   "js/geo.js",
   "js/location.js",
+  "js/map.js",
+  "js/map-model.js",
   "js/schema.js",
   "js/storage.js",
+  // Leaflet 1.9.4, inclus local (M-003.2). Tile-urile hărții (alt domeniu) NU sunt puse în cache.
+  "vendor/leaflet/leaflet.js",
+  "vendor/leaflet/leaflet.css",
   // Conținut: aventura demo, ca refresh-ul fără rețea să o poată încărca.
   "../content/adventures/brasov-centrul-vechi.json",
 ];

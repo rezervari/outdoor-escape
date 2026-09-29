@@ -403,3 +403,40 @@ Făcut pe o copie locală servită prin HTTP (`localhost`), cu fixture-ul copiat
 | Pagina descărcată / reîncărcată | Progresul se restaurează; urmărirea trebuie reactivată cu „Activează locația” (fără pornire automată). La plecarea de pe pagină (`pagehide`) urmărirea se oprește; la revenirea din bfcache se reia dacă era activă |
 
 Nu există geofencing în fundal și nici notificări: un browser/PWA nu le garantează. „Am ajuns” rămâne mereu calea de rezervă (când aventura o permite).
+
+## 25. M-003.2 — Harta (Leaflet + OpenStreetMap)
+
+Specificația și criteriile de acceptare: [`12_MAP_SPECIFICATION_M-003.2.md`](12_MAP_SPECIFICATION_M-003.2.md), §15. Harta este doar afișare: GPS-ul, sosirea și progresul rămân în `location.js` / `geo.js` / `game.js` (secțiunea 24).
+
+### 25.1 Automat — `npm test` (Node, fără browser, fără rețea)
+
+| Fișier | Acoperă |
+| --- | --- |
+| `tests/map-model.test.js` | forma modelului D-048; calitatea (`gps-ready` → `valid`, `gps-uncertain` → `uncertain`, restul → `none`; `weak` neprodus); stările locațiilor (D-049-B; `locked` → `visible: false`); `currentObjectiveId`; raza copiată de la motor; lipsa fix-ului; ultima poziție cu `none`; fără distanțe / câmpuri GPS; verificare în sursă (fără importuri, fără praguri GPS); integrare cu `game.getLocation` pe fixture |
+| `tests/map.test.js` | `map.js` cu Leaflet fals injectat (`tests/helpers/fake-leaflet.js`): creare (OSM HTTPS + atribuire, rotița dezactivată), `MapError` (`leaflet_unavailable`, `invalid_container`, `invalid_tile_config`), jucător (valid / uncertain / weak / none, cerc de acuratețe, limita de 1000 m, coordonate invalide), locații (doar vizibile, stări distincte, `aria-label`, obiectiv curent, escapare HTML), cercul obiectivului, viewport (prima afișare, primul fix, pan manual + 20 de fix-uri, schimbarea obiectivului = o recentrare, „Centrează pe mine” = o centrare, „Vezi obiectivele”), banner tile-uri, `destroy`, zero apeluri pentru același model, verificare în sursă, versiunea 1.9.4 și SHA-256 din `03_ARCHITECTURE.md` |
+| `tests/location-radius.test.js` | `geo.effectiveRadius` = raza din `evaluateProximity` = `game.getLocation().radiusMeters` (D-049-D / R2), cu și fără `radius` în conținut |
+
+### 25.2 Browser automat (Chromium headless, geolocație emulată — verificare locală, nu face parte din `npm test`)
+
+Ca la 24.2: copie locală servită prin HTTP (`localhost`), cu fixture-ul copiat temporar ca `content/adventures/demo-ceasul-oprit.json` **doar în copia servită**. Tile-urile `tile.openstreetmap.org` sunt interceptate de script și servite local (niciun trafic către OSM în timpul testelor). Scriptul nu este în repository (fără dependențe noi). Viewport-uri: desktop 1280×800 și mobil 360×640.
+
+| ID | Verificare |
+| --- | --- |
+| H1 | Aventura publică (V1, fără locații), desktop + mobil: fără panou de hartă, zero cereri de tile, nicio hartă Leaflet creată; GPS-ul M-003.1 funcționează |
+| H2 | Fixture: fără hartă pe ecranul de start; în joc, o singură hartă; doar locația vizibilă apare (locked și ascunsă nu); obiectivul curent evidențiat + etichetă; cercul razei; prima afișare = o mișcare; atribuire OSM vizibilă; marker focalizabil cu `aria-label`; cereri de tile HTTPS, fără parametri, cu Referer |
+| H3 | „Activează locația”: marker jucător + cerc de acuratețe; primul fix = exact o mișcare (jucător + obiectiv); stare „near” venită din motor |
+| H4 | 20 de fix-uri → 0 mișcări; pan manual + 20 de fix-uri → 0 mișcări, centrul neschimbat; zoom manual păstrat |
+| H5 | Precizie 1500 m → fără cerc, text „precizie foarte slabă”, punct gol; 150 m → cerc punctat |
+| H6 | „Centrează pe mine” = exact o mișcare; fix-urile următoare → 0 mișcări (fără follow) |
+| H7 | Sosire GPS decisă de motor (`arrivalSource: "gps"`, regulile `ev-aproape-piata`, `ev-sosire-piata`); cercul obiectivului dispare; misiune nouă cu același obiectiv → 0 mișcări; schimbarea obiectivului → exact o recentrare; apoi 20 de fix-uri → 0 mișcări; „Am ajuns” funcționează; nicio coordonată în `localStorage` |
+| H8 | Reset → harta distrusă; reintrare → o singură hartă |
+| H9 | Mobil 360×640: „Am ajuns” deasupra hărții; hartă ≥ 200 px, fără scroll orizontal; butoane ≥ 48 px, sub hartă; atribuire neacoperită; zoom +/- ≥ 44 px |
+| H10 | `prefers-reduced-motion`: animațiile Leaflet dezactivate |
+| H11 | Tile-uri indisponibile: banner, markerii rămân, GPS-ul nu raportează eroare; bannerul dispare când tile-urile revin |
+| H12 | `leaflet.js` blocat: „Harta nu este disponibilă acum”, fără erori necapturate, sosirea GPS funcționează; progresul și regulile rulate sunt identice cu rularea cu hartă |
+| H13 | Permisiune refuzată: mesajul M-003.1, harta arată obiectivele fără jucător, „Am ajuns” rezolvă misiunea |
+| H14 | Service worker `v6`: cache-ul conține `map.js`, `map-model.js`, Leaflet; niciun tile în cache; offline după o vizită: aplicația și Leaflet pornesc din cache; offline în timpul jocului: banner, jocul continuă |
+
+### 25.3 Manual pe telefon
+
+Nu se poate face încă cu obiective: aventura publică nu are locații (D-049-M). Pe aventura publică se verifică doar că harta **nu** apare și că M-003.1 funcționează ca înainte (24.3). Testul pe teren cere o aventură cu coordonate reale.

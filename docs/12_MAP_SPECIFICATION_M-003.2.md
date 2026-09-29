@@ -2,10 +2,10 @@
 
 | | |
 | --- | --- |
-| **Status** | SPECIFICATION APPROVED — IMPLEMENTATION PENDING |
+| **Status** | SPECIFICATION APPROVED — IMPLEMENTED, PENDING OWNER REVIEW |
 | **Decisions** | D-046, D-047, D-048, D-049 (`04_DECISIONS_LOG.md`) |
 | **Milestone** | M-003.2 |
-| **Implementation status** | **Not started** — `map.js`, `map-model.js`, Leaflet și testele hărții nu există încă în repository |
+| **Implementation status** | **Implementat, în review (necomis)** — `src/js/map.js`, `src/js/map-model.js`, `src/vendor/leaflet/` (1.9.4), `geo.effectiveRadius` + `game.getLocation().radiusMeters` (R2), teste; verificare: `07_TESTING.md` §25. Milestone-ul se închide după review-ul proprietarului |
 | **Aprobat** | 2026-09-29, de proprietarul proiectului |
 | **Alegeri finale** | D-049-C → `uncertain`; D-049-D → R2; D-049-A, B, C2, E…M în forma din §13 |
 
@@ -510,4 +510,6 @@ export const DEFAULT_MAP_VIEW = Object.freeze({
 - 2026-09-29 — D-049 aprobat: C → `uncertain`, D → R2, restul în forma din §13. D-045 confirmată; D-046…D-049 înregistrate în `04_DECISIONS_LOG.md`; D-027 marcată `SUPERSEDED` de D-046.
 - 2026-09-29 — specificația mutată în `docs/` ca document oficial (acest fișier).
 
-**Implementarea M-003.2 NU a început.** La finalizarea implementării, acest header se actualizează (status, rezultatul criteriilor de acceptare din §15).
+- 2026-09-29 — implementarea M-003.2 realizată (necomisă, în review): 128 de teste `node --test` verzi (83 existente, nemodificate + 45 noi), verificare Chromium automată (`07_TESTING.md` §25). Rezultatul pe criterii (§15) este raportat proprietarului pentru review; testul pe telefon cu locații reale rămâne amânat (D-049-M).
+
+**Implementarea M-003.2 este făcută, dar milestone-ul nu este închis** până la review-ul proprietarului și commit.

@@ -21,7 +21,7 @@
 
 import { toAdventureV2 } from "./schema.js";
 import { processEvents } from "./events.js";
-import { evaluateProximity, nextPresence, Presence, Transition, Zone } from "./geo.js";
+import { effectiveRadius, evaluateProximity, nextPresence, Presence, Transition, Zone } from "./geo.js";
 
 export const STATE_SCHEMA_VERSION = 2;
 
@@ -602,9 +602,15 @@ export function createGame({ adventure, validator, savedState = null, now = () =
       return content.missions.filter((m) => state.missions[m.id].status === ChallengeStatus.PENDING).map((m) => missionView(m.id));
     },
 
+    /**
+     * Locația din conținut, progresul ei și raza efectivă (metri) folosită de motor
+     * (geo.effectiveRadius — D-049-D / R2; câmp aditiv pentru afișarea pe hartă).
+     */
     getLocation(locationId) {
       const location = locationById.get(locationId);
-      return location ? { location, progress: { ...state.locations[locationId] } } : null;
+      return location
+        ? { location, progress: { ...state.locations[locationId] }, radiusMeters: effectiveRadius(location, content.settings.gps) }
+        : null;
     },
 
     /** score / maxScore (toate punctele care se pot obține) / misiuni principale rezolvate. */

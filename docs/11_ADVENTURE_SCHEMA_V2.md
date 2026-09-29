@@ -18,7 +18,7 @@ Principiul: **motorul este stabil, conținutul este extensibil.** Motorul nu șt
 | Modelul de locație (distanță, rază, precizie, near / arrival / leave, exit margin) | `src/js/geo.js`, `src/js/defaults.js` | `tests/geo.test.js` |
 | Motorul de evenimente (filtre, acțiuni, `once`, limita lanțurilor) | `src/js/events.js`, `src/js/game.js` | `tests/events.test.js`, `tests/progress-v2.test.js` |
 | Progresul V2 (stări pe entități, scor derivat, restaurare) | `src/js/game.js` | `tests/progress-v2.test.js` |
-| Teste | `tests/` + fixture fictiv `tests/fixtures/adventure-v2-demo.json` | 63 de teste (M-002); 83 după M-003.1 |
+| Teste | `tests/` + fixture fictiv `tests/fixtures/adventure-v2-demo.json` | 63 de teste (M-002); 83 după M-003.1; 128 după M-003.2 |
 
 **IMPLEMENTAT în M-003.1** (GPS real din browser, doar cu pagina activă):
 
@@ -44,7 +44,7 @@ Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii, s�
 | Audio | schemă (`audio.tracks`, text alternativ obligatoriu); efecte `audio` | player, activarea sunetului, cache offline pentru fișiere |
 | GPS în fundal / ecran blocat, geofencing | — (M-003.1 acoperă doar pagina activă) | nu este garantat de browser/PWA; D-028 rămâne deschisă |
 | Notificări | — | tot |
-| Hartă | stările locațiilor (`locked` / `unlocked` / `discovered` / `completed`) pentru „fog of war”; **specificația M-003.2 aprobată** (D-046–D-049: Leaflet 1.9.4 local, OSM configurabil, contractul `map.js`, modelul vizual) | implementarea M-003.2 (componenta de hartă) — **neîncepută** |
+| Hartă | **implementată în M-003.2 (în review, necomisă)** — `map-model.js` + `map.js` + Leaflet 1.9.4 local, OSM configurabil; doar afișare (`12_MAP_SPECIFICATION_M-003.2.md`) | test pe telefon cu o aventură reală cu locații (D-049-M) |
 
 ## 1. Module
 
@@ -59,9 +59,11 @@ Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii, s�
 | `src/js/game.js` | Motorul: stări, progres V2, reguli de evenimente, tranziții de locație, migrare | `schema.js`, `events.js`, `geo.js` |
 | `src/js/storage.js` | `localStorage`, cheia `outdoor-escape:game:<id>` | — |
 | `src/js/location.js` | Adaptorul Browser Geolocation API (M-003.1): pornire/oprire, erori, normalizarea fix-ului. Nu interpretează poziția | `defaults.js` |
-| `src/js/app.js` | Interfața (singurul modul cu DOM) | toate |
+| `src/js/map-model.js` | Modelul vizual al hărții (M-003.2, D-048): traducere 1:1 a stărilor existente, fără calcule GPS | — |
+| `src/js/map.js` | Harta Leaflet (M-003.2, D-047): strat exclusiv vizual; Leaflet se injectează (testat în Node cu un Leaflet fals) | `defaults.js` |
+| `src/js/app.js` | Interfața (orchestrare, ecrane; construiește modelul hărții) | toate |
 
-Toate modulele, cu excepția `app.js` și `location.js`, sunt pure (fără DOM, fără API-uri de browser) și sunt testate cu `node --test`. `location.js` este singurul modul care atinge `navigator.geolocation`; API-ul i se injectează, deci este testat în Node cu un mock.
+Toate modulele, cu excepția `app.js`, `location.js` și `map.js`, sunt pure (fără DOM, fără API-uri de browser) și sunt testate cu `node --test`. `location.js` este singurul modul care atinge `navigator.geolocation`; API-ul i se injectează, deci este testat în Node cu un mock. `map.js` este singurul modul care folosește Leaflet (injectat, deci testat în Node cu un Leaflet fals).
 
 ## 2. Versiuni și compatibilitate (D-038)
 
@@ -179,6 +181,8 @@ geo.js        → zone, histerezis, tranziții   → events.js → progres → U
 - `geo.assessFix(fix, gps)` → `{ usable, reason }`: aceeași regulă de precizie ca `evaluateProximity` (care o folosește intern). Interfața o folosește pentru „semnal slab” fără praguri proprii, inclusiv înainte de începerea jocului sau într-o aventură fără locații.
 - Opțiunile `watchPosition` (`enableHighAccuracy`, `timeout`, `maximumAge`) sunt în `defaults.js` (`DEFAULT_GEOLOCATION_OPTIONS`); țin de dispozitiv, nu de aventură.
 - La începerea jocului și la trecerea la misiunea următoare, ultima poziție primită este trimisă din nou motorului (browserul nu trimite poziții la interval fix).
+
+Harta (M-003.2) folosește aceleași stări, fără reguli proprii: calitatea afișată pe hartă este traducerea 1:1 a `LocationDisplay` (`gps-ready` → `valid`, `gps-uncertain` → `uncertain`, restul → `none`; `weak` nu este produs), iar raza desenată este `game.getLocation(id).radiusMeters` = `geo.effectiveRadius(location, gps)` — aceeași rază folosită de `evaluateProximity`. Detalii: `12_MAP_SPECIFICATION_M-003.2.md`.
 
 Limitări acceptate (PWA): browserul suspendă JavaScript și GPS-ul în fundal sau cu ecranul blocat (mai ales pe iPhone). Motorul nu presupune urmărire continuă: evaluează fiecare observație primită, iar confirmarea manuală rămâne mereu disponibilă. Coordonatele jucătorului **nu** se salvează (doar stări și momente).
 

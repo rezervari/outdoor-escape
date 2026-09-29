@@ -54,8 +54,9 @@ Structura actuală (motorul V2, fundația):
 ├── src/                                aplicația (publicată)
 │   ├── index.html, manifest.webmanifest, sw.js
 │   ├── css/app.css
+│   ├── vendor/leaflet/  Leaflet 1.9.4 inclus local (leaflet.js, leaflet.css, LICENSE — D-046)
 │   └── js/
-│       ├── app.js       interfața (singurul modul cu DOM)
+│       ├── app.js       interfața (orchestrare, ecranele, DOM-ul aplicației)
 │       ├── content.js   încărcare + validare după schemaVersion
 │       ├── schema.js    schema V2, validare, conversie V1 → V2
 │       ├── defaults.js  valorile implicite centrale
@@ -63,6 +64,9 @@ Structura actuală (motorul V2, fundația):
 │       ├── geo.js       modelul de locație (distanțe, zone, histerezis)
 │       ├── game.js      motorul (stări, progres V2, migrare)
 │       ├── answers.js   normalizarea și verificarea răspunsurilor
+│       ├── location.js  adaptorul Browser Geolocation (M-003.1)
+│       ├── map-model.js modelul vizual al hărții (M-003.2, pur)
+│       ├── map.js       harta Leaflet, strat exclusiv vizual (M-003.2)
 │       └── storage.js   localStorage
 ├── content/                            conținutul aventurilor (publicat)
 │   ├── adventures/brasov-centrul-vechi.json   aventura DEMO (schemaVersion 1, D-037)
@@ -143,7 +147,7 @@ Offline în această etapă: doar ecranul fundației se poate redeschide fără 
 
 Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul nu conține texte, răspunsuri sau logică specifică unei aventuri. Motorul V1 (provocări liniare) a fost extins în fundația V2: misiuni pe trasee, locații, evenimente, parteneri, secrete. Specificația completă a schemei și a contractelor: [`11_ADVENTURE_SCHEMA_V2.md`](11_ADVENTURE_SCHEMA_V2.md).
 
-**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele; din M-003.1: adaptorul Browser Geolocation (`location.js`), urmărirea poziției cu pagina activă, starea GPS și explicația permisiunii în interfață, obiectivul misiunii curente cu „Am ajuns”. **Pregătit, dar neimplementat:** misiunile partener, secrete și cu timp în UI, interfața naratorului, audio, harta, GPS în fundal / geofencing, notificări. **Harta (M-003.2): specificație aprobată (D-046–D-049), implementare în așteptare** — modulele `map.js` / `map-model.js` nu există încă. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
+**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele; din M-003.1: adaptorul Browser Geolocation (`location.js`), urmărirea poziției cu pagina activă, starea GPS și explicația permisiunii în interfață, obiectivul misiunii curente cu „Am ajuns”. **Pregătit, dar neimplementat:** misiunile partener, secrete și cu timp în UI, interfața naratorului, audio, harta, GPS în fundal / geofencing, notificări. **Harta (M-003.2):** implementată conform `12_MAP_SPECIFICATION_M-003.2.md` (D-046–D-049) — `map-model.js`, `map.js`, Leaflet 1.9.4 local; în review, necomisă la data scrierii. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
 
 ### Fișiere
 
@@ -152,14 +156,17 @@ Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul 
 | `content/adventures/<id>.json` (D-037) | O aventură, `schemaVersion` 1 sau 2. Aventura actuală este DEMO, V1 (fără locații reale, fără afirmații istorice). |
 | `src/js/content.js` | Încarcă JSON-ul (`fetch`, URL relativ la modul: `../../content/adventures/<id>.json`), îl validează după `schemaVersion` (V1 minim, V2 prin `schema.js`), erori pe înțelesul jucătorului (`AdventureLoadError`). |
 | `src/js/schema.js` | Schema V2: vocabular închis, validare cu verificarea referințelor, conversia V1 → V2 în memorie, forma normalizată (`toAdventureV2`). |
-| `src/js/defaults.js` | Valorile implicite centrale (GPS, progresie, limita lanțurilor de evenimente). |
+| `src/js/defaults.js` | Valorile implicite centrale (GPS, progresie, limita lanțurilor de evenimente) și configurația hărții (M-003.2): `MAP_LIBRARY_VERSION`, `DEFAULT_MAP_TILES` (provider OSM, atribuire), `DEFAULT_MAP_VIEW` (valori strict vizuale). |
 | `src/js/events.js` | Modelul de evenimente: liste închise, filtru simplu, `once`, limită de lanț. |
-| `src/js/geo.js` | Modelul de locație: distanță haversine, zone `inside/near/outside/uncertain`, histerezis. Fără Geolocation API. |
+| `src/js/geo.js` | Modelul de locație: distanță haversine, zone `inside/near/outside/uncertain`, histerezis. Fără Geolocation API. `effectiveRadius(location, gps)` (M-003.2, D-049-D / R2): singura sursă a razei efective, folosită de `evaluateProximity`. |
 | `src/js/answers.js` | Singurul modul care citește câmpul `answer` și compară răspunsuri (D-021): `normalizeAnswer`, `answersMatch`, `createLocalValidator` (interfață asincronă `check(missionId, input) → Promise<boolean>`), `withoutAnswers` (V1 și V2). |
 | `src/js/game.js` | Motorul: stări, progres V2 pe entități, reguli de evenimente, tranziții de locație, scor derivat, migrarea progresului V1. Fără DOM și fără stocare. Primește aventura **fără răspunsuri** și validatorul. Notifică schimbările prin `subscribe()`; mesajele/sunetele sunt „efecte” (`takeEffects()`). |
 | `src/js/storage.js` | Salvare/restaurare/ștergere în `localStorage`, cheia `outdoor-escape:game:<id>` (prefix D-035; cheie confirmată — D-029). Nu aruncă excepții dacă stocarea lipsește. |
 | `src/js/location.js` | Adaptorul Browser Geolocation API (M-003.1): verifică disponibilitatea (inclusiv contextul securizat), `watchPosition`/`clearWatch` fără porniri multiple, erori (refuz → oprire; indisponibil/timeout → urmărirea continuă), retry, transformă `GeolocationPosition` în `{ lat, lng, accuracy, timestamp }` și îl transmite mai departe. Nu calculează distanțe, praguri sau tranziții. API-ul se injectează (testabil în Node). |
-| `src/js/app.js` | Leagă modulele, afișează ecranele, salvează automat la fiecare schimbare de stare, înregistrează service worker-ul. Trimite fix-urile de la `location.js` în `game.reportPosition` (doar în joc) și afișează starea GPS și obiectivul; nu calculează nimic geo. |
+| `src/js/app.js` | Leagă modulele, afișează ecranele, salvează automat la fiecare schimbare de stare, înregistrează service worker-ul. Trimite fix-urile de la `location.js` în `game.reportPosition` (doar în joc) și afișează starea GPS și obiectivul; nu calculează nimic geo. Pentru hartă (M-003.2): adună datele existente (`game.getLocation`, obiectivul curent, `describeLocation`, fix-ul trackerului), le trece prin `map-model.js` și apelează `map.js`; creează / distruge harta și prinde orice eroare a ei (jocul continuă ca în M-003.1). |
+| `src/js/map-model.js` | Modul pur (M-003.2, D-048): traduce prin tabele fixe starea existentă în modelul vizual `{ player: { fix, quality }, locations: [{ id, name, lat, lng, radius, state, visible }], currentObjectiveId }`. Calitatea: `gps-ready` → `valid`, `gps-uncertain` → `uncertain`, restul → `none` (D-049-C). Raza este `radiusMeters` de la motor. Fără importuri, fără calcule GPS. |
+| `src/js/map.js` | Strat exclusiv vizual (M-003.2, D-047): singurul modul care folosește Leaflet. API: `createMap({ container, tileConfig, view?, leaflet? })` → `updatePlayer`, `updateLocations`, `setCurrentObjective`, `fitToAdventure`, `centerOnPlayer`, `destroy`; erori `MapError` (`leaflet_unavailable`, `invalid_container`, `invalid_tile_config`). Nu accesează geolocația, nu apelează motorul, nu calculează distanțe/progres. |
+| `src/vendor/leaflet/` | Leaflet **1.9.4** (D-046, D-049-A), copiat neschimbat din arhiva oficială `https://github.com/Leaflet/Leaflet/releases/download/v1.9.4/leaflet.zip` (`dist/`). SHA-256: `leaflet.js` `85d455b4522415f6badc42a0e7d17c919d100347d6b8958bd0dc738fdecd6d50`, `leaflet.css` `a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6`. Fără imaginile implicite (markerii folosesc `divIcon`) și fără `leaflet.js.map`. `.gitattributes` marchează `src/vendor/**` ca `-text -diff`, ca fișierele să rămână identice byte cu byte pe orice sistem. Verificat de `tests/map.test.js`. |
 
 Fluxul la pornire: `app.js` → `loadAdventure(id)` → `toAdventureV2(...)` → `createLocalValidator(aventură)` + `withoutAnswers(aventură)` → `createGame({ adventure, validator, savedState })` → interfața. Aventura implicită este `brasov-centrul-vechi`; pentru teste se poate cere alta cu `src/?adventure=<id>` (id-ul este validat: litere mici, cifre, cratimă).
 
@@ -206,7 +213,7 @@ Id-urile (aventură, misiuni, locații etc.) trebuie să rămână stabile: prog
 
 ### Service worker
 
-`SHELL_FILES` include toate modulele din `js/` (inclusiv `schema.js`, `defaults.js`, `events.js`, `geo.js`, `location.js`) și aventura demo `../content/adventures/brasov-centrul-vechi.json` (aceeași strategie network-first; 15 intrări). `CACHE_VERSION` = `v5` (M-003.1: adăugat `location.js`); cache-urile mai vechi cu prefixul `outdoor-escape:shell:` se șterg la activare. După o primă încărcare reușită, un refresh fără rețea încarcă aplicația și aventura demo din cache. Orice modul nou din `js/` trebuie adăugat în `SHELL_FILES` (cu versiune nouă a cache-ului), altfel aplicația nu pornește offline. Alte aventuri (sau alt conținut din `content/`) nu sunt puse în cache: fără rețea, ele duc la ecranul de eroare cu „Încearcă din nou”, iar progresul salvat rămâne intact.
+`SHELL_FILES` include toate modulele din `js/` (inclusiv `schema.js`, `defaults.js`, `events.js`, `geo.js`, `location.js`, `map-model.js`, `map.js`), Leaflet local (`vendor/leaflet/leaflet.js`, `vendor/leaflet/leaflet.css`) și aventura demo `../content/adventures/brasov-centrul-vechi.json` (aceeași strategie network-first; 19 intrări). `CACHE_VERSION` = `v6` (M-003.2: harta și Leaflet; anterior `v5`, M-003.1: `location.js`). Tile-urile hărții (alt domeniu) **nu** sunt interceptate și nu sunt puse în cache (politica OSM, D-046); cache-urile mai vechi cu prefixul `outdoor-escape:shell:` se șterg la activare. După o primă încărcare reușită, un refresh fără rețea încarcă aplicația și aventura demo din cache. Orice modul nou din `js/` trebuie adăugat în `SHELL_FILES` (cu versiune nouă a cache-ului), altfel aplicația nu pornește offline. Alte aventuri (sau alt conținut din `content/`) nu sunt puse în cache: fără rețea, ele duc la ecranul de eroare cu „Încearcă din nou”, iar progresul salvat rămâne intact.
 
 Limitare cunoscută (actualizări): service worker-ul folosește `fetch()` obișnuit, deci trece prin cache-ul HTTP al browserului (pe GitHub Pages, de obicei câteva minute). Imediat după o publicare nouă, un browser care a vizitat recent site-ul poate combina un `index.html` nou cu module JavaScript vechi. Se rezolvă singur la expirarea cache-ului HTTP; o soluție (URL-uri versionate sau `cache: "no-cache"` în service worker) este de decis separat.
 

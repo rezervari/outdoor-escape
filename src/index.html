@@ -13,7 +13,10 @@
        (rădăcina domeniului, în afara /outdoor-escape/ — D-035). -->
   <link rel="icon" href="data:,">
   <link rel="manifest" href="manifest.webmanifest">
+  <!-- Leaflet 1.9.4, inclus local, fără CDN (D-046). Scriptul „defer” rulează înaintea modulului app.js. -->
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/app.css">
+  <script defer src="vendor/leaflet/leaflet.js"></script>
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
@@ -69,6 +72,24 @@
         <p id="objective-gps-note" class="objective-note"></p>
         <button type="button" class="button button-primary" id="btn-arrived">Am ajuns</button>
       </div>
+
+      <!-- Harta (M-003.2): doar orientare. Apare numai pentru aventurile cu locații. -->
+      <section id="map-panel" class="map-panel" hidden aria-label="Hartă">
+        <div id="map-container" class="map-container" role="region" aria-label="Harta aventurii"
+             aria-describedby="map-caption" hidden></div>
+        <p id="map-placeholder" class="map-placeholder" hidden>
+          Harta apare când ai un obiectiv sau când locația este activă.
+        </p>
+        <p id="map-unavailable" class="map-unavailable" hidden>
+          Harta nu este disponibilă acum. Folosește indicațiile obiectivului și „Am ajuns”.
+        </p>
+        <p id="map-caption" class="map-caption"></p>
+        <p id="map-center-note" class="map-note" hidden></p>
+        <div class="map-actions">
+          <button type="button" class="button button-secondary" id="btn-map-center">Centrează pe mine</button>
+          <button type="button" class="button button-secondary" id="btn-map-fit">Vezi obiectivele</button>
+        </div>
+      </section>
 
       <form id="answer-form" novalidate>
         <label for="answer-input">Răspunsul tău</label>
@@ -137,6 +158,8 @@
         <dd id="status-storage">necunoscut</dd>
         <dt>Geolocație</dt>
         <dd id="status-geo">necunoscut</dd>
+        <dt>Hartă</dt>
+        <dd id="status-map">inactivă</dd>
       </dl>
     </details>
   </main>

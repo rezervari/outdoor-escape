@@ -81,13 +81,24 @@ export function assessFix(fix, gps = DEFAULT_SETTINGS.gps) {
 }
 
 /**
+ * Raza efectivă a unei locații, în metri: `radius` propriu (număr pozitiv) sau
+ * `gps.defaultRadius`. Singura sursă a acestei reguli în codul rulat de joc
+ * (D-049-D, varianta R2): folosită de evaluateProximity și expusă de game.js
+ * (`getLocation().radiusMeters`) pentru afișare. Adăugare aditivă, comportament identic.
+ */
+export function effectiveRadius(location, gps = DEFAULT_SETTINGS.gps) {
+  const radius = location ? location.radius : undefined;
+  return Number.isFinite(radius) && radius > 0 ? radius : gps.defaultRadius;
+}
+
+/**
  * Evaluează o observație față de o locație.
  * location: { coordinates: {lat, lng}, radius? }
  * fix:      { lat, lng, accuracy }
  * gps:      setările GPS efective (implicit DEFAULT_SETTINGS.gps)
  */
 export function evaluateProximity(location, fix, gps = DEFAULT_SETTINGS.gps) {
-  const radius = Number.isFinite(location.radius) && location.radius > 0 ? location.radius : gps.defaultRadius;
+  const radius = effectiveRadius(location, gps);
 
   const quality = assessFix(fix, gps);
   if (quality.reason === "invalid_fix") {

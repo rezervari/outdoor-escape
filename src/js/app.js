@@ -7,7 +7,8 @@
  * - answers.js — validarea răspunsurilor (D-021);
  * - game.js    — motorul de joc (stări, scor, progres);
  * - storage.js — salvarea progresului în localStorage;
- * - location.js — adaptorul Geolocation API (poziția reală → game.reportPosition).
+ * - location.js — adaptorul Geolocation API (poziția reală → game.reportPosition);
+ * - map-model.js / map.js — harta (M-003.2): doar afișare, construită din starea existentă.
  *
  * Nu conține logică de joc și nici conținut de joc. Nu calculează distanțe,
  * praguri de precizie sau tranziții GPS: le primește interpretate de la
@@ -22,6 +23,9 @@ import { createGame, GameStatus, ChallengeStatus } from "./game.js";
 import { createStorage } from "./storage.js";
 import { assessFix } from "./geo.js";
 import { createLocationTracker, describeLocation, LocationDisplay } from "./location.js";
+import { buildMapModel } from "./map-model.js";
+import { createMap } from "./map.js";
+import { DEFAULT_MAP_TILES, DEFAULT_MAP_VIEW } from "./defaults.js";
 
 const APP_NAME = "outdoor-escape";
 const DEFAULT_ADVENTURE_ID = "brasov-centrul-vechi";
@@ -187,9 +191,152 @@ function setupGameUi(game, storage) {
     $("btn-arrived").hidden = arrived || !allowManual;
   }
 
+  /* --- Harta (M-003.2): doar vizualizare. Nu raportează poziții și nu confirmă sosiri. --- */
+
+  const hasMapLocations = adventure.locations.length > 0; // D-049-K
+  let map = null;
+  let mapFailure = null; // codul erorii, dacă harta nu poate fi folosită în această sesiune
+  let lastMapModel = null;
+
+  // Aceeași condiție ca în renderObjective: locația misiunii curente, dacă nu este „locked”.
+  function currentObjectiveLocationId() {
+    const locationId = game.getCurrentMission()?.mission.locationId;
+    const view = locationId ? game.getLocation(locationId) : null;
+    return view && view.progress.status !== "locked" ? locationId : null;
+  }
+
+  function currentMapModel() {
+    return buildMapModel({
+      locations: adventure.locations.map((location) => game.getLocation(location.id)),
+      currentObjectiveLocationId: currentObjectiveLocationId(),
+      locationDisplay: locationDisplay(),
+      trackerFix: tracker.getState().fix,
+    });
+  }
+
+  function destroyMap() {
+    if (!map) return;
+    try {
+      map.destroy();
+    } catch (error) {
+      console.warn(`[${APP_NAME}] Închiderea hărții a eșuat:`, error);
+    }
+    map = null;
+  }
+
+  function failMap(error) {
+    mapFailure = error && error.code ? error.code : "render_error";
+    console.warn(`[${APP_NAME}] Harta nu este disponibilă (${mapFailure}); jocul continuă fără ea.`, error);
+    destroyMap();
+  }
+
+  // Textul de sub hartă (§7). Nu este aria-live: anunțurile GPS rămân în panoul „Locația ta”.
+  function mapCaption(model) {
+    const { fix } = model.player;
+    const display = locationDisplay();
+    const accuracy = fix && Number.isFinite(fix.accuracy) ? Math.round(fix.accuracy) : null;
+    const veryWeak = accuracy !== null && fix.accuracy > DEFAULT_MAP_VIEW.accuracyCircleMax;
+    if (fix && display === LocationDisplay.READY) {
+      return veryWeak ? `Poziția ta · precizie foarte slabă (~${accuracy} m)` : `Poziția ta · precizie ~${accuracy} m`;
+    }
+    if (fix && display === LocationDisplay.UNCERTAIN) {
+      if (veryWeak) return `Semnal GPS slab — precizie foarte slabă (~${accuracy} m)`;
+      return accuracy !== null
+        ? `Semnal GPS slab — poziția de pe hartă poate fi greșită cu ~${accuracy} m`
+        : "Semnal GPS slab — poziția de pe hartă poate fi greșită";
+    }
+    if (fix) return "Ultima poziție primită — GPS-ul nu transmite acum poziția";
+    switch (display) {
+      case LocationDisplay.OFF:
+        return "Poziția ta nu apare pe hartă: locația nu este activată (butonul „Activează locația” este mai jos).";
+      case LocationDisplay.SEARCHING:
+        return "Caut poziția…";
+      case LocationDisplay.ERROR:
+        return "Poziția nu poate fi determinată acum.";
+      default:
+        return "Poziția ta nu apare pe hartă. Folosește indicațiile obiectivului și „Am ajuns”.";
+    }
+  }
+
+  function renderMap() {
+    const panel = $("map-panel");
+    if (!hasMapLocations || !isPlaying()) {
+      panel.hidden = true;
+      destroyMap();
+      setStatus("status-map", hasMapLocations ? "inactivă" : "inactivă (aventura nu are locații)");
+      return;
+    }
+    panel.hidden = false;
+
+    let model;
+    try {
+      model = currentMapModel();
+    } catch (error) {
+      failMap(error);
+      model = null;
+    }
+    lastMapModel = model;
+    const hasVisible = Boolean(model) && model.locations.some((location) => location.visible);
+    const hasFix = Boolean(model && model.player.fix);
+
+    if (!mapFailure && !map && (hasVisible || hasFix)) {
+      // Containerul se afișează înainte de creare, ca Leaflet să aibă dimensiunile reale.
+      $("map-container").hidden = false;
+      try {
+        map = createMap({ container: $("map-container"), tileConfig: DEFAULT_MAP_TILES, view: DEFAULT_MAP_VIEW });
+      } catch (error) {
+        failMap(error);
+      }
+    }
+    $("map-container").hidden = !map;
+    if (map && model) {
+      try {
+        map.updateLocations(model.locations);
+        map.updatePlayer(model.player.fix, model.player.quality);
+        map.setCurrentObjective(model.currentObjectiveId);
+      } catch (error) {
+        failMap(error);
+        $("map-container").hidden = true;
+      }
+    }
+
+    $("map-unavailable").hidden = !mapFailure;
+    $("map-placeholder").hidden = Boolean(map) || Boolean(mapFailure);
+    $("map-caption").textContent = model && map ? mapCaption(model) : "";
+    $("map-caption").hidden = !map;
+    $("btn-map-center").disabled = !map || !hasFix;
+    $("btn-map-fit").disabled = !map || !hasVisible;
+    const note = map && !hasFix ? "„Centrează pe mine” devine activ când poziția ta este cunoscută." : "";
+    $("map-center-note").textContent = note;
+    $("map-center-note").hidden = !note;
+    $("map-panel").querySelector(".map-actions").hidden = Boolean(mapFailure) || !map;
+    setStatus("status-map", mapFailure ? `indisponibilă (${mapFailure})` : map ? "activă" : "în așteptare (fără obiective vizibile sau poziție)");
+  }
+
+  $("btn-map-center").addEventListener("click", () => {
+    if (!map) return;
+    try {
+      map.centerOnPlayer();
+    } catch (error) {
+      failMap(error);
+      renderMap();
+    }
+  });
+
+  $("btn-map-fit").addEventListener("click", () => {
+    if (!map || !lastMapModel) return;
+    try {
+      map.fitToAdventure(lastMapModel.locations);
+    } catch (error) {
+      failMap(error);
+      renderMap();
+    }
+  });
+
   tracker.subscribe(() => {
     renderLocation();
     if (isPlaying()) renderObjective();
+    renderMap();
   });
 
   function renderStart() {
@@ -262,6 +409,7 @@ function setupGameUi(game, storage) {
     else renderStart();
     $("location-panel").hidden = status === GameStatus.COMPLETED;
     renderLocation();
+    renderMap();
   }
 
   function hideResetConfirm() {
