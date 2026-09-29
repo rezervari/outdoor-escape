@@ -262,4 +262,63 @@ Se execută atât local (`http://localhost:8000/`), cât și în producție (`ht
 | R7 | DevTools → Network la deschiderea rădăcinii | Nicio cerere spre `https://rezervari.github.io/` în afara lui `/outdoor-escape/` |
 | R8 | Compară R1–R7 local și în producție | Comportament echivalent |
 
-Notă: `meta refresh` și linkul sunt statice, deci fără JavaScript nu pot păstra query-ul și hash-ul. Rezultatul așteptat pentru R2 fără JavaScript trebuie clarificat înainte de implementare.
+Notă: `meta refresh` și linkul sunt statice, deci fără JavaScript nu pot păstra query-ul și hash-ul. Comportamentul implementat: fără JavaScript, rădăcina duce la `.../src/` **fără** query și hash (R4). R2 se testează doar cu JavaScript activ.
+
+## 21. Scheletul PWA (fundația tehnică)
+
+Se execută local (`http://localhost:8000/src/`) și, după publicare, în producție (`https://rezervari.github.io/outdoor-escape/src/`). Înainte: „Clear site data” (secțiunea 11).
+
+| ID | Pași | Rezultat așteptat |
+| --- | --- | --- |
+| F1 | Deschide `src/` | Ecranul „Fundație tehnică / skeleton”; „JavaScript: încărcat” |
+| F2 | DevTools → Console și Network | Fără erori, fără 404, nicio cerere în afara bazei (`/` local, `/outdoor-escape/` în producție) |
+| F3 | Application → Manifest | Manifest citit fără erori; Start URL și Scope = `.../src/`; Computed App Id = `.../src/`. Avertismentul despre iconuri lipsă este **așteptat** (nu există încă iconuri reale) |
+| F4 | Application → Service workers | `sw.js` din `.../src/`, scope `.../src/`, „activated and running”; pe ecran: „Service worker: înregistrat” |
+| F5 | Application → Cache storage | Un singur cache al proiectului, `outdoor-escape:shell:v1`, cu exact: `src/`, `index.html`, `manifest.webmanifest`, `css/app.css`, `js/app.js`. Nimic din `content/` |
+| F6 | Network → „Offline”, reîncarcă `src/` și `src/?test=1#abc` | Ecranul fundației se deschide din cache |
+| F7 | Offline, deschide rădăcina | Poate eșua. Este **așteptat**: rădăcina nu este controlată de service worker (D-036) |
+| F8 | Mărește `CACHE_VERSION` în `sw.js` (de ex. `v2`), reîncarcă | Cache-ul `outdoor-escape:shell:v1` dispare, apare `...:v2`. Revino la `v1` după test |
+| F9 | Deschide `http://192.168.x.x:8000/src/` de pe alt dispozitiv (context nesigur) | Pagina se afișează; „Service worker: indisponibil (context nesigur...)”; fără erori blocante |
+| F10 | Pe pagina rădăcinii, DevTools → Application | Fără manifest; niciun service worker cu scope în rădăcină |
+| F11 | După push pe `main` (secțiunea 18) | Pe site există `index.html`, `src/`, `content/`; `.../outdoor-escape/docs/` și `.../outdoor-escape/tests/` dau 404 |
+
+Limitări cunoscute ale fundației:
+- aplicația nu este instalabilă până nu există iconuri reale (F3);
+- offline este disponibil doar ecranul fundației, după o primă vizită online.
+
+## 22. Motorul de joc v1 (aventura demo)
+
+### 22.1 Teste automate (fără browser)
+
+Din rădăcina repository-ului: `node --test` (sau `npm test`). Node.js 20+. Rezultat așteptat: toate testele `pass`, `fail 0`. Ce acoperă: `tests/README.md`.
+
+### 22.2 Teste manuale în browser
+
+Se execută la `http://localhost:8000/src/` și, după publicare, la `https://rezervari.github.io/outdoor-escape/src/`. Înainte: „Clear site data” (secțiunea 11).
+
+| ID | Pași | Rezultat așteptat |
+| --- | --- | --- |
+| G1 | Deschide `src/` | Ecranul de start: „Outdoor Escape”, titlul aventurii [DEMO], descriere, oraș, durată, dificultate, număr de provocări, „Începe aventura” |
+| G2 | Console și Network | Fără erori, fără 404; JSON-ul se încarcă de la `.../content/adventures/brasov-centrul-vechi.json` |
+| G3 | „Începe aventura” | „Provocarea 1 din 3”, scor 0, câmp de răspuns, „Verifică răspunsul”, „Arată indiciul” |
+| G4 | „Verifică răspunsul” cu câmpul gol | Mesaj „Scrie un răspuns…”; nu se trece mai departe |
+| G5 | Răspuns greșit (ex. `Cluj`) | „Răspuns incorect…”; scorul nu se schimbă; nu apare „Continuă” |
+| G6 | „Arată indiciul” | Apare textul indiciului; butonul dispare; scorul nu se schimbă |
+| G7 | Răspuns corect cu variații (`  BRAȘOV `, `brasov`, `Braşov` cu sedilă) | „Corect! +100 puncte”; scorul crește; apare „Continuă” |
+| G8 | F5 după G7, înainte de „Continuă” | Aceeași provocare, marcată corectă, cu „Continuă” |
+| G9 | „Continuă”, răspuns trimis cu Enter | Provocarea 2; Enter trimite răspunsul |
+| G10 | F5 la provocarea 3 | Progresul și scorul sunt păstrate. Application → Local Storage: cheia `outdoor-escape:game:brasov-centrul-vechi` |
+| G11 | „Începe de la capăt” → „Nu”, apoi → „Da, șterge progresul” | „Nu” păstrează jocul; „Da” duce la ecranul de start și șterge cheia din Local Storage |
+| G12 | „Sari peste (0 puncte)” la o provocare, apoi F5 înainte și după „Continuă” | Mesaj „Ai sărit…”; scorul nu crește; apare „Continuă”. După F5, provocarea rămâne sărită (Local Storage: `"status":"skipped"`); provocarea nu se numără la „rezolvate” la final |
+| G13 | Termină aventura | Ecran final: „Felicitări…”, scorul „X din 350 puncte”, „Provocări rezolvate: N din 3”, „Joacă din nou” |
+| G14 | F5 pe ecranul final, apoi „Joacă din nou” | Rezultatul rămâne după F5; „Joacă din nou” duce la start și șterge progresul |
+| G15 | `src/?adventure=inexistenta` | Ecran „Aventura nu a putut fi încărcată” + „Încearcă din nou”; fără excepții în consolă |
+| G16 | Application → Cache storage | Doar `outdoor-escape:shell:v3`, cu fișierele din `SHELL_FILES` (10 intrări: 9 din `src/` + `content/adventures/brasov-centrul-vechi.json`) |
+| G17 | După o primă încărcare online: Network → „Offline”, F5 (pe ecranul de start și în timpul jocului) | Aplicația și aventura demo se încarcă din cache; progresul este păstrat; răspunsurile se verifică și offline |
+| G19 | `src/?adventure=inexistenta` cu Network → „Offline” | Ecranul de eroare („Verifică conexiunea…”) + „Încearcă din nou” — doar aventura demo este în cache |
+| G18 | Simulare mobil 360 px (secțiunea 12.3) | Fără derulare orizontală; butoanele principale pe toată lățimea, cel puțin 48 px înălțime |
+
+Note:
+- Secțiunea 21 (F5) descrie cache-ul fundației (`v1`, 5 fișiere). Începând cu motorul v1, rezultatul așteptat este cel din G16.
+- Starea `failed` nu poate fi produsă din interfață în această etapă; este acoperită de testele automate (`tests/game.test.js`).
+- Workflow-ul actual (`.github/workflows/deploy-pages.yml`) publică întreg repository-ul (`path: .`), deci F11 (docs/ și tests/ dau 404) nu este îndeplinit în prezent. Workflow-ul nu a fost modificat în această etapă.

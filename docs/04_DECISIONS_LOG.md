@@ -238,17 +238,19 @@ Status: PROPOSED
 ---
 
 ## D-023 — Tooling pentru teste automate și validarea documentației
-Status: PROPOSED
+Status: CONFIRMED (2026-09-29) — pentru testele motorului
 
 Propunere:
 Rularea de teste automate pentru logica motorului cu test runner-ul inclus în Node.js (`node --test`), fără dependențe în repository. Node ar fi doar unealtă de dezvoltare, nu parte din aplicație. Opțional: verificare automată a linkurilor din documentație.
 
 Până la decizie: validare manuală (`07_TESTING.md`, secțiunea 17).
 
+Notă (2026-09-29): la cererea proprietarului, odată cu motorul de joc v1, s-au adăugat teste `node --test` în `tests/` și un `package.json` fără dependențe (doar `"type": "module"` și `npm test`). Confirmat de proprietar (2026-09-29): se păstrează `node --test`, fără framework suplimentar de testare. Verificarea automată a linkurilor din documentație rămâne nedecisă.
+
 ---
 
 ## D-024 — Normalizarea răspunsurilor
-Status: PROPOSED
+Status: CONFIRMED (2026-09-29) — comportamentul actual
 
 Context:
 Literele românești `ș` și `ț` există în două codificări (cu virgulă și cu sedilă). Tastaturile telefoanelor pot produce oricare dintre ele. Un răspuns corect nu trebuie respins (defect critic, `07_TESTING.md` secțiunea 9).
@@ -260,6 +262,10 @@ De decis:
 - numere scrise cu cifre sau cu litere;
 - variante acceptate definite per puzzle, în conținut.
 
+Notă (2026-09-29): implementare provizorie în `src/js/answers.js`, la cererea proprietarului: majuscule ignorate; spații de la capete eliminate și spații multiple reduse; diacritice eliminate (inclusiv variantele cu sedilă), deci și răspunsurile fără diacritice sunt acceptate. NU sunt implementate: numere în litere, variante per puzzle, eliminarea punctuației, fuzzy matching.
+
+Confirmat de proprietar (2026-09-29): comportamentul actual se păstrează (majuscule ignorate, spații inutile ignorate, diacritice românești normalizate, `ş/ș` și `ţ/ț` echivalente, fără fuzzy matching). Rămân nedecise: numerele scrise în litere și variantele de răspuns per puzzle.
+
 ---
 
 ## D-025 — Cronometru și punctaj
@@ -269,6 +275,8 @@ De decis:
 - cronometrul măsoară timpul total de la start sau se poate opri;
 - valorile penalizărilor pentru indiciul 1, indiciul 2 și afișarea răspunsului;
 - cum se afișează scorul final.
+
+Notă (2026-09-29): motorul v1 calculează scorul ca sumă a punctelor provocărilor rezolvate corect, fără penalizări și fără cronometru. Sunt salvate `startedAt`/`completedAt` (timestamp-uri), fără afișare.
 
 Notă tehnică: timpul trebuie calculat din momente salvate (timestamp), nu dintr-un contor care rulează în pagină, pentru că browserul poate suspenda pagina (vezi D-028).
 
@@ -315,6 +323,10 @@ Propunere:
 - câmpuri pregătite pentru sesiuni corporate (de exemplu `sessionId`, `teamId`, `eventId`), goale în MVP, fără infrastructură corporate;
 - `localStorage` inițial (conform `03_ARCHITECTURE.md`).
 
+Notă (2026-09-29): motorul v1 salvează progresul cu `schemaVersion: 1` (vezi `03_ARCHITECTURE.md`, secțiunea 3c). Câmpurile pentru sesiuni corporate NU au fost adăugate. Statusul rămâne PROPOSED.
+
+Confirmat de proprietar (2026-09-29): cheia de stocare `outdoor-escape:game:<id>` (conformă cu D-035). Restul propunerii (versiunea schemei, câmpuri corporate) rămâne PROPOSED.
+
 ---
 
 ## D-030 — HINT_USED: eveniment, nu stare
@@ -325,6 +337,8 @@ Context:
 
 Propunere:
 Folosirea indiciilor se înregistrează ca date ale puzzle-ului (număr de indicii folosite, penalizare), în starea `PUZZLE_ACTIVE`. Lista stărilor din `03_ARCHITECTURE.md` nu a fost modificată; a fost adăugată doar o notă.
+
+Notă (2026-09-29): motorul v1 aplică deja această idee: indiciul este marcat `hintUsed` în progresul provocării, nu este o stare separată.
 
 ---
 
@@ -437,3 +451,24 @@ Consecințe:
 - Testele de efectuat după implementare: `07_TESTING.md`, secțiunea 20.
 
 Opțiuni analizate: A — redirecționare (aleasă); B — pagină de intrare cu link; C — fără fișier în rădăcină (404).
+
+---
+
+## D-037 — Structura conținutului: `content/adventures/` sau `content/games/`
+Status: CONFIRMED (2026-09-29)
+
+Context:
+`03_ARCHITECTURE.md` și instrucțiunile proiectului sugerează `content/games/game-001/` cu fișiere separate (`game.json`, `locations.json`, `puzzles.json`, `media/`). La cererea proprietarului, motorul v1 folosește un singur fișier per aventură: `content/adventures/<id>.json`. `content/games/` a rămas gol (doar `.gitkeep`).
+
+De decis:
+- denumirea: „adventure” sau „game” (în cod, conținut și documentație);
+- un singur fișier per aventură sau un folder per aventură (`content/adventures/<id>/adventure.json` + `media/`), necesar când apar imagini;
+- ștergerea lui `content/games/.gitkeep` după alegere.
+
+Recomandare Claude (anterioară deciziei): folder per aventură (`content/adventures/<id>/adventure.json` + `media/`) și ștergerea lui `content/games/`.
+
+Decizie (proprietar, 2026-09-29):
+- se păstrează `content/adventures/<id>.json` (un fișier per aventură);
+- conținutul nu se mută în `content/games/`.
+
+Rămân deschise, pentru o etapă ulterioară: structura când apar media per aventură și soarta directorului gol `content/games/`.

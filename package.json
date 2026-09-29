@@ -1,0 +1,9 @@
+{
+  "name": "outdoor-escape",
+  "private": true,
+  "description": "Doar pentru rularea testelor locale (node --test). Fără dependențe; nu este folosit de aplicația publicată.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

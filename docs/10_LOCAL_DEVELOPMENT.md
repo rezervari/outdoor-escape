@@ -4,7 +4,7 @@
 
 Acest document descrie cum se lucrează local la proiect și cum se testează funcțiile GPS/PWA pe un telefon real.
 
-Stare: în Faza 0 nu există încă cod de aplicație. Secțiunile 4–8 se aplică după ce va exista scheletul PWA. Acolo unde procedura depinde de o decizie încă deschisă, trimiterea este la `04_DECISIONS_LOG.md` (intrările PROPOSED).
+Stare: există scheletul PWA (fundația tehnică, fără joc). Secțiunile 4–8 se aplică scheletului. Acolo unde procedura depinde de o decizie încă deschisă, trimiterea este la `04_DECISIONS_LOG.md` (intrările PROPOSED).
 
 ## 2. Principii
 
@@ -52,7 +52,7 @@ Apoi, în browser:
 - aplicația: `http://localhost:8000/src/`
 - conținutul (pentru verificare): `http://localhost:8000/content/...`
 
-Adresa `http://localhost:8000/` (fără `src/`) nu este aplicația: după ce va exista `index.html` din rădăcina repository-ului (D-036), ea redirecționează automat către `http://localhost:8000/src/`, la fel ca `https://rezervari.github.io/outdoor-escape/` în producție. Pentru dezvoltare și testare se folosește direct adresa cu `src/`.
+Adresa `http://localhost:8000/` (fără `src/`) nu este aplicația: `index.html` din rădăcina repository-ului (D-036) redirecționează automat către `http://localhost:8000/src/`, la fel ca `https://rezervari.github.io/outdoor-escape/` în producție. Pentru dezvoltare și testare se folosește direct adresa cu `src/`.
 
 Oprire: `Ctrl + C` în terminal.
 
@@ -123,7 +123,16 @@ Un service worker poate servi fișiere vechi din cache după o modificare. În C
 
 Pe telefon: se șterg datele site-ului din setările browserului.
 
-Numele cache-urilor și cheile din `localStorage` au prefixul proiectului (`outdoor-escape:`, D-035). Pe `localhost`, stocarea este separată de cea din producție. Strategia de versionare a cache-ului se stabilește când se implementează service worker-ul (Faza 3).
+Numele cache-urilor și cheile din `localStorage` au prefixul proiectului (`outdoor-escape:`, D-035). Pe `localhost`, stocarea este separată de cea din producție.
+
+Service worker-ul fundației (`src/sw.js`, detalii în `03_ARCHITECTURE.md`, secțiunea 3b):
+
+- folosește „rețea mai întâi”, deci în timpul dezvoltării, cu serverul pornit, se văd modificările la o reîncărcare normală;
+- cache-ul se numește `outdoor-escape:shell:<versiune>`; la schimbarea fișierelor din lista fundației se mărește `CACHE_VERSION` din `sw.js`, iar cache-ul vechi se șterge automat;
+- dacă se adaugă un fișier nou în fundație, se adaugă și în lista `SHELL_FILES` din `sw.js` (altfel nu va fi disponibil offline);
+- pe ecranul aplicației, rândul „Service worker” arată dacă înregistrarea a reușit.
+
+Strategia completă de offline și de actualizare pentru joc se stabilește odată cu motorul (Faza 3).
 
 ## 8. Rețea și firewall pe Windows
 

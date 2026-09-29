@@ -3,40 +3,114 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Outdoor Escape — schelet tehnic (fundație). Nu conține încă jocul.">
+  <meta name="description" content="Outdoor Escape — versiune de dezvoltare, cu o aventură demonstrativă.">
   <meta name="theme-color" content="#1f3a2e">
   <meta name="color-scheme" content="light">
   <meta name="robots" content="noindex">
-  <title>Outdoor Escape (fundație)</title>
+  <title>Outdoor Escape</title>
   <!-- Toate căile sunt relative (D-035). -->
+  <!-- Fără iconuri reale încă: iconul gol evită cererea automată către /favicon.ico
+       (rădăcina domeniului, în afara /outdoor-escape/ — D-035). -->
+  <link rel="icon" href="data:,">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="css/app.css">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
   <main class="container">
-    <p class="badge">Fundație tehnică / skeleton</p>
+    <p class="badge">Versiune de dezvoltare</p>
     <h1>Outdoor Escape</h1>
-    <p>
-      Acesta este doar scheletul tehnic al aplicației.
-      Jocul nu este implementat încă.
-    </p>
-
-    <section aria-labelledby="status-title" class="status">
-      <h2 id="status-title">Stare tehnică</h2>
-      <dl>
-        <dt>JavaScript</dt>
-        <dd id="status-js">neîncărcat</dd>
-        <dt>Service worker</dt>
-        <dd id="status-sw">necunoscut</dd>
-      </dl>
-    </section>
 
     <noscript>
       <p class="warning">JavaScript este dezactivat. Aplicația are nevoie de JavaScript.</p>
     </noscript>
 
-    <p><a class="button" href="./">Reîncarcă</a></p>
+    <!-- Ecranele. app.js afișează unul singur, în funcție de starea jocului. -->
+
+    <section id="screen-loading" class="screen" aria-live="polite">
+      <p>Se încarcă aventura…</p>
+    </section>
+
+    <section id="screen-error" class="screen" hidden aria-labelledby="error-title">
+      <h2 id="error-title">Aventura nu a putut fi încărcată</h2>
+      <p id="error-message" class="warning"></p>
+      <button type="button" class="button" id="btn-retry">Încearcă din nou</button>
+    </section>
+
+    <section id="screen-start" class="screen" hidden aria-labelledby="adventure-title">
+      <h2 id="adventure-title"></h2>
+      <p id="adventure-description"></p>
+      <dl class="facts">
+        <dt>Oraș</dt>
+        <dd id="adventure-city"></dd>
+        <dt>Durată estimată</dt>
+        <dd id="adventure-time"></dd>
+        <dt>Dificultate</dt>
+        <dd id="adventure-difficulty"></dd>
+        <dt>Provocări</dt>
+        <dd id="adventure-count"></dd>
+      </dl>
+      <button type="button" class="button button-primary" id="btn-start">Începe aventura</button>
+    </section>
+
+    <section id="screen-play" class="screen" hidden aria-labelledby="challenge-title">
+      <div class="play-header">
+        <p id="challenge-progress" class="progress"></p>
+        <p class="score">Scor: <strong id="current-score">0</strong></p>
+      </div>
+      <h2 id="challenge-title"></h2>
+      <p id="challenge-description"></p>
+
+      <form id="answer-form" novalidate>
+        <label for="answer-input">Răspunsul tău</label>
+        <input id="answer-input" name="answer" type="text"
+               autocomplete="off" autocapitalize="off" autocorrect="off"
+               spellcheck="false" enterkeyhint="done">
+        <button type="submit" class="button button-primary" id="btn-check">Verifică răspunsul</button>
+      </form>
+
+      <p id="feedback" class="feedback" role="status" aria-live="polite" hidden></p>
+
+      <button type="button" class="button button-primary" id="btn-next" hidden>Continuă</button>
+
+      <div id="hint-area">
+        <button type="button" class="button button-secondary" id="btn-hint">Arată indiciul</button>
+        <p id="hint-text" class="hint" hidden></p>
+      </div>
+
+      <div class="secondary-actions">
+        <button type="button" class="button button-secondary" id="btn-skip">Sari peste (0 puncte)</button>
+        <button type="button" class="button button-secondary" id="btn-reset">Începe de la capăt</button>
+      </div>
+      <p id="reset-confirm" class="warning" hidden>
+        Tot progresul acestei aventuri va fi șters.
+        <button type="button" class="button button-danger" id="btn-reset-yes">Da, șterge progresul</button>
+        <button type="button" class="button button-secondary" id="btn-reset-no">Nu</button>
+      </p>
+    </section>
+
+    <section id="screen-end" class="screen" hidden aria-labelledby="end-title">
+      <h2 id="end-title">Felicitări! Ai terminat aventura.</h2>
+      <dl class="facts">
+        <dt>Scor</dt>
+        <dd id="end-score"></dd>
+        <dt>Provocări rezolvate</dt>
+        <dd id="end-solved"></dd>
+      </dl>
+      <button type="button" class="button button-primary" id="btn-replay">Joacă din nou</button>
+    </section>
+
+    <details class="status">
+      <summary>Stare tehnică</summary>
+      <dl>
+        <dt>JavaScript</dt>
+        <dd id="status-js">neîncărcat</dd>
+        <dt>Service worker</dt>
+        <dd id="status-sw">necunoscut</dd>
+        <dt>Salvare progres</dt>
+        <dd id="status-storage">necunoscut</dd>
+      </dl>
+    </details>
   </main>
 </body>
 </html>

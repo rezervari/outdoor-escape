@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "brasov-centrul-vechi",
+  "demo": true,
+  "city": "Brașov",
+  "title": "[DEMO] Misterul Centrului Vechi",
+  "description": "Aventură DEMONSTRATIVĂ pentru testarea motorului de joc. Provocările nu folosesc locații reale și nu conțin informații istorice. Conținutul va fi înlocuit cu aventura reală.",
+  "estimatedTime": 60,
+  "difficulty": "easy",
+  "challenges": [
+    {
+      "id": "challenge-01",
+      "title": "[DEMO] Provocarea 1",
+      "description": "Provocare de test. Scrie numele orașului în care este gândită această aventură demo.",
+      "hint": "Este scris în câmpul „oraș” de pe ecranul de start. Poți scrie cu sau fără diacritice.",
+      "answer": "Brașov",
+      "points": 100
+    },
+    {
+      "id": "challenge-02",
+      "title": "[DEMO] Provocarea 2",
+      "description": "Provocare de test. Câte provocări are această aventură demo? Scrie numărul cu cifre.",
+      "hint": "Uită-te la indicatorul de progres de deasupra titlului.",
+      "answer": "3",
+      "points": 100
+    },
+    {
+      "id": "challenge-03",
+      "title": "[DEMO] Provocarea 3",
+      "description": "Ghicitoare de test: are ace, dar nu coase. Ce este? Răspunde cu un singur cuvânt, nearticulat.",
+      "hint": "Este un animal mic, care se strânge ghem când se sperie.",
+      "answer": "arici",
+      "points": 150
+    }
+  ]
+}

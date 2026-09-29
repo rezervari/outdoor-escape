@@ -1,14 +1,16 @@
 /*
- * Outdoor Escape — service worker MINIMAL (fundație).
+ * Outdoor Escape — service worker MINIMAL.
  *
  * Ce face:
- * - la instalare, pune în cache doar fișierele fundației (SHELL_FILES);
+ * - la instalare, pune în cache doar fișierele aplicației (SHELL_FILES);
  * - pentru aceste fișiere: rețea mai întâi, cache ca rezervă (network-first);
  * - la activare, șterge versiunile vechi ale cache-ului fundației.
  *
  * Ce NU face (în această etapă):
  * - NU oferă offline complet și nu garantează funcționarea offline;
- * - NU pune în cache nimic din ../content/ (conținutul jocurilor);
+ * - din ../content/ pune în cache DOAR aventura demo (listată explicit în
+ *   SHELL_FILES), cu aceeași strategie network-first; restul conținutului
+ *   nu este interceptat;
  * - NU pune în cache răspunsuri dinamice, cereri către alte domenii
  *   sau orice fișier care nu este în SHELL_FILES;
  * - NU folosește biblioteci.
@@ -16,14 +18,14 @@
  * Scope: folderul src/ (D-035), pentru că sw.js stă în src/.
  * Toate căile sunt relative la locația acestui fișier.
  *
- * Actualizare: la orice schimbare a fișierelor fundației se mărește
+ * Actualizare: la orice schimbare a fișierelor aplicației (sau a listei) se mărește
  * CACHE_VERSION. Cache-urile vechi cu prefixul CACHE_PREFIX sunt șterse
  * la activare. Cache-urile altor site-uri de pe același domeniu
  * (rezervari.github.io) nu sunt atinse.
  */
 
 const CACHE_PREFIX = "outdoor-escape:shell:";
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v3";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 // Relative la sw.js, adică la src/.
@@ -33,6 +35,12 @@ const SHELL_FILES = [
   "manifest.webmanifest",
   "css/app.css",
   "js/app.js",
+  "js/answers.js",
+  "js/content.js",
+  "js/game.js",
+  "js/storage.js",
+  // Conținut: aventura demo, ca refresh-ul fără rețea să o poată încărca.
+  "../content/adventures/brasov-centrul-vechi.json",
 ];
 
 const SHELL_URLS = new Set(
@@ -79,7 +87,7 @@ self.addEventListener("fetch", (event) => {
   // src/ și src/index.html sunt aceeași pagină.
   if (isNavigation && key === INDEX_URL) key = SCOPE_ROOT;
 
-  // Orice altceva (inclusiv ../content/) nu este interceptat.
+  // Orice altceva (inclusiv restul lui ../content/) nu este interceptat.
   if (!SHELL_URLS.has(key)) return;
   // Query string-ul este acceptat doar la navigare (ex. src/?test=1).
   if (url.search && !isNavigation) return;

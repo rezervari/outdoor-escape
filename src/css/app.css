@@ -1,4 +1,4 @@
-/* Outdoor Escape — stiluri minime pentru fundație. Nu este designul final. */
+/* Outdoor Escape — stiluri minime, mobile-first. Nu este designul final. */
 
 *,
 *::before,
@@ -48,6 +48,24 @@ h2 {
   letter-spacing: 0.04em;
 }
 
+/* Atributul hidden trebuie să câștige în fața regulilor display de mai jos. */
+[hidden] {
+  display: none !important;
+}
+
+.status {
+  margin-top: 2.5rem;
+  font-size: 0.875rem;
+  color: #444;
+}
+
+.status summary {
+  cursor: pointer;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+}
+
 .status dl {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -86,6 +104,153 @@ h2 {
 
 .button:hover {
   background: #2c5242;
+}
+
+/* <button> moștenește fontul paginii și ocupă toată lățimea pe telefon. */
+button.button {
+  border: 2px solid #1f3a2e;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button-primary {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.button-secondary {
+  background: #fff;
+  color: #1f3a2e;
+}
+
+.button-secondary:hover {
+  background: #e8efe9;
+}
+
+.button-danger {
+  border-color: #8a1c1c;
+  background: #8a1c1c;
+  margin: 0.5rem 0.5rem 0 0;
+}
+
+.button-danger:hover {
+  background: #a52a2a;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ---------- Ecranele jocului ---------- */
+
+.screen h2 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.375rem;
+  line-height: 1.25;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1rem;
+  margin: 1rem 0;
+}
+
+.facts dt {
+  font-weight: 700;
+}
+
+.facts dd {
+  margin: 0;
+}
+
+.play-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 2px solid #1f3a2e;
+}
+
+.play-header p {
+  margin: 0;
+  font-weight: 700;
+}
+
+label {
+  display: block;
+  margin: 1rem 0 0.25rem;
+  font-weight: 700;
+}
+
+input[type="text"] {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #1a1a1a;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: #1a1a1a;
+  /* ≥ 16px: iOS nu mai face zoom automat la focus. */
+  font: inherit;
+}
+
+input[type="text"]:focus-visible,
+button:focus-visible {
+  outline: 3px solid #d98e04;
+  outline-offset: 3px;
+}
+
+/* Feedback: textul spune rezultatul; culoarea doar îl întărește. */
+.feedback {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border: 2px solid #1a1a1a;
+  border-left-width: 0.5rem;
+  border-radius: 0.25rem;
+  background: #fff;
+  font-weight: 700;
+}
+
+.feedback[data-kind="correct"] {
+  border-color: #1d6b36;
+  background: #e6f4ea;
+}
+
+.feedback[data-kind="incorrect"],
+.feedback[data-kind="empty"] {
+  border-color: #8a1c1c;
+  background: #fbeaea;
+}
+
+.hint {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border: 2px dashed #d98e04;
+  border-radius: 0.25rem;
+  background: #fff8e6;
+}
+
+#hint-area .button-secondary {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #c9c4b5;
+}
+
+.secondary-actions .button {
+  flex: 1 1 10rem;
+  font-size: 1rem;
 }
 
 a:focus-visible,

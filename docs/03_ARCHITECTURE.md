@@ -44,8 +44,9 @@ AI development:
 
 /
 ├── .github/
-│   └── workflows/          (workflow de publicare pe GitHub Pages — D-020, încă necreat)
-├── index.html              (doar redirecționare către src/ — D-036, încă necreat; NU este aplicația)
+│   └── workflows/
+│       └── deploy-pages.yml (publicare pe GitHub Pages — D-020, creat)
+├── index.html              (doar redirecționare către src/ — D-036, creat; NU este aplicația)
 ├── README.md
 ├── LICENSE                 (MIT — doar codul aplicației, vezi D-016)
 ├── LICENSE-CONTENT.md      (conținutul jocului — NU este MIT)
@@ -93,6 +94,8 @@ AI development:
 
 This is a starting structure, not an instruction to create every file immediately.
 
+Stare (motorul de joc v1): pe lângă scheletul PWA (secțiunea 3b), există modulele `src/js/answers.js`, `content.js`, `game.js`, `storage.js`, aventura demo `content/adventures/brasov-centrul-vechi.json`, testele automate din `tests/` și `package.json` (doar pentru teste). Conținutul stă în `content/adventures/<id>.json` (CONFIRMED — D-037); `content/games/` este gol (`.gitkeep`). Modulele `state.js`, `router.js`, `gps.js`, `timer.js`, `puzzles.js`, `hints.js` și `src/assets/` nu există. Detalii: secțiunea 3c.
+
 Notă (CONFIRMED — D-020): site-ul se publică printr-un workflow GitHub Actions care publică doar fișierele statice necesare aplicației (codul din `src/` și conținutul din `content/`), fără `docs/` și `tests/`, fără framework de build. Site-ul publicat păstrează structura repository-ului (CONFIRMED — vezi D-035 și secțiunea 3a).
 
 ## 3a. URL-uri și căi (CONFIRMED — D-035)
@@ -121,6 +124,103 @@ Reguli:
 - Workflow-ul de publicare copiază structura necesară (`src/`, `content/` și `index.html` din rădăcină — D-036) fără transformări de căi și fără build system.
 
 Motivare: aceeași structură relativă local și online înseamnă că ce funcționează la `localhost` funcționează și pe GitHub Pages, fără cod dependent de mediu.
+
+## 3b. Scheletul PWA (fundația tehnică)
+
+Scheletul conține doar infrastructura tehnică. Nu conține motor de joc, GPS, hărți, puzzle-uri, validare, progres salvat sau conținut.
+
+| Fișier | Rol |
+| --- | --- |
+| `index.html` (rădăcină) | Redirecționare către `src/` (D-036). `location.replace("src/" + location.search + location.hash)`; `meta refresh` către `src/` doar în `<noscript>`; link vizibil către `src/`. Fără manifest, fără service worker. |
+| `src/index.html` | Punctul de intrare al aplicației. Ecran minimal marcat „fundație tehnică”, cu starea JavaScript și a service worker-ului. |
+| `src/manifest.webmanifest` | Manifest minim. `start_url` și `scope` sunt `"./"`, deci se rezolvă relativ la manifest: `.../outdoor-escape/src/`. Nume și descriere provizorii. |
+| `src/sw.js` | Service worker minim (vezi mai jos). |
+| `src/js/app.js` | Modul ES. Confirmă încărcarea și înregistrează service worker-ul cu cale relativă (`sw.js`, scope `./`). Modulele viitoare se importă de aici cu căi relative. |
+| `src/css/app.css` | Stiluri minime, mobile-first. Nu este designul final. |
+| `.github/workflows/deploy-pages.yml` | Publicare pe GitHub Pages (D-020). |
+
+Detalii de implementare:
+
+- `meta refresh` stă în `<noscript>`, ca să nu concureze cu `location.replace()`: dacă ambele ar rula, `meta refresh` ar putea înlocui navigarea care păstrează query-ul și hash-ul. Fără JavaScript, `meta refresh` și linkul duc la `src/`, dar **fără** query și hash (sunt statice).
+- Manifestul **nu** are câmpul `id`. Conform specificației, `id` se rezolvă față de originea domeniului, nu față de manifest: `"id": "./"` ar deveni `https://rezervari.github.io/`, o identitate comună tuturor site-urilor contului. Fără `id`, identitatea aplicației este `start_url` (`.../outdoor-escape/src/`). Verificat în Chromium.
+- Manifestul **nu** are încă iconuri, pentru că nu există iconuri reale. Consecință: aplicația **nu** este instalabilă în Chrome (Chrome cere iconuri de cel puțin 144 px). Se adaugă când există iconurile.
+- `app.js` tratează lipsa service worker-ului (context nesigur, `file://`, unele moduri private) și eșecul înregistrării: aplicația afișează starea și continuă fără service worker.
+
+### Service worker — ce este și ce NU este offline în această etapă
+
+- Scope: `src/` (fișierul stă în `src/`, D-035). Rădăcina nu este controlată.
+- La instalare pune în cache doar fișierele fundației: `./`, `index.html`, `manifest.webmanifest`, `css/app.css`, `js/app.js`.
+- Pentru aceste fișiere: rețea mai întâi, cache ca rezervă. Când rețeaua răspunde, copia din cache se actualizează. Navigarea către `src/?...` folosește intrarea `./`.
+- Orice altă cerere nu este interceptată: `../content/`, alte domenii, cereri non-GET, fișiere care nu sunt în listă.
+- Nume cache: `outdoor-escape:shell:<versiune>` (D-035). La o versiune nouă (`CACHE_VERSION` în `sw.js`), cache-urile vechi cu prefixul `outdoor-escape:shell:` sunt șterse la activare. Cache-urile altor site-uri de pe același domeniu nu sunt atinse.
+- Service worker-ul nou se activează imediat (`skipWaiting` + `clients.claim`). În fundație nu există stare de joc care să fie afectată; comportamentul la actualizare în timpul unui joc se stabilește odată cu motorul (Faza 3).
+
+Offline în această etapă: doar ecranul fundației se poate redeschide fără rețea, după o primă vizită online. Conținutul jocurilor, media și rădăcina **nu** sunt disponibile offline. (Actualizat pentru motorul v1: vezi secțiunea 3c — aventura demo este acum în cache.) Nu există încă o strategie offline pentru joc (secțiunea 8).
+
+## 3c. Motorul de joc v1 (fără GPS, hartă, cronometru sau backend)
+
+Prima versiune funcțională a motorului. Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul nu conține texte sau răspunsuri de joc.
+
+### Fișiere
+
+| Fișier | Rol |
+| --- | --- |
+| `content/adventures/<id>.json` (D-037) | O aventură: date generale + lista de provocări. Aventura actuală este DEMO (fără locații reale, fără afirmații istorice). |
+| `src/js/content.js` | Încarcă JSON-ul (`fetch`, URL relativ la modul: `../../content/adventures/<id>.json`), validare minimă, erori pe înțelesul jucătorului (`AdventureLoadError`). |
+| `src/js/answers.js` | Singurul modul care citește câmpul `answer` și compară răspunsuri (D-021): `normalizeAnswer`, `answersMatch`, `createLocalValidator` (interfață asincronă `check(challengeId, input) → Promise<boolean>`), `withoutAnswers`. |
+| `src/js/game.js` | Motorul: stări, progres, scor. Fără DOM și fără stocare. Primește aventura **fără răspunsuri** și validatorul. Notifică schimbările prin `subscribe()`. |
+| `src/js/storage.js` | Salvare/restaurare/ștergere în `localStorage`, cheia `outdoor-escape:game:<id>` (prefix D-035; cheie confirmată — D-029). Nu aruncă excepții dacă stocarea lipsește. |
+| `src/js/app.js` | Leagă modulele, afișează ecranele, salvează automat la fiecare schimbare de stare, înregistrează service worker-ul. |
+
+Fluxul la pornire: `app.js` → `loadAdventure(id)` → `createLocalValidator(aventură)` + `withoutAnswers(aventură)` → `createGame({ adventure, validator, savedState })` → interfața. Aventura implicită este `brasov-centrul-vechi`; pentru teste se poate cere alta cu `src/?adventure=<id>` (id-ul este validat: litere mici, cifre, cratimă).
+
+### Formatul aventurii (schemaVersion 1)
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "brasov-centrul-vechi",
+  "demo": true,
+  "city": "Brașov",
+  "title": "…",
+  "description": "…",
+  "estimatedTime": 60,
+  "difficulty": "easy",
+  "challenges": [
+    { "id": "challenge-01", "title": "…", "description": "…", "hint": "…", "answer": "…", "points": 100 }
+  ]
+}
+```
+
+Obligatorii: `id`, `title`, `challenges` (cel puțin una); pentru fiecare provocare `id` (unic), `title`, `description`, `answer`, `points` (întreg ≥ 0). Opționale: `schemaVersion`, `demo`, `city`, `description`, `estimatedTime` (minute), `difficulty` (`easy`/`medium`/`hard`), `hint`.
+
+Câmpurile necunoscute sunt permise, ca formatul să poată fi extins fără a strica validarea: coordonate, imagini, mai multe indicii, variante de răspuns, tipuri de provocări, obiective, timp limită, recompense. Niciunul nu este implementat încă.
+
+Id-urile (`id` al aventurii și al provocărilor) trebuie să rămână stabile: progresul salvat este legat de ele.
+
+### Stări și progres
+
+- Starea jocului: `idle` → `playing` → `completed`. „Joacă din nou” / „Începe de la capăt” readuc jocul la `idle` și șterg progresul salvat.
+- Fiecare provocare are progresul `pending` | `solved` | `failed` | `skipped`, plus `attempts` și `hintUsed`. Indiciul este o dată, nu o stare (în spiritul D-030).
+  - `solved` — rezolvată corect; singura stare care aduce puncte și care se numără la „provocări rezolvate”.
+  - `skipped` — jucătorul a apăsat „Sari peste (0 puncte)”: 0 puncte, nu este rezolvată, jocul continuă.
+  - `failed` — închisă fără rezolvare, 0 puncte. Motorul o suportă (`failChallenge()`), dar nicio acțiune din interfață nu o produce încă; este pregătită pentru reguli viitoare (de exemplu număr maxim de încercări).
+- O provocare `pending` poate deveni `solved`, `skipped` sau `failed`; o provocare închisă nu își mai schimbă starea. Trecerea la următoarea provocare cere închiderea celei curente. Toate trei stările se salvează și se restaurează după refresh.
+- Scorul = suma `points` pentru provocările `solved` (`failed` și `skipped` = 0). Nu există penalizări (D-025 rămâne deschisă). Scorul se recalculează din conținut la restaurare; valoarea salvată nu este de încredere.
+- Starea salvată: `{ schemaVersion, adventureId, status, currentIndex, score, challenges: { <id>: { status, attempts, hintUsed } }, startedAt, completedAt }`. O stare salvată pentru altă aventură sau altă versiune de schemă este ignorată (jocul pornește de la zero). Provocările noi din conținut pornesc ca `pending`; cele eliminate sunt ignorate.
+- Mesajul „Răspuns incorect” nu este salvat: după refresh, provocarea nerezolvată apare fără mesaj. Mesajul „Corect!” / „sărită” se reconstruiește din progres.
+
+Această listă simplă de stări nu înlocuiește modelul din secțiunea 4 (locații, GPS, final); acela va fi integrat când se adaugă locațiile.
+
+### Normalizarea răspunsurilor (CONFIRMED — D-024)
+
+Înainte de comparare, ambele texte trec prin: descompunere Unicode (NFD) și eliminarea semnelor diacritice (acoperă `ă â î ș ț` și variantele cu sedilă `ş ţ`), litere mici, spațiile multiple reduse la unul, spațiile de la capete eliminate. Nu se elimină punctuația, nu se echivalează numerele scrise în litere și nu există fuzzy matching. Răspunsul gol nu este niciodată corect.
+
+### Service worker
+
+`SHELL_FILES` include noile module și aventura demo `../content/adventures/brasov-centrul-vechi.json` (aceeași strategie network-first). `CACHE_VERSION` = `v3`; cache-urile mai vechi cu prefixul `outdoor-escape:shell:` se șterg la activare. După o primă încărcare reușită, un refresh fără rețea încarcă aplicația și aventura demo din cache. Alte aventuri (sau alt conținut din `content/`) nu sunt puse în cache: fără rețea, ele duc la ecranul de eroare cu „Încearcă din nou”, iar progresul salvat rămâne intact.
+
+Limitare cunoscută (actualizări): service worker-ul folosește `fetch()` obișnuit, deci trece prin cache-ul HTTP al browserului (pe GitHub Pages, de obicei câteva minute). Imediat după o publicare nouă, un browser care a vizitat recent site-ul poate combina un `index.html` nou cu module JavaScript vechi. Se rezolvă singur la expirarea cache-ului HTTP; o soluție (URL-uri versionate sau `cache: "no-cache"` în service worker) este de decis separat.
 
 ## 4. Game state model
 
@@ -228,6 +328,8 @@ At minimum:
 - preserve local progress.
 
 Do not promise complete offline functionality until it has been tested.
+
+Stare: în scheletul PWA doar fișierele fundației sunt în cache (secțiunea 3b). Conținutul jocului și media nu sunt încă în cache.
 
 ## 9. Accessibility
 

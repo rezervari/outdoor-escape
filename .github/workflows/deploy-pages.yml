@@ -1,9 +1,23 @@
+# Publicarea pe GitHub Pages (D-020, D-035, D-036).
+#
+# Publică doar fișierele statice necesare site-ului, fără build și fără
+# transformări: index.html din rădăcină, src/ și content/.
+# NU publică docs/, tests/, .github/ sau alte fișiere de lucru.
+#
+# Fișierele sunt copiate neschimbate, cu aceeași structură, într-un folder
+# temporar din runner (_site/). Acesta este singurul mod în care
+# actions/upload-pages-artifact poate publica doar o parte din repository.
+#
+# Pas manual (proprietar): Settings → Pages → Source → GitHub Actions.
+#
+# Site: https://rezervari.github.io/outdoor-escape/
+# Aplicația: https://rezervari.github.io/outdoor-escape/src/
+
 name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -17,28 +31,49 @@ concurrency:
 
 jobs:
   build:
+    name: Pregătește fișierele site-ului
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Pages
+      - name: Assemble _site (allowlist, fără transformări)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for item in index.html src content; do
+            if [ ! -e "$item" ]; then
+              echo "::error::Lipsește '$item' din repository."
+              exit 1
+            fi
+          done
+          mkdir _site
+          cp -R index.html src content _site/
+          for forbidden in docs tests .github; do
+            if [ -e "_site/$forbidden" ]; then
+              echo "::error::'$forbidden' nu trebuie publicat."
+              exit 1
+            fi
+          done
+          echo "Fișiere publicate:"
+          find _site -type f | sort
+
+      - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
   deploy:
+    name: Publică pe GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-
+      url: ${{ steps.deployment.outputs.page_url }}src/
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4

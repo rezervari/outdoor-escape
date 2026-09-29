@@ -1,7 +1,7 @@
 {
-  "name": "Outdoor Escape (fundație)",
+  "name": "Outdoor Escape",
   "short_name": "Outdoor Escape",
-  "description": "Schelet tehnic provizoriu. Nu conține încă jocul.",
+  "description": "Versiune de dezvoltare, cu o aventură demonstrativă.",
   "lang": "ro",
   "dir": "ltr",
   "start_url": "./",
