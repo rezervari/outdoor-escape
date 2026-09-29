@@ -45,6 +45,7 @@ AI development:
 /
 ├── .github/
 │   └── workflows/          (workflow de publicare pe GitHub Pages — D-020, încă necreat)
+├── index.html              (doar redirecționare către src/ — D-036, încă necreat; NU este aplicația)
 ├── README.md
 ├── LICENSE                 (MIT — doar codul aplicației, vezi D-016)
 ├── LICENSE-CONTENT.md      (conținutul jocului — NU este MIT)
@@ -98,15 +99,26 @@ Notă (CONFIRMED — D-020): site-ul se publică printr-un workflow GitHub Actio
 
 | | Producție (GitHub Pages) | Local |
 | --- | --- | --- |
+| Rădăcina (doar redirecționare, D-036) | `https://rezervari.github.io/outdoor-escape/` | `http://localhost:8000/` |
 | Aplicația | `https://rezervari.github.io/outdoor-escape/src/` | `http://localhost:8000/src/` |
 | Conținutul | `https://rezervari.github.io/outdoor-escape/content/...` | `http://localhost:8000/content/...` |
+
+Diferența dintre `/` și `/src/`:
+- `/src/` este aplicația: `index.html` al jocului, manifestul PWA, service worker-ul, CSS/JS. Aici se instalează PWA-ul și aici indică toate intrările oficiale (coduri QR, linkuri, instrucțiuni pentru jucători).
+- `/` (rădăcina) conține doar `index.html` din rădăcina repository-ului, care redirecționează către `src/` (D-036). Nu are manifest, nu înregistrează service worker, nu conține logică de joc și nu este garantat offline.
+
+Comportamentul rădăcinii (CONFIRMED — D-036):
+- redirecționare cu `location.replace()` către calea relativă `src/`, păstrând parametrii de query și hash-ul;
+- `meta refresh` ca rezervă;
+- link vizibil către `src/` ca rezervă;
+- același comportament local și în producție.
 
 Reguli:
 - Toate căile sunt relative; nicio cale nu începe cu `/`. Din `src/`, conținutul se accesează prin `../content/...`.
 - Manifestul PWA (`manifest.webmanifest`) și service worker-ul (`sw.js`) stau lângă `index.html`, în `src/`.
 - Pentru MVP nu există routing bazat pe URL; ecranul afișat rezultă din starea internă a jocului. Dacă va fi nevoie ulterior, se folosește hash routing.
 - Cheile din `localStorage`, numele cache-urilor (Cache API) și orice alte chei persistente au prefixul proiectului (de exemplu `outdoor-escape:`). Domeniul `rezervari.github.io` este comun tuturor site-urilor GitHub Pages ale contului.
-- Workflow-ul de publicare copiază structura necesară (`src/`, `content/`) fără transformări de căi și fără build system.
+- Workflow-ul de publicare copiază structura necesară (`src/`, `content/` și `index.html` din rădăcină — D-036) fără transformări de căi și fără build system.
 
 Motivare: aceeași structură relativă local și online înseamnă că ce funcționează la `localhost` funcționează și pe GitHub Pages, fără cod dependent de mediu.
 

@@ -52,7 +52,7 @@ Apoi, în browser:
 - aplicația: `http://localhost:8000/src/`
 - conținutul (pentru verificare): `http://localhost:8000/content/...`
 
-Adresa `http://localhost:8000/` (fără `src/`) nu este aplicația.
+Adresa `http://localhost:8000/` (fără `src/`) nu este aplicația: după ce va exista `index.html` din rădăcina repository-ului (D-036), ea redirecționează automat către `http://localhost:8000/src/`, la fel ca `https://rezervari.github.io/outdoor-escape/` în producție. Pentru dezvoltare și testare se folosește direct adresa cu `src/`.
 
 Oprire: `Ctrl + C` în terminal.
 

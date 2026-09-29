@@ -74,6 +74,8 @@ Adresele aplicației, după ce va exista (D-035):
 - local: `http://localhost:8000/src/`
 - producție: `https://rezervari.github.io/outdoor-escape/src/`
 
+Rădăcina (`http://localhost:8000/`, respectiv `https://rezervari.github.io/outdoor-escape/`) doar redirecționează către `src/` (D-036). Codurile QR, linkurile oficiale și instrucțiunile pentru jucători indică direct adresa cu `/src/`.
+
 ## Securitate
 
 Nu se pun în repository chei API secrete, chei Stripe secrete, parole sau alte date confidențiale. Repository-ul este **public**.

@@ -403,7 +403,37 @@ Consecințe acceptate:
 - URL-ul pentru jucători conține `/src/`. Codurile QR și linkurile trebuie să indice direct spre `.../outdoor-escape/src/`.
 - Schimbarea ulterioară a adresei aplicației (alt folder sau domeniu propriu) ar face ca telefoanele să vadă o aplicație nouă. Progresul salvat și permisiunile nu s-ar transfera.
 
-Rămâne de stabilit (la implementarea workflow-ului, nu face parte din această decizie):
-- ce se afișează la `https://rezervari.github.io/outdoor-escape/` (pagină de redirecționare către `src/` sau pagină de eroare). O redirecționare nu ar funcționa offline, pentru că se află în afara zonei controlate de service worker.
+Stabilit ulterior:
+- comportamentul adresei `https://rezervari.github.io/outdoor-escape/` (rădăcina) — vezi D-036.
 
 Opțiuni analizate: A — aplicația în rădăcina site-ului (`.../outdoor-escape/`), cu căi diferite local și online; B — aceeași structură ca repository-ul (aleasă).
+
+---
+
+## D-036 — Comportamentul rădăcinii GitHub Pages
+Status: CONFIRMED (2026-09-29)
+
+Context:
+D-035 publică aplicația la `/outdoor-escape/src/`. Fără un fișier în rădăcină, `https://rezervari.github.io/outdoor-escape/` ar da 404. GitHub Pages nu are redirecționări pe server.
+
+Decizie:
+- În rădăcina repository-ului există un `index.html`, publicat la `https://rezervari.github.io/outdoor-escape/`.
+- `index.html` redirecționează automat către `/outdoor-escape/src/`.
+- Redirecționarea folosește o cale relativă către `src/`.
+- Se păstrează eventualii parametri de query și hash.
+- Se folosește `location.replace()`, astfel încât rădăcina să nu rămână în istoricul „Back”.
+- Se adaugă `meta refresh` ca rezervă.
+- Se păstrează un link vizibil către `src/`, ca rezervă pentru cazul în care redirecționarea nu funcționează.
+- `index.html` nu are manifest și nu înregistrează service worker.
+- Fișierul este copiat neschimbat de workflow-ul GitHub Actions.
+- Local, `http://localhost:8000/` are același comportament și redirecționează către `/src/`.
+- Codurile QR, linkurile oficiale și instrucțiunile pentru jucători indică direct `/outdoor-escape/src/`.
+
+Consecințe:
+- `index.html` din rădăcină nu face parte din aplicație și nu conține logică de joc. Aplicația rămâne în `src/`.
+- Workflow-ul publică, pe lângă `src/` și `content/`, și `index.html` din rădăcină (D-020, D-035).
+- Rădăcina nu este controlată de service worker (care stă în `src/`, D-035), deci nu este garantat că funcționează offline. Acesta este motivul pentru care intrările oficiale indică direct `/src/`.
+- Pagina nu poate fi instalată ca PWA (nu are manifest). Instalarea se face din `/src/`.
+- Testele de efectuat după implementare: `07_TESTING.md`, secțiunea 20.
+
+Opțiuni analizate: A — redirecționare (aleasă); B — pagină de intrare cu link; C — fără fișier în rădăcină (404).

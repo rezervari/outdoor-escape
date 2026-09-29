@@ -246,3 +246,20 @@ Pe lângă cazurile din secțiunea 5:
 2. Motorul obține rezultatul doar prin modulul de validare. Se verifică prin citirea codului la review.
 3. Dacă răspunsurile sunt stocate ca hash: răspunsul corect scris cu variațiile permise de normalizare (D-024) produce același rezultat ca forma de referință.
 4. Nicio documentație sau interfață nu prezintă hash-ul ca protecție reală a răspunsurilor.
+
+## 20. Redirecționarea din rădăcină (D-036 — după implementare)
+
+Se execută atât local (`http://localhost:8000/`), cât și în producție (`https://rezervari.github.io/outdoor-escape/`), cu aceleași rezultate așteptate.
+
+| ID | Pași | Rezultat așteptat |
+| --- | --- | --- |
+| R1 | Deschide adresa rădăcinii | Ajunge automat la `.../src/` (local: `http://localhost:8000/src/`; producție: `https://rezervari.github.io/outdoor-escape/src/`) |
+| R2 | Deschide rădăcina cu `?test=1#abc` | Ajunge la `.../src/?test=1#abc` (query și hash păstrate) |
+| R3 | Pornind de la o altă pagină, deschide rădăcina, apoi apasă „Back” | Browserul revine la pagina anterioară, nu la pagina de redirecționare (și nu intră într-o buclă) |
+| R4 | Dezactivează JavaScript (DevTools → Settings → Debugger → Disable JavaScript), deschide rădăcina | `meta refresh` duce la `.../src/` |
+| R5 | Verifică linkul vizibil de pe pagina rădăcinii (în pagină sau în DevTools → Elements) și deschide-l | Linkul există și duce la `.../src/` |
+| R6 | DevTools → Application pe pagina rădăcinii | Fără manifest, fără service worker înregistrat de această pagină |
+| R7 | DevTools → Network la deschiderea rădăcinii | Nicio cerere spre `https://rezervari.github.io/` în afara lui `/outdoor-escape/` |
+| R8 | Compară R1–R7 local și în producție | Comportament echivalent |
+
+Notă: `meta refresh` și linkul sunt statice, deci fără JavaScript nu pot păstra query-ul și hash-ul. Rezultatul așteptat pentru R2 fără JavaScript trebuie clarificat înainte de implementare.
