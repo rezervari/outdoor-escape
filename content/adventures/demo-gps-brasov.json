@@ -53,29 +53,38 @@
       "initialStatus": "locked"
     }
   ],
-  "missions": [
-    {
-      "id": "m-start",
-      "type": "location",
-      "track": "main",
-      "locationId": "start",
-      "initialStatus": "pending"
-    },
-    {
-      "id": "m-bariera",
-      "type": "location",
-      "track": "main",
-      "locationId": "bariera",
-      "initialStatus": "locked"
-    },
-    {
-      "id": "m-magazin",
-      "type": "location",
-      "track": "main",
-      "locationId": "magazin",
-      "initialStatus": "locked"
-    }
-  ],
+"missions": [
+  {
+    "id": "m-start",
+    "type": "location",
+    "track": "main",
+    "title": "Ajungi la punctul Start",
+    "briefing": "Mergi la punctul Start. Confirmarea se face automat prin GPS.",
+    "locationId": "start",
+    "initialStatus": "pending",
+    "points": 50
+  },
+  {
+    "id": "m-bariera",
+    "type": "location",
+    "track": "main",
+    "title": "Ajungi la Bariera",
+    "briefing": "Mergi la punctul Bariera. Confirmarea se face automat prin GPS.",
+    "locationId": "bariera",
+    "initialStatus": "locked",
+    "points": 50
+  },
+  {
+    "id": "m-magazin",
+    "type": "location",
+    "track": "main",
+    "title": "Ajungi la Magazin",
+    "briefing": "Mergi la punctul Magazin. Acesta este punctul final al demonstrației.",
+    "locationId": "magazin",
+    "initialStatus": "locked",
+    "points": 100
+  }
+],
   "events": [
     {
       "id": "ev-start",
