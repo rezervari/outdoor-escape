@@ -125,6 +125,7 @@ repository + context pack + product specification.
 - `CONFIRMED` — decizie aprobată de proprietarul proiectului.
 - `WORKING TARGET` — țintă de lucru, poate fi ajustată.
 - `PROPOSED` — problemă deschisă. **Nu este aprobată.** Nu se implementează nimic pe baza ei până nu este marcată `CONFIRMED` de proprietar. Recomandările notate aici sunt ale lui Claude, nu decizii.
+- `SUPERSEDED` — decizie (sau problemă deschisă) înlocuită de o decizie ulterioară, indicată în status. Textul original se păstrează ca istoric; nu se mai aplică. (Adăugat la 2026-09-29, odată cu D-046.)
 
 Cuvintele de stare rămân în engleză, pentru consecvență cu intrările D-001–D-013 și pentru a putea fi căutate ușor.
 
@@ -293,7 +294,9 @@ Recomandare Claude: pentru MVP, un telefon principal per echipă; ceilalți juc�
 ---
 
 ## D-027 — Hărți: furnizor de tile-uri și includerea Leaflet
-Status: PROPOSED
+Status: SUPERSEDED (2026-09-29) — înlocuită de D-046 (anterior: PROPOSED)
+
+Notă (2026-09-29): întrebările de mai jos (dacă MVP-ul are hartă, furnizorul de tile-uri, modul de includere a Leaflet) au primit răspuns în D-046: Leaflet 1.9.4 inclus local, fără CDN; OpenStreetMap standard tiles ca furnizor inițial, configurabil. Textul original se păstrează ca istoric.
 
 Context:
 Serverele de tile-uri OpenStreetMap au o politică de utilizare care limitează folosirea intensivă sau comercială. Leaflet poate fi inclus direct în repository sau încărcat de pe un CDN; varianta locală funcționează mai bine offline.
@@ -571,9 +574,11 @@ Stare implementat / pregătit: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
 ---
 
 ## D-045 — M-003.1: adaptorul Browser Geolocation
-Status: PROPOSED (2026-09-29) — de confirmat de proprietar la review
+Status: CONFIRMED (2026-09-29) — implementată și validată în M-003.1 (comisă și publicată: „feat: integrate browser geolocation”)
 
-Decizie propusă (implementată local, necomisă):
+Istoric: înregistrată inițial ca PROPOSED („de confirmat de proprietar la review”), când implementarea era doar locală și necomisă. Confirmată de proprietar după review-ul, testarea și publicarea M-003.1. Conținutul deciziei de mai jos este neschimbat.
+
+Decizie (formularea din momentul propunerii):
 - `src/js/location.js` este singurul modul care atinge `navigator.geolocation`: `watchPosition`/`clearWatch`, fără porniri multiple, erori, retry, context securizat. Transformă poziția în `{ lat, lng, accuracy, timestamp }` și o transmite nemodificată; nu calculează distanțe, praguri sau tranziții. `geo.js` rămâne pur.
 - Fluxul: `location.js` → `app.js` → `game.reportPosition(fix)` (contractul M-002, neschimbat), doar când jocul este „playing”. La start și la misiunea următoare, ultima poziție primită este retrimisă.
 - Adăugare **aditivă** în `geo.js`: `assessFix(fix, gps)` — regula de precizie extrasă din `evaluateProximity` (care o folosește intern, comportament identic). Motiv: interfața trebuie să afișeze „semnal slab” și când nu există locații evaluate (ecranul de start, aventură fără locații), iar `reportPosition` nu acoperă aceste cazuri; fără `assessFix` pragul ar fi fost duplicat în UI.
@@ -583,3 +588,119 @@ Decizie propusă (implementată local, necomisă):
 - „Am ajuns” folosește `game.confirmArrival` (același `arrive` ca GPS-ul).
 
 Detalii și limite: `11_ADVENTURE_SCHEMA_V2.md` (secțiunile 0 și 5), `07_TESTING.md` (secțiunea 24).
+
+---
+
+## D-046 — Tehnologia hărții
+Status: CONFIRMED (2026-09-29) — înlocuiește D-027
+
+Decizie:
+- Motorul de hartă este **Leaflet**, versiune fixată **1.9.4** (pin exact; o versiune nouă cere o decizie nouă).
+- Leaflet este **inclus local** în repository, **fără CDN** și fără pas de build (D-018).
+- Providerul de tile-uri este **configurabil** (configurație, nu cod de joc). Providerul inițial: **OpenStreetMap standard tiles** (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`).
+- **Atribuirea obligatorie** a providerului este afișată vizibil pe hartă, permanent.
+- Fără API key pentru implementarea inițială.
+- Fără hărți offline, fără prefetch, fără descărcare în bloc (bulk download) de tile-uri.
+- Harta este **strat de vizualizare / orientare**. Nu influențează progresul jocului. Nu există routing și nici navigație turn-by-turn.
+- Providerul trebuie să poată fi schimbat ulterior **fără modificarea logicii jocului**.
+- Dacă harta sau providerul de tile-uri nu funcționează, jocul continuă să funcționeze ca în M-003.1 (GPS, cardul obiectivului, „Am ajuns”).
+- Nu se modifică algoritmul GPS și nici schema locațiilor.
+
+Constrângere operațională (politica OpenStreetMap pentru tile-uri — nu este logică de joc):
+- atribuire vizibilă și neacoperită;
+- tile-urile standard sunt folosite doar pentru utilizare interactivă normală: se cer doar tile-urile zonei privite de jucător;
+- fără prefetch, fără bulk download, fără stocare offline de tile-uri; nu se construiește niciun mecanism care descarcă preventiv o zonă (nici în service worker);
+- cache-ul HTTP al browserului respectă headerele providerului: fără parametri anti-cache, fără `Cache-Control: no-cache`; service worker-ul nu interceptează tile-urile;
+- browserul trimite Referer-ul implicit: nu se setează o `Referrer-Policy` restrictivă;
+- serviciul OSM standard nu are garanții de disponibilitate (SLA); înainte de o lansare comercială, providerul se reevaluează, doar prin configurație.
+
+---
+
+## D-047 — Contractul modulului `map.js`
+Status: CONFIRMED (2026-09-29)
+
+Decizie:
+`src/js/map.js` este **exclusiv strat vizual**: singurul modul care folosește Leaflet și desenează modelul primit (D-048).
+
+API:
+
+```js
+createMap({ container, tileConfig })   // întoarce instanța hărții
+
+updatePlayer(fix, quality)
+updateLocations(locations)
+setCurrentObjective(locationId)
+fitToAdventure(locations)
+centerOnPlayer()
+destroy()
+```
+
+`map.js`:
+- nu accesează `navigator.geolocation`;
+- nu apelează `game.reportPosition()`;
+- nu apelează `game.confirmArrival()`;
+- nu interpretează stările GPS (`near`, `inside`, `arrived`, `outside`, calitatea poziției): le primește deja traduse și doar le desenează;
+- nu conține logică de progres;
+- nu conține reguli de business (praguri, distanțe, rază implicită).
+
+`geo.js` și `game.js` rămân sursele de adevăr pentru GPS și progres; `location.js` rămâne singurul modul care atinge `navigator.geolocation` (D-045).
+
+Precizări aprobate în D-049: metodele aparțin instanței întoarse de `createMap`; `createMap` acceptă opțional `view` și `leaflet` (injectabil pentru teste) și aruncă `MapError` (`leaflet_unavailable` | `invalid_container` | `invalid_tile_config`).
+
+---
+
+## D-048 — Modelul vizual transmis hărții
+Status: CONFIRMED (2026-09-29)
+
+Decizie:
+Harta primește doar acest model:
+
+```js
+{
+  player: {
+    fix: { lat, lng, accuracy, timestamp },   // sau null
+    quality                                   // "valid" | "weak" | "uncertain" | "none"
+  },
+  locations: [
+    { id, name, lat, lng, radius, state, visible }
+  ],
+  currentObjectiveId                          // sau null
+}
+```
+
+- Modelul este construit de `src/js/map-model.js`, modul pur, care **traduce** stările existente ale motorului și ale adaptorului de locație. Nu calculează nimic GPS.
+- `map.js` nu devine sursă de adevăr: nu deduce stări, nu păstrează progres, nu modifică jocul.
+- Calitatea GPS este **tradusă din starea existentă** (M-003.1). Nu se introduce nicio regulă GPS nouă. Corespondența exactă este fixată în D-049.
+- `distanceMeters` **nu face parte** din contractul hărții în M-003.2.
+- Nu se transmit către `map.js`: `game`, `geo`, `location.js`, `navigator.geolocation`, reguli GPS sau formule de distanță.
+
+---
+
+## D-049 — Comportamentul vizual și UX al hărții (Map V1)
+Status: CONFIRMED (2026-09-29) — specificație aprobată; implementarea M-003.2 NU a început
+
+Specificația completă (cu cele 30 de criterii de acceptare): [`12_MAP_SPECIFICATION_M-003.2.md`](12_MAP_SPECIFICATION_M-003.2.md). Propunerea originală (`Claude outputs/PROPUNERE_D-049_MAP_V1.md`, ignorată de Git, D-044) rămâne doar ca artefact local istoric. Deciziile esențiale sunt rezumate mai jos.
+
+Alegerile proprietarului: D-049-C → `uncertain`; D-049-D → R2; celelalte (A…M) în forma din revizia 2.
+
+Decizii:
+- **A — Leaflet:** 1.9.4, inclus local în `src/vendor/leaflet/` (`leaflet.js`, `leaflet.css`, `LICENSE`), încărcat cu `<script defer>` înainte de `app.js`, adăugat în `SHELL_FILES` al service worker-ului. Versiunea și suma SHA-256 se notează în `03_ARCHITECTURE.md` la implementare.
+- **B — Stările locațiilor** (traducere 1:1 din progresul motorului, în ordine):
+  `completed` → `completed`; `discovered` sau `arrivedAt` setat → `arrived`; `unlocked` + prezență `near` → `near`; `unlocked` → `available`; `locked` → `locked` cu `visible: false`. O locație descoperită printr-un eveniment, fără sosire fizică, apare ca `arrived`.
+- **C — Calitatea GPS** (traducere 1:1 din `LocationDisplay`, rezultatul existent `describeLocation(trackerState, geo.assessFix(...))`):
+  `gps-ready` → `valid`; `gps-uncertain` → **`uncertain`** (termenul final); `gps-off` / `gps-unavailable` / `gps-permission-denied` / `gps-searching` / `gps-error` → `none`. `weak` rămâne valoare validă a contractului D-048, dar **nu este produsă în V1** (M-003.1 nu are o astfel de stare); dacă apare, se desenează ca `uncertain`. Textul pentru jucător rămâne „Semnal GPS slab”.
+- **C2 — Ultima poziție reținută:** `player.fix` este exact ultima observație pe care `location.js` o reține deja. Dacă `quality` este `none`, dar există un fix (ex. `gps-error` după o poziție primită), harta îl arată ca punct gri „ultima poziție”, fără cerc de acuratețe. Este **doar comportament vizual**, nu o stare GPS: nu schimbă `quality`, progresul sau evenimentele. Harta nu folosește `timestamp` pentru nicio decizie.
+- **D — Raza:** raza efectivă desenată **provine din motor**, nu din `map-model.js` sau `map.js` (care nu aplică valori implicite). Varianta aleasă: **R2** — la implementare, `geo.js` primește un export **aditiv** `effectiveRadius(location, gps)`, folosit intern de `evaluateProximity` (comportament identic, ca precedentul `assessFix` din D-045). `game.js` îl expune aditiv ca `getLocation(id).radiusMeters`. Algoritmul GPS nu se schimbă. Copia preexistentă din validarea din `schema.js` rămâne în afara M-003.2.
+- **E — Schimbarea obiectivului:** o singură recentrare (încadrare pe noul obiectiv + jucător, dacă există poziție), chiar dacă utilizatorul făcuse pan. Fix-urile GPS ulterioare actualizează doar markerul.
+- **F — Poziția în ecran:** după cardul obiectivului, înălțime `clamp(200px, 40vh, 360px)`. Butoanele „Centrează pe mine” și „Vezi obiectivele” stau sub hartă, în afara ei.
+- **G — „Centrează pe mine”:** o singură centrare, **fără urmărire continuă**. Harta nu se mișcă niciodată la un fix GPS obișnuit.
+- **H — Locațiile `locked`** (inclusiv `hiddenUntilDiscovered`) nu sunt afișate niciodată.
+- **I — Precizie > 1000 m:** cercul de acuratețe nu se desenează. Este o limită doar de desen, fără efect asupra jocului. Cercul de acuratețe nu influențează niciodată zoom-ul.
+- **J — Configurația hărții** este în `defaults.js` (`DEFAULT_MAP_TILES`, `DEFAULT_MAP_VIEW`), nu în `settings` / schema aventurii.
+- **K — Harta apare** doar pe ecranul de joc și doar când aventura are cel puțin o locație.
+- **L — `map-model.js`** este modul pur de transformare, testat cu `node --test`. `leaflet` este injectabil în `createMap`, pentru teste fără dependențe.
+- **M — Testare:** testele automate (`node --test`) și testarea automată în Chromium (geolocație emulată, fixture copiat temporar doar în copia servită local, ca `07_TESTING.md` §24.2) fac parte din M-003.2. Testarea pe telefon cu o aventură reală cu locații este **amânată**: cere conținut cu coordonate reale, în afara M-003.2.
+
+Principiu general: harta **nu afectează progresul**. Cercul obiectivului este doar reprezentare vizuală; sosirea este decisă exclusiv de `geo.js` / `game.js`, iar „Am ajuns” rămâne rezerva (D-006).
+
+Fișiere de modificat la implementare: `src/js/map.js` (nou), `src/js/map-model.js` (nou), `src/vendor/leaflet/` (nou), `src/index.html`, `src/css/app.css`, `src/js/app.js`, `src/js/defaults.js`, `src/sw.js` (`CACHE_VERSION` `v6`), `src/js/game.js` (doar `radiusMeters`, aditiv), `src/js/geo.js` (doar `effectiveRadius`, aditiv), teste noi (testele existente rămân nemodificate), documentația.

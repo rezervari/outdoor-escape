@@ -44,7 +44,7 @@ Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii, s�
 | Audio | schemă (`audio.tracks`, text alternativ obligatoriu); efecte `audio` | player, activarea sunetului, cache offline pentru fișiere |
 | GPS în fundal / ecran blocat, geofencing | — (M-003.1 acoperă doar pagina activă) | nu este garantat de browser/PWA; D-028 rămâne deschisă |
 | Notificări | — | tot |
-| Hartă | stările locațiilor (`locked` / `unlocked` / `discovered` / `completed`) pentru „fog of war” | componenta de hartă și furnizorul (D-027) |
+| Hartă | stările locațiilor (`locked` / `unlocked` / `discovered` / `completed`) pentru „fog of war”; **specificația M-003.2 aprobată** (D-046–D-049: Leaflet 1.9.4 local, OSM configurabil, contractul `map.js`, modelul vizual) | implementarea M-003.2 (componenta de hartă) — **neîncepută** |
 
 ## 1. Module
 

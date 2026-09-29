@@ -143,7 +143,7 @@ Offline în această etapă: doar ecranul fundației se poate redeschide fără 
 
 Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul nu conține texte, răspunsuri sau logică specifică unei aventuri. Motorul V1 (provocări liniare) a fost extins în fundația V2: misiuni pe trasee, locații, evenimente, parteneri, secrete. Specificația completă a schemei și a contractelor: [`11_ADVENTURE_SCHEMA_V2.md`](11_ADVENTURE_SCHEMA_V2.md).
 
-**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele; din M-003.1: adaptorul Browser Geolocation (`location.js`), urmărirea poziției cu pagina activă, starea GPS și explicația permisiunii în interfață, obiectivul misiunii curente cu „Am ajuns”. **Pregătit, dar neimplementat:** misiunile partener, secrete și cu timp în UI, interfața naratorului, audio, harta, GPS în fundal / geofencing, notificări. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
+**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele; din M-003.1: adaptorul Browser Geolocation (`location.js`), urmărirea poziției cu pagina activă, starea GPS și explicația permisiunii în interfață, obiectivul misiunii curente cu „Am ajuns”. **Pregătit, dar neimplementat:** misiunile partener, secrete și cu timp în UI, interfața naratorului, audio, harta, GPS în fundal / geofencing, notificări. **Harta (M-003.2): specificație aprobată (D-046–D-049), implementare în așteptare** — modulele `map.js` / `map-model.js` nu există încă. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
 
 ### Fișiere
 
