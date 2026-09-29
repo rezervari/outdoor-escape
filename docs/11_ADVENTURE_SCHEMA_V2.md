@@ -18,21 +18,32 @@ Principiul: **motorul este stabil, conținutul este extensibil.** Motorul nu șt
 | Modelul de locație (distanță, rază, precizie, near / arrival / leave, exit margin) | `src/js/geo.js`, `src/js/defaults.js` | `tests/geo.test.js` |
 | Motorul de evenimente (filtre, acțiuni, `once`, limita lanțurilor) | `src/js/events.js`, `src/js/game.js` | `tests/events.test.js`, `tests/progress-v2.test.js` |
 | Progresul V2 (stări pe entități, scor derivat, restaurare) | `src/js/game.js` | `tests/progress-v2.test.js` |
-| Teste | `tests/` + fixture fictiv `tests/fixtures/adventure-v2-demo.json` | 63 de teste |
+| Teste | `tests/` + fixture fictiv `tests/fixtures/adventure-v2-demo.json` | 63 de teste (M-002); 83 după M-003.1 |
 
-Interfața actuală folosește doar ce are nevoie aventura demo V1 (misiuni-ghicitoare pe traseul principal, indicii, sărire, scor).
+**IMPLEMENTAT în M-003.1** (GPS real din browser, doar cu pagina activă):
+
+| Componentă | Unde | Teste |
+| --- | --- | --- |
+| Adaptorul Browser Geolocation (`watchPosition` / `clearWatch`, fără porniri multiple, erori, retry, context securizat) | `src/js/location.js`, opțiunile în `src/js/defaults.js` (`DEFAULT_GEOLOCATION_OPTIONS`) | `tests/location.test.js` (mock `navigator.geolocation`) |
+| Integrarea browser → `location.js` → `game.reportPosition` → `geo.js` → evenimente → UI | `src/js/app.js` | `tests/location-integration.test.js` + verificare Chromium cu geolocație emulată (`07_TESTING.md`, 24.2) |
+| Starea GPS în interfață (neactivată / caut / activ + precizie / semnal slab / eroare / refuzat / indisponibil) | `src/index.html`, `src/js/app.js`, `src/css/app.css`; calitatea fix-ului: `geo.assessFix` | `tests/location.test.js`, `tests/geo.test.js` |
+| Explicația înainte de permisiune + butonul „Activează locația” | `src/index.html`, `src/js/app.js` | manual / Chromium |
+| Misiuni de locație în UI: cardul obiectivului, rezolvare la sosire, „Am ajuns” (`confirmArrival` — același mecanism ca GPS-ul) | `src/js/app.js` | `tests/location-integration.test.js` + Chromium |
+
+Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii, sărire, scor și — pentru aventurile V2 care au locații — obiectivul misiunii curente cu GPS și „Am ajuns”. Aventura publică `brasov-centrul-vechi` este V1, fără locații: pe ea se vede doar starea GPS (informativ).
 
 **PREGĂTIT, DAR NEIMPLEMENTAT ÎN UI** (există în schemă și/sau în motor, testat doar automat; jucătorul nu îl vede încă):
 
 | Mecanică | Ce există deja | Ce lipsește |
 | --- | --- | --- |
-| Misiuni de locație (`location`) | schemă; motorul le rezolvă la sosire (`reportPosition` / `confirmArrival`) | interfață („Am ajuns”, distanță, stare GPS) |
+| Misiuni de locație (`location`) | schemă; motor; **interfață minimă din M-003.1** (obiectiv, stare GPS, „Am ajuns”) | afișarea distanței; conținut real cu locații |
 | Misiuni partener (`partner`) | schemă generică (`partners`, `verification`, `reward`, `validity`); `unlock_partner` | interfață; aplicarea `validity`/`reward`; parteneri și coduri reale |
 | Misiuni secrete (`secret`, traseul `secret`) | schemă; descoperire prin trecere pe lângă o locație ascunsă; deblocare prin evenimente | interfață pentru misiunile din afara traseului principal |
 | Misiuni cu timp (`timed`) | schemă (`timeLimitSeconds`); `startedAt` salvat | aplicarea limitei de timp (D-025, D-028); interfață |
 | Game Master / narator (UI) | `narrator.messages`; efecte `message` produse de motor (`takeEffects()`) | afișarea mesajelor în interfață |
 | Audio | schemă (`audio.tracks`, text alternativ obligatoriu); efecte `audio` | player, activarea sunetului, cache offline pentru fișiere |
-| GPS real din browser | contractul `reportPosition(fix)` / `confirmArrival` | sursa Geolocation API, permisiuni, fundal / ecran stins |
+| GPS în fundal / ecran blocat, geofencing | — (M-003.1 acoperă doar pagina activă) | nu este garantat de browser/PWA; D-028 rămâne deschisă |
+| Notificări | — | tot |
 | Hartă | stările locațiilor (`locked` / `unlocked` / `discovered` / `completed`) pentru „fog of war” | componenta de hartă și furnizorul (D-027) |
 
 ## 1. Module
@@ -47,9 +58,10 @@ Interfața actuală folosește doar ce are nevoie aventura demo V1 (misiuni-ghic
 | `src/js/answers.js` | Normalizarea și verificarea răspunsurilor (D-021, D-024) | — |
 | `src/js/game.js` | Motorul: stări, progres V2, reguli de evenimente, tranziții de locație, migrare | `schema.js`, `events.js`, `geo.js` |
 | `src/js/storage.js` | `localStorage`, cheia `outdoor-escape:game:<id>` | — |
+| `src/js/location.js` | Adaptorul Browser Geolocation API (M-003.1): pornire/oprire, erori, normalizarea fix-ului. Nu interpretează poziția | `defaults.js` |
 | `src/js/app.js` | Interfața (singurul modul cu DOM) | toate |
 
-Toate modulele, cu excepția `app.js`, sunt pure (fără DOM, fără API-uri de browser) și sunt testate cu `node --test`.
+Toate modulele, cu excepția `app.js` și `location.js`, sunt pure (fără DOM, fără API-uri de browser) și sunt testate cu `node --test`. `location.js` este singurul modul care atinge `navigator.geolocation`; API-ul i se injectează, deci este testat în Node cu un mock.
 
 ## 2. Versiuni și compatibilitate (D-038)
 
@@ -151,6 +163,22 @@ Reguli (`geo.js`):
 3. **near** dacă `distanța ≤ nearDistance`; altfel **outside**.
 4. **Histerezis:** odată „inside”, ieșirea cere `distanța > pragul de intrare + exitMargin`; odată „near”, trecerea la „outside” cere `distanța > nearDistance + exitMargin`.
 5. Motorul memorează prezența pe locație (`outside | near | inside`) și produce **tranziții**, nu stări repetate: `player_near_location`, `player_arrived` (+ `location_discovered` la prima sosire), `player_left_area`.
+
+Sursa observațiilor în browser (M-003.1):
+
+```text
+navigator.geolocation.watchPosition
+        ↓  GeolocationPosition
+location.js   → { lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy, timestamp }
+        ↓  onFix(fix) — fiecare fix, nemodificat, fără deduplicare
+app.js        → game.reportPosition(fix)   (doar în starea „playing”)
+        ↓
+geo.js        → zone, histerezis, tranziții   → events.js → progres → UI
+```
+
+- `geo.assessFix(fix, gps)` → `{ usable, reason }`: aceeași regulă de precizie ca `evaluateProximity` (care o folosește intern). Interfața o folosește pentru „semnal slab” fără praguri proprii, inclusiv înainte de începerea jocului sau într-o aventură fără locații.
+- Opțiunile `watchPosition` (`enableHighAccuracy`, `timeout`, `maximumAge`) sunt în `defaults.js` (`DEFAULT_GEOLOCATION_OPTIONS`); țin de dispozitiv, nu de aventură.
+- La începerea jocului și la trecerea la misiunea următoare, ultima poziție primită este trimisă din nou motorului (browserul nu trimite poziții la interval fix).
 
 Limitări acceptate (PWA): browserul suspendă JavaScript și GPS-ul în fundal sau cu ecranul blocat (mai ales pe iPhone). Motorul nu presupune urmărire continuă: evaluează fiecare observație primită, iar confirmarea manuală rămâne mereu disponibilă. Coordonatele jucătorului **nu** se salvează (doar stări și momente).
 
@@ -314,8 +342,8 @@ Cheia rămâne `outdoor-escape:game:<id>`. Forma V2:
 
 Compatibil cu versiunea anterioară: `start`, `submitAnswer`, `useHint`, `skipChallenge`, `failChallenge`, `next`, `reset`, `getState`, `subscribe`, `getSummary`, `getCurrentChallenge` (alias pentru `getCurrentMission`).
 
-Nou: `content` (aventura normalizată), `getCurrentMission`, `getMission`, `getOpenMissions`, `getLocation`, `getProgressSummary`, `takeEffects`, `submitMissionAnswer(missionId, input)`, `requestHint(missionId?)`, `skipMission`, `failMission`, `reportPosition(fix)`, `confirmArrival(locationId)`.
+Nou în M-002: `content` (aventura normalizată), `getCurrentMission`, `getMission`, `getOpenMissions`, `getLocation`, `getProgressSummary`, `takeEffects`, `submitMissionAnswer(missionId, input)`, `requestHint(missionId?)`, `skipMission`, `failMission`, `reportPosition(fix)`, `confirmArrival(locationId)`.
 
 ## 13. Ce NU este implementat în această etapă
 
-Vezi tabelul din secțiunea 0. În plus, nu există: notificări, parteneri reali și coduri reale, plăți, backend, cache offline pentru mai multe aventuri sau pentru audio.
+Vezi tabelul din secțiunea 0. În plus, nu există: GPS în fundal / geofencing, hartă (M-003.2), audio, notificări, parteneri reali și coduri reale, plăți, backend, cache offline pentru mai multe aventuri sau pentru audio.

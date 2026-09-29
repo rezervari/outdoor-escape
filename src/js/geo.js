@@ -3,8 +3,8 @@
  *
  * NU folosește Geolocation API. Primește o observație GPS de forma
  *   { lat, lng, accuracy, timestamp? }   (grade zecimale WGS84, precizie în metri)
- * și produce zone și tranziții. Sursa observației (browser, test, simulare)
- * este treaba altui modul, într-o etapă ulterioară.
+ * și produce zone și tranziții. Sursa observației din browser este location.js
+ * (M-003.1); geo.js rămâne pur și testabil cu date simulate.
  *
  * Reguli (setările vin din defaults.js / settings.gps al aventurii):
  * - precizie lipsă, invalidă sau > maxAccuracy → zona „uncertain”: nu declanșează nimic;
@@ -65,6 +65,22 @@ export function distanceMeters(a, b) {
 }
 
 /**
+ * Calitatea unei observații, independent de orice locație (aceeași regulă ca în
+ * evaluateProximity — singura sursă a pragului de precizie):
+ *   { usable: true,  reason: null }
+ *   { usable: false, reason: "invalid_fix" | "low_accuracy" }
+ * Folosită de interfață pentru starea „semnal slab”, fără a calcula praguri proprii.
+ */
+export function assessFix(fix, gps = DEFAULT_SETTINGS.gps) {
+  if (!isValidCoordinates(fix)) return { usable: false, reason: "invalid_fix" };
+  const accuracy = fix.accuracy;
+  if (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > gps.maxAccuracy) {
+    return { usable: false, reason: "low_accuracy" };
+  }
+  return { usable: true, reason: null };
+}
+
+/**
  * Evaluează o observație față de o locație.
  * location: { coordinates: {lat, lng}, radius? }
  * fix:      { lat, lng, accuracy }
@@ -73,15 +89,16 @@ export function distanceMeters(a, b) {
 export function evaluateProximity(location, fix, gps = DEFAULT_SETTINGS.gps) {
   const radius = Number.isFinite(location.radius) && location.radius > 0 ? location.radius : gps.defaultRadius;
 
-  if (!isValidCoordinates(fix)) {
+  const quality = assessFix(fix, gps);
+  if (quality.reason === "invalid_fix") {
     return { zone: Zone.UNCERTAIN, reason: "invalid_fix", radiusMeters: radius };
   }
   const distance = distanceMeters(location.coordinates, fix);
   const accuracy = fix.accuracy;
   const base = { distanceMeters: distance, accuracyMeters: accuracy, radiusMeters: radius };
 
-  if (!Number.isFinite(accuracy) || accuracy < 0 || accuracy > gps.maxAccuracy) {
-    return { ...base, zone: Zone.UNCERTAIN, reason: "low_accuracy" };
+  if (!quality.usable) {
+    return { ...base, zone: Zone.UNCERTAIN, reason: quality.reason };
   }
 
   const insideThreshold = radius + Math.min(accuracy, radius / 2);

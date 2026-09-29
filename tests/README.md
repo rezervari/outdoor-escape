@@ -25,8 +25,10 @@ Necesită Node.js 20 sau mai nou. `package.json` din rădăcină există doar pe
 | `storage.test.js` | `src/js/storage.js` | cheia `outdoor-escape:game:<id>`, salvare/restaurare/resetare, date corupte, `localStorage` indisponibil |
 | `game.test.js` | `src/js/game.js` | stările `idle → playing → completed`, răspuns corect/incorect/gol, indiciu, stările `solved`/`failed`/`skipped` (inclusiv după refresh), calculul scorului, restaurarea, resetarea — pe aventura demo V1 |
 | `schema.test.js` | `src/js/schema.js`, `defaults.js`, `content.js` | validarea V2 (structură și referințe între entități), extensibilitate, conversia V1 → V2, valorile implicite centrale, încărcarea V2 |
-| `geo.test.js` | `src/js/geo.js` | distanțe, rază, precizie („uncertain”), near / arrival / leave, exit margin |
+| `geo.test.js` | `src/js/geo.js` | distanțe, rază, precizie („uncertain”), near / arrival / leave, exit margin, `assessFix` (aceeași regulă ca `evaluateProximity`) |
 | `events.test.js` | `src/js/events.js` | filtre, `once`, acțiuni, duplicate, limitarea lanțurilor și a buclelor |
+| `location.test.js` | `src/js/location.js` | adaptorul Geolocation cu mock `navigator.geolocation` (`helpers/mock-geolocation.js`): API indisponibil / context nesigur, permisiune refuzată (inclusiv sincron), erori generice, `watchPosition` reușit, `stop` și cleanup, start duplicat, retry, `GeolocationPosition` → fix, starea afișată |
+| `location-integration.test.js` | `location.js` + `game.js` + `geo.js` + `events.js` | browser (mock) → `reportPosition`: outside → near → arrived până în regulile de evenimente și progres, precizie bună/slabă („uncertain”), fallback manual (GPS nesigur, refuzat, indisponibil), poziții duplicate, tranziții repetate, oprire |
 | `progress-v2.test.js` | `src/js/game.js` | progresul V2 pe fixture-ul fictiv: GPS prin motor, confirmare manuală, evenimente, trasee main/bonus/secret, final, salvare/restaurare, migrarea progresului V1, lipsa logicii specifice unei aventuri |
 
 ## Fixture-uri

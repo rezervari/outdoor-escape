@@ -25,7 +25,7 @@
  */
 
 const CACHE_PREFIX = "outdoor-escape:shell:";
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 // Relative la sw.js, adică la src/.
@@ -41,6 +41,7 @@ const SHELL_FILES = [
   "js/events.js",
   "js/game.js",
   "js/geo.js",
+  "js/location.js",
   "js/schema.js",
   "js/storage.js",
   // Conținut: aventura demo, ca refresh-ul fără rețea să o poată încărca.

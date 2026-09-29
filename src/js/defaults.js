@@ -31,3 +31,14 @@ export function resolveSettings(settings = {}) {
     events: { ...DEFAULT_SETTINGS.events, ...(source.events || {}) },
   };
 }
+
+/**
+ * Opțiunile pentru navigator.geolocation.watchPosition (M-003.1).
+ * Țin de dispozitiv/browser, nu de aventură, deci nu sunt în `settings`.
+ * Pragurile de joc (precizie, rază, histerezis) rămân în DEFAULT_SETTINGS.gps.
+ */
+export const DEFAULT_GEOLOCATION_OPTIONS = Object.freeze({
+  enableHighAccuracy: true, // GPS-ul telefonului, nu doar Wi-Fi/celular (consum mai mare de baterie)
+  timeout: 20000, // ms — cât așteaptă browserul o poziție înainte de eroarea TIMEOUT
+  maximumAge: 5000, // ms — cât de veche poate fi o poziție din cache-ul browserului
+});

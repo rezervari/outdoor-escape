@@ -61,6 +61,15 @@
       <h2 id="challenge-title"></h2>
       <p id="challenge-description"></p>
 
+      <!-- Obiectivul misiunii curente (dacă are o locație). Stările vin din motor. -->
+      <div id="objective" class="objective" hidden aria-live="polite">
+        <p class="objective-title">📍 Obiectiv: <strong id="objective-name"></strong></p>
+        <p id="objective-status" class="objective-status"></p>
+        <p id="objective-instructions" class="objective-instructions" hidden></p>
+        <p id="objective-gps-note" class="objective-note"></p>
+        <button type="button" class="button button-primary" id="btn-arrived">Am ajuns</button>
+      </div>
+
       <form id="answer-form" novalidate>
         <label for="answer-input">Răspunsul tău</label>
         <input id="answer-input" name="answer" type="text"
@@ -100,6 +109,23 @@
       <button type="button" class="button button-primary" id="btn-replay">Joacă din nou</button>
     </section>
 
+    <!-- Starea locației (M-003.1). Vizibilă pe ecranul de start și în joc. -->
+    <section id="location-panel" class="location-panel" hidden aria-labelledby="location-title">
+      <h2 id="location-title" class="location-title">📍 Locația ta</h2>
+      <p id="location-status" class="location-status" role="status" aria-live="polite"></p>
+      <p id="location-detail" class="location-detail" hidden></p>
+      <p id="location-intro" class="location-intro" hidden>
+        Outdoor Escape folosește locația ta pentru a detecta când ajungi la obiectivele aventurii.
+        Locația este folosită doar pe acest telefon, cât timp aplicația este deschisă, și nu este salvată.
+      </p>
+      <p id="location-no-objectives" class="location-detail" hidden>
+        Aventura curentă nu are încă obiective GPS: locația este afișată doar informativ.
+      </p>
+      <button type="button" class="button button-primary" id="btn-location-start">Activează locația</button>
+      <button type="button" class="button button-primary" id="btn-location-retry" hidden>Reîncearcă</button>
+      <button type="button" class="button button-secondary" id="btn-location-stop" hidden>Oprește locația</button>
+    </section>
+
     <details class="status">
       <summary>Stare tehnică</summary>
       <dl>
@@ -109,6 +135,8 @@
         <dd id="status-sw">necunoscut</dd>
         <dt>Salvare progres</dt>
         <dd id="status-storage">necunoscut</dd>
+        <dt>Geolocație</dt>
+        <dd id="status-geo">necunoscut</dd>
       </dl>
     </details>
   </main>

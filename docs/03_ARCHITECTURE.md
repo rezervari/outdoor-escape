@@ -143,7 +143,7 @@ Offline în această etapă: doar ecranul fundației se poate redeschide fără 
 
 Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul nu conține texte, răspunsuri sau logică specifică unei aventuri. Motorul V1 (provocări liniare) a fost extins în fundația V2: misiuni pe trasee, locații, evenimente, parteneri, secrete. Specificația completă a schemei și a contractelor: [`11_ADVENTURE_SCHEMA_V2.md`](11_ADVENTURE_SCHEMA_V2.md).
 
-**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele. **Pregătit, dar neimplementat în UI:** misiunile de locație, partener, secrete și cu timp, interfața naratorului, audio, GPS-ul real din browser, harta. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
+**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele; din M-003.1: adaptorul Browser Geolocation (`location.js`), urmărirea poziției cu pagina activă, starea GPS și explicația permisiunii în interfață, obiectivul misiunii curente cu „Am ajuns”. **Pregătit, dar neimplementat:** misiunile partener, secrete și cu timp în UI, interfața naratorului, audio, harta, GPS în fundal / geofencing, notificări. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
 
 ### Fișiere
 
@@ -158,7 +158,8 @@ Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul 
 | `src/js/answers.js` | Singurul modul care citește câmpul `answer` și compară răspunsuri (D-021): `normalizeAnswer`, `answersMatch`, `createLocalValidator` (interfață asincronă `check(missionId, input) → Promise<boolean>`), `withoutAnswers` (V1 și V2). |
 | `src/js/game.js` | Motorul: stări, progres V2 pe entități, reguli de evenimente, tranziții de locație, scor derivat, migrarea progresului V1. Fără DOM și fără stocare. Primește aventura **fără răspunsuri** și validatorul. Notifică schimbările prin `subscribe()`; mesajele/sunetele sunt „efecte” (`takeEffects()`). |
 | `src/js/storage.js` | Salvare/restaurare/ștergere în `localStorage`, cheia `outdoor-escape:game:<id>` (prefix D-035; cheie confirmată — D-029). Nu aruncă excepții dacă stocarea lipsește. |
-| `src/js/app.js` | Leagă modulele, afișează ecranele, salvează automat la fiecare schimbare de stare, înregistrează service worker-ul. |
+| `src/js/location.js` | Adaptorul Browser Geolocation API (M-003.1): verifică disponibilitatea (inclusiv contextul securizat), `watchPosition`/`clearWatch` fără porniri multiple, erori (refuz → oprire; indisponibil/timeout → urmărirea continuă), retry, transformă `GeolocationPosition` în `{ lat, lng, accuracy, timestamp }` și îl transmite mai departe. Nu calculează distanțe, praguri sau tranziții. API-ul se injectează (testabil în Node). |
+| `src/js/app.js` | Leagă modulele, afișează ecranele, salvează automat la fiecare schimbare de stare, înregistrează service worker-ul. Trimite fix-urile de la `location.js` în `game.reportPosition` (doar în joc) și afișează starea GPS și obiectivul; nu calculează nimic geo. |
 
 Fluxul la pornire: `app.js` → `loadAdventure(id)` → `toAdventureV2(...)` → `createLocalValidator(aventură)` + `withoutAnswers(aventură)` → `createGame({ adventure, validator, savedState })` → interfața. Aventura implicită este `brasov-centrul-vechi`; pentru teste se poate cere alta cu `src/?adventure=<id>` (id-ul este validat: litere mici, cifre, cratimă).
 
@@ -205,7 +206,7 @@ Id-urile (aventură, misiuni, locații etc.) trebuie să rămână stabile: prog
 
 ### Service worker
 
-`SHELL_FILES` include toate modulele din `js/` (inclusiv `schema.js`, `defaults.js`, `events.js`, `geo.js`) și aventura demo `../content/adventures/brasov-centrul-vechi.json` (aceeași strategie network-first; 14 intrări). `CACHE_VERSION` = `v4`; cache-urile mai vechi cu prefixul `outdoor-escape:shell:` se șterg la activare. După o primă încărcare reușită, un refresh fără rețea încarcă aplicația și aventura demo din cache. Orice modul nou din `js/` trebuie adăugat în `SHELL_FILES` (cu versiune nouă a cache-ului), altfel aplicația nu pornește offline. Alte aventuri (sau alt conținut din `content/`) nu sunt puse în cache: fără rețea, ele duc la ecranul de eroare cu „Încearcă din nou”, iar progresul salvat rămâne intact.
+`SHELL_FILES` include toate modulele din `js/` (inclusiv `schema.js`, `defaults.js`, `events.js`, `geo.js`, `location.js`) și aventura demo `../content/adventures/brasov-centrul-vechi.json` (aceeași strategie network-first; 15 intrări). `CACHE_VERSION` = `v5` (M-003.1: adăugat `location.js`); cache-urile mai vechi cu prefixul `outdoor-escape:shell:` se șterg la activare. După o primă încărcare reușită, un refresh fără rețea încarcă aplicația și aventura demo din cache. Orice modul nou din `js/` trebuie adăugat în `SHELL_FILES` (cu versiune nouă a cache-ului), altfel aplicația nu pornește offline. Alte aventuri (sau alt conținut din `content/`) nu sunt puse în cache: fără rețea, ele duc la ecranul de eroare cu „Încearcă din nou”, iar progresul salvat rămâne intact.
 
 Limitare cunoscută (actualizări): service worker-ul folosește `fetch()` obișnuit, deci trece prin cache-ul HTTP al browserului (pe GitHub Pages, de obicei câteva minute). Imediat după o publicare nouă, un browser care a vizitat recent site-ul poate combina un `index.html` nou cu module JavaScript vechi. Se rezolvă singur la expirarea cache-ului HTTP; o soluție (URL-uri versionate sau `cache: "no-cache"` în service worker) este de decis separat.
 
@@ -308,7 +309,9 @@ The GPS module should expose a simple result such as:
 
 The game engine decides what that result means.
 
-Notă (2026-09-29, D-039): contractul implementat este în `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 5. Locația are `coordinates: { lat, lng }`, `radius` (metri) și `fallback`. `geo.js` întoarce `{ zone: inside | near | outside | uncertain, distanceMeters, accuracyMeters, radiusMeters, … }`; motorul primește observații prin `reportPosition(fix)` și produce tranziții (`player_near_location`, `player_arrived`, `player_left_area`). Confirmarea manuală: `confirmArrival(locationId)`. Motorul nu folosește Geolocation API; sursa observațiilor din browser este o etapă ulterioară.
+Notă (2026-09-29, D-039): contractul implementat este în `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 5. Locația are `coordinates: { lat, lng }`, `radius` (metri) și `fallback`. `geo.js` întoarce `{ zone: inside | near | outside | uncertain, distanceMeters, accuracyMeters, radiusMeters, … }`; motorul primește observații prin `reportPosition(fix)` și produce tranziții (`player_near_location`, `player_arrived`, `player_left_area`). Confirmarea manuală: `confirmArrival(locationId)`. Motorul nu folosește Geolocation API.
+
+Actualizare M-003.1: sursa observațiilor din browser este `src/js/location.js` (adaptor), conectat în `app.js` la `game.reportPosition(fix)`. Fluxul și limitele (doar pagina activă, fără fundal): `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 5, și `07_TESTING.md`, secțiunea 24.
 
 ## 8. Offline strategy
 

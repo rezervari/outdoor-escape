@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { distanceMeters, evaluateProximity, nextPresence, isValidCoordinates, Zone, Presence, Transition } from "../src/js/geo.js";
+import { distanceMeters, evaluateProximity, nextPresence, isValidCoordinates, assessFix, Zone, Presence, Transition } from "../src/js/geo.js";
 import { DEFAULT_SETTINGS, resolveSettings } from "../src/js/defaults.js";
 
 // La ecuator, 1 grad de latitudine ≈ 111 195 m (raza medie 6 371 008,8 m).
@@ -125,4 +125,16 @@ test("nextPresence: o observație incertă nu schimbă prezența", () => {
   assert.deepEqual(nextPresence(Presence.INSIDE, uncertain), { presence: Presence.INSIDE, transitions: [] });
   assert.deepEqual(nextPresence(Presence.OUTSIDE, evaluateProximity(location, fixAt(0, 200))), { presence: Presence.OUTSIDE, transitions: [] });
   assert.equal(nextPresence("valoare-stricata", evaluateProximity(location, fixAt(500))).presence, Presence.OUTSIDE);
+});
+
+test("assessFix: aceeași regulă de precizie ca evaluateProximity (o singură formulă)", () => {
+  for (const accuracy of [0, 10, 59.9, 60, 60.1, 200, -1, NaN, undefined]) {
+    const fix = { lat: 0, lng: 0, accuracy };
+    const quality = assessFix(fix, gps);
+    const proximity = evaluateProximity(location, fix, gps);
+    assert.equal(quality.usable, proximity.zone !== Zone.UNCERTAIN, `accuracy=${accuracy}`);
+    if (!quality.usable) assert.equal(quality.reason, proximity.reason);
+  }
+  assert.deepEqual(assessFix({ lat: 999, lng: 0, accuracy: 5 }), { usable: false, reason: "invalid_fix" });
+  assert.deepEqual(assessFix({ lat: 0, lng: 0, accuracy: 25 }, resolveSettings({ gps: { maxAccuracy: 20 } }).gps), { usable: false, reason: "low_accuracy" });
 });

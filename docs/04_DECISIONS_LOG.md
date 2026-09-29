@@ -567,3 +567,19 @@ Decizie (confirmată de proprietar după implementarea M-002):
 
 Stare implementat / pregătit: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
 
+
+---
+
+## D-045 — M-003.1: adaptorul Browser Geolocation
+Status: PROPOSED (2026-09-29) — de confirmat de proprietar la review
+
+Decizie propusă (implementată local, necomisă):
+- `src/js/location.js` este singurul modul care atinge `navigator.geolocation`: `watchPosition`/`clearWatch`, fără porniri multiple, erori, retry, context securizat. Transformă poziția în `{ lat, lng, accuracy, timestamp }` și o transmite nemodificată; nu calculează distanțe, praguri sau tranziții. `geo.js` rămâne pur.
+- Fluxul: `location.js` → `app.js` → `game.reportPosition(fix)` (contractul M-002, neschimbat), doar când jocul este „playing”. La start și la misiunea următoare, ultima poziție primită este retrimisă.
+- Adăugare **aditivă** în `geo.js`: `assessFix(fix, gps)` — regula de precizie extrasă din `evaluateProximity` (care o folosește intern, comportament identic). Motiv: interfața trebuie să afișeze „semnal slab” și când nu există locații evaluate (ecranul de start, aventură fără locații), iar `reportPosition` nu acoperă aceste cazuri; fără `assessFix` pragul ar fi fost duplicat în UI.
+- Opțiunile `watchPosition` (`enableHighAccuracy: true`, `timeout: 20000`, `maximumAge: 5000`) sunt în `defaults.js` (`DEFAULT_GEOLOCATION_OPTIONS`), separat de `settings.gps` al aventurii: țin de dispozitiv, nu de conținut.
+- Urmărirea pornește doar prin „Activează locația” (după explicație), nu automat, nici după refresh. Se oprește la `pagehide`.
+- Doar pagina activă. Fără fundal, geofencing, notificări, hartă (M-003.2).
+- „Am ajuns” folosește `game.confirmArrival` (același `arrive` ca GPS-ul).
+
+Detalii și limite: `11_ADVENTURE_SCHEMA_V2.md` (secțiunile 0 și 5), `07_TESTING.md` (secțiunea 24).

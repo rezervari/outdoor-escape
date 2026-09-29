@@ -347,3 +347,59 @@ Aventura folosită: `tests/fixtures/adventure-v2-demo.json` (fictivă, coordonat
 | V1 | Testele G1–G19 (secțiunea 22) | Neschimbate față de versiunea anterioară (aventura demo V1 este convertită la încărcare) |
 | V2 | Cu progres salvat de versiunea anterioară: DevTools → Application → Local Storage → cheia `outdoor-escape:game:brasov-centrul-vechi` cu o valoare `schemaVersion: 1` (de ex. `{"schemaVersion":1,"adventureId":"brasov-centrul-vechi","status":"playing","currentIndex":1,"score":100,"challenges":{"challenge-01":{"status":"solved","attempts":1,"hintUsed":true},"challenge-02":{"status":"pending","attempts":2,"hintUsed":true},"challenge-03":{"status":"pending","attempts":0,"hintUsed":false}},"startedAt":1790000000000,"completedAt":null}`), apoi F5 | Jocul continuă la „Provocarea 2 din 3”, scor 100, indiciul provocării 2 vizibil. După următoarea acțiune, cheia conține `"schemaVersion":2` și `currentMissionId` |
 | V3 | După publicare, deschide `.../outdoor-escape/tests/fixtures/adventure-v2-demo.json` | 404 (fixture-ul nu este publicat) |
+
+## 24. M-003.1 — GPS real din browser (Location Adapter)
+
+Fluxul testat: `navigator.geolocation.watchPosition` → `src/js/location.js` → `game.reportPosition(fix)` → `geo.js` (zone, histerezis) → `events.js` → progres → interfață. Ținta M-003.1: **aplicația deschisă și activă pe telefon** (fără fundal).
+
+### 24.1 Automat — `npm test` (Node, fără browser)
+
+| Fișier | Acoperă |
+| --- | --- |
+| `tests/location.test.js` | mock minimal `navigator.geolocation` (`tests/helpers/mock-geolocation.js`): API indisponibil (fără `navigator` / fără `geolocation` / context nesigur), `watchPosition` reușit + opțiuni configurabile, `stop` + cleanup (callback-uri întârziate ignorate), `start` duplicat (un singur watcher), permisiune refuzată (inclusiv raportată sincron), erori generice (indisponibil / timeout / necunoscut) + retry fără dubluri, eroare în consumator, metode folosite detașat, `GeolocationPosition` → `{ lat, lng, accuracy, timestamp }`, stările afișate (`describeLocation` + `geo.assessFix`) |
+| `tests/location-integration.test.js` | fixture-ul fictiv V2: outside → near → arrived până în reguli (`player_near_location`, `player_arrived`), misiune `location` rezolvată, scor; fix-uri înainte de start (neraportate); poziții duplicate (fără schimbări de stare); plecare + revenire (fără sosire/puncte duble); precizie slabă → `uncertain` → apoi sosire; fallback manual (GPS nesigur, refuzat, indisponibil) prin `confirmArrival`; oprirea urmăririi |
+| `tests/geo.test.js` | în plus: `assessFix` folosește exact regula de precizie din `evaluateProximity` |
+
+### 24.2 Browser automat (Chromium headless, geolocație emulată — verificare locală, nu face parte din `npm test`)
+
+Făcut pe o copie locală servită prin HTTP (`localhost`), cu fixture-ul copiat temporar ca `content/adventures/demo-ceasul-oprit.json` **doar în copia servită** (nu în repository, nu publicat). Scriptul nu este în repository (fără dependențe noi).
+
+| ID | Verificare |
+| --- | --- |
+| L1 | Pornire: panoul „📍 Locația ta” afișează „Locația nu este activată.”, explicația și „Activează locația”; niciun watcher înainte de click |
+| L2 | Click → „GPS activ”, „Precizie ~12 m”; exact un watcher |
+| L3 | Precizie 150 m → „⚠️ Semnal GPS slab” (pragul vine din `geo.assessFix`) |
+| L4 | „Oprește locația” → `clearWatch`, 0 watchers; repornire + click repetat → tot 1 watcher |
+| L5 | Aventura publică (V1, fără locații): fix-uri în joc fără erori; mesajul „fără obiective GPS” |
+| L6 | Fixture V2: card „Obiectiv”, formular de răspuns ascuns la misiunea `location`; outside → „Ești aproape” → „Ai ajuns la obiectiv! +50”; în progres: `arrivalSource: "gps"`, regulile `ev-aproape-piata`, `ev-sosire-piata`, misiunea `solved` |
+| L7 | În obiectiv cu precizie 250 m → nicio sosire, notă „GPS-ul nu poate confirma…”; precizie 10 m → sosire GPS |
+| L8 | Permisiune refuzată → „Accesul la locație a fost refuzat.” + „Reîncearcă”; „Am ajuns” → `arrivalSource: "manual"`, aceleași reguli și aceeași rezolvare |
+| L9 | API absent → „Acest browser nu oferă acces la locație.” |
+| L10 | Timeout simulat → eroare + „Reîncearcă”; o poziție ulterioară → „GPS activ” |
+| L11 | Refresh în joc → progresul se restaurează; urmărirea **nu** pornește singură |
+
+### 24.3 Manual pe telefon — `https://rezervari.github.io/outdoor-escape/src/` (după publicare)
+
+| ID | Pași | Rezultat așteptat |
+| --- | --- | --- |
+| P1 | Deschide aplicația | Panoul „📍 Locația ta”: „Locația nu este activată.” + explicația + „Activează locația” |
+| P2 | Apasă „Activează locația” | Browserul poate cere permisiunea (nu întotdeauna — dacă a fost deja acordată/refuzată, nu mai apare); apoi „Caut poziția…” |
+| P3 | Așteaptă afară | „GPS activ” + „Precizie ~N m” |
+| P4 | Intră într-o clădire / între blocuri | Precizia crește; peste 60 m → „⚠️ Semnal GPS slab” |
+| P5 | „Oprește locația”, apoi „Activează locația” din nou | Starea revine corect; „Stare tehnică → Geolocație” arată un singur `watchPosition activ` |
+| P6 | Refuză permisiunea (setările site-ului), „Reîncearcă” | „Accesul la locație a fost refuzat.”; jocul continuă normal |
+| P7 | Începe aventura | Fără erori; aventura publică nu are locații, deci nu apare niciun obiectiv (GPS doar informativ) |
+
+**Limită cunoscută:** pașii „obiectiv de test → near → arrived → evenimente → gameplay” **nu pot fi făcuți pe telefon** cu aventura publică (V1, fără locații), iar aventura publică nu se modifică pentru test. Sunt acoperiți de 24.1 (Node) și 24.2 (Chromium cu geolocație emulată). Testul real pe teren cere o aventură cu coordonate reale (Faza 5).
+
+### 24.4 Fundal, ecran blocat, tab suspendat — ce NU este garantat
+
+| Situație | Comportament real |
+| --- | --- |
+| Pagina deschisă, activă, ecran aprins | `watchPosition` livrează poziții la intervale decise de browser/sistem (nu fix); fiecare este evaluată |
+| Tab schimbat / browser în fundal | Browserele mobile (Safari iOS, Chrome Android) opresc sau rarefiază pozițiile și pot suspenda JavaScript-ul; nicio sosire nu este detectată cât timp pagina nu rulează |
+| Telefon blocat | Fără poziții (iOS: garantat oprit; Android: de regulă oprit/suspendat) |
+| Revenire în aplicație | Urmărirea continuă (dacă pagina nu a fost descărcată din memorie); prima poziție nouă este evaluată normal; dacă jucătorul a trecut deja prin zonă în fundal, sosirea se confirmă când revine în rază sau cu „Am ajuns” |
+| Pagina descărcată / reîncărcată | Progresul se restaurează; urmărirea trebuie reactivată cu „Activează locația” (fără pornire automată). La plecarea de pe pagină (`pagehide`) urmărirea se oprește; la revenirea din bfcache se reia dacă era activă |
+
+Nu există geofencing în fundal și nici notificări: un browser/PWA nu le garantează. „Am ajuns” rămâne mereu calea de rezervă (când aventura o permite).

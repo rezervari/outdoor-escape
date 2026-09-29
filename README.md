@@ -8,7 +8,7 @@ Primul joc este gândit pentru **Brașov**. Titlul de lucru este „Tainele Bres
 
 ## Stare
 
-**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. Pregătit, dar încă fără interfață: misiunile de locație, partener, secrete și cu timp, naratorul, audio, GPS-ul real din browser și harta — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
+**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. **M-003.1:** poziția reală a telefonului (Browser Geolocation API, doar cu aplicația deschisă) este conectată la motor: stare GPS, permisiune explicată, obiectivul misiunii și „Am ajuns” ca rezervă. Aventura demo publică nu are încă locații, deci pe ea GPS-ul este doar informativ. Pregătit, dar încă fără interfață: misiunile partener, secrete și cu timp, naratorul, audio, harta, GPS-ul în fundal și notificările — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
 
 Traseul, locațiile și puzzle-urile jocului real nu sunt finale până nu sunt verificate pe teren.
 

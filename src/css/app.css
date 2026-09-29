@@ -259,3 +259,71 @@ a:focus-visible,
   outline: 3px solid #d98e04;
   outline-offset: 3px;
 }
+
+/* ---------- Locație (M-003.1) ---------- */
+
+.location-panel {
+  margin-top: 2rem;
+  padding: 1rem;
+  border: 2px solid #1f3a2e;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.location-panel .location-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.125rem;
+}
+
+.location-status {
+  margin: 0;
+  font-weight: 700;
+}
+
+.location-panel[data-state="gps-uncertain"],
+.location-panel[data-state="gps-error"],
+.location-panel[data-state="gps-permission-denied"],
+.location-panel[data-state="gps-unavailable"] {
+  border-color: #8a1c1c;
+}
+
+.location-panel[data-state="gps-ready"] {
+  border-color: #1d6b36;
+}
+
+.location-detail,
+.location-intro {
+  margin: 0.5rem 0 0;
+}
+
+.location-panel .button-secondary {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.objective {
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border: 2px solid #1f3a2e;
+  border-left-width: 0.5rem;
+  border-radius: 0.25rem;
+  background: #fff;
+}
+
+.objective p {
+  margin: 0 0 0.5rem;
+}
+
+.objective-status {
+  font-weight: 700;
+}
+
+.objective[data-presence="inside"] {
+  border-color: #1d6b36;
+  background: #e6f4ea;
+}
+
+.objective-note {
+  font-size: 1rem;
+  color: #333;
+}
