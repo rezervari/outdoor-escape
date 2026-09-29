@@ -34,7 +34,7 @@ node --version     # doar dacă se folosește varianta Node
 
 Aplicația nu trebuie deschisă direct ca fișier (`file://...`). În modul `file://`, browserele blochează sau limitează modulele JavaScript, încărcarea fișierelor JSON cu `fetch` și service worker-ul.
 
-Din rădăcina repository-ului (provizoriu — folderul servit depinde de D-020):
+Serverul se pornește **din rădăcina repository-ului**, astfel încât structura locală să fie identică cu cea publicată (D-035):
 
 ```bash
 cd "/c/Users/<utilizator>/Documents/Outdoor Escape"
@@ -47,7 +47,12 @@ python -m http.server 8000 --bind 127.0.0.1
 npx serve -l 8000 .
 ```
 
-Apoi, în browser: `http://localhost:8000/`
+Apoi, în browser:
+
+- aplicația: `http://localhost:8000/src/`
+- conținutul (pentru verificare): `http://localhost:8000/content/...`
+
+Adresa `http://localhost:8000/` (fără `src/`) nu este aplicația.
 
 Oprire: `Ctrl + C` în terminal.
 
@@ -74,15 +79,16 @@ Metoda standard pentru proiect nu este încă aleasă (D-031, PROPOSED). Opțiun
 ### A. Adresa HTTPS de pe GitHub Pages
 
 - GitHub Pages servește site-ul prin HTTPS, deci merge pe Android și pe iPhone.
-- Adresa unui site de proiect are forma `https://<cont>.github.io/<repository>/`, adică aplicația rulează într-un subfolder. Căile din aplicație trebuie să fie relative, nu absolute (`/`).
-- Limitare: fiecare test cere un commit și un push, iar repository-ul fiind public, ce se publică este vizibil public. Modul exact de publicare depinde de D-020.
+- Adresa aplicației în producție este `https://rezervari.github.io/outdoor-escape/src/` (D-035). Subfolderul `/outdoor-escape/` este impus de GitHub Pages, de aceea toate căile din aplicație sunt relative, nu absolute (`/`).
+- Publicarea se face printr-un workflow GitHub Actions (D-020), la push pe `main`, după ce workflow-ul va exista. Progresul unei publicări se vede în tab-ul „Actions” al repository-ului.
+- Limitare: fiecare test cere un commit și un push, iar ce se publică este vizibil public.
 
 ### B. Android: redirecționare de port prin USB (Chrome)
 
 1. Pe telefon: activează „Opțiuni pentru dezvoltatori” și „Depanare USB”.
 2. Conectează telefonul la calculator prin USB.
 3. Pe calculator, în Chrome: `chrome://inspect/#devices` → „Port forwarding” → `8000` → `localhost:8000`.
-4. Pe telefon, în Chrome: `http://localhost:8000/`.
+4. Pe telefon, în Chrome: `http://localhost:8000/src/`.
 
 Telefonul vede adresa ca `localhost`, deci GPS-ul și service worker-ul funcționează. Aceeași conexiune permite vederea consolei telefonului în DevTools. Metoda nu funcționează pentru iPhone.
 
@@ -117,7 +123,7 @@ Un service worker poate servi fișiere vechi din cache după o modificare. În C
 
 Pe telefon: se șterg datele site-ului din setările browserului.
 
-Strategia de versionare a cache-ului se stabilește când se implementează service worker-ul (Faza 3).
+Numele cache-urilor și cheile din `localStorage` au prefixul proiectului (`outdoor-escape:`, D-035). Pe `localhost`, stocarea este separată de cea din producție. Strategia de versionare a cache-ului se stabilește când se implementează service worker-ul (Faza 3).
 
 ## 8. Rețea și firewall pe Windows
 

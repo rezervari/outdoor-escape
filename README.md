@@ -27,7 +27,7 @@ Repository-ul conține deocamdată documentația, deciziile și specificațiile 
 - Web App Manifest și Service Worker;
 - conținut în JSON;
 - Browser Geolocation API; Leaflet + OpenStreetMap doar unde o hartă este cu adevărat utilă;
-- găzduire statică pe **GitHub Pages**.
+- găzduire statică pe **GitHub Pages**, publicată printr-un workflow GitHub Actions care publică doar fișierele aplicației (fără framework de build).
 
 Deocamdată **nu** există backend, plăți (Stripe), conturi de utilizator sau analytics. Acestea vor fi introduse doar când vor exista cerințe clare. Vezi [`docs/04_DECISIONS_LOG.md`](docs/04_DECISIONS_LOG.md).
 
@@ -69,11 +69,16 @@ Documentația nouă se scrie în limba română (D-017). Unele documente existen
 
 Vezi [`docs/10_LOCAL_DEVELOPMENT.md`](docs/10_LOCAL_DEVELOPMENT.md). Pe scurt: nu există build, fișierele se servesc cu un server static local, iar funcțiile GPS/PWA pe un telefon real necesită HTTPS.
 
+Adresele aplicației, după ce va exista (D-035):
+
+- local: `http://localhost:8000/src/`
+- producție: `https://rezervari.github.io/outdoor-escape/src/`
+
 ## Securitate
 
 Nu se pun în repository chei API secrete, chei Stripe secrete, parole sau alte date confidențiale. Repository-ul este **public**.
 
-Orice fișier publicat pe GitHub Pages (inclusiv conținutul JSON al jocului) poate fi citit de oricine. Verificarea în browser (inclusiv prin hash) nu este o barieră de securitate. Accesul plătit va trebui validat pe server într-o fază ulterioară.
+Orice fișier publicat pe GitHub Pages (inclusiv conținutul JSON al jocului) poate fi citit de oricine. În MVP, răspunsurile la puzzle-uri sunt verificate în browser (D-021). Hash-ul poate ascunde răspunsurile de o privire superficială, dar nu este o barieră de securitate. Motorul este proiectat astfel încât validarea să poată fi mutată ulterior pe server. Accesul plătit va trebui validat pe server într-o fază ulterioară.
 
 ## Licență
 

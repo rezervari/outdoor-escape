@@ -95,7 +95,7 @@ Preferred MVP direction:
 - PWA manifest
 - Service Worker
 - GitHub repository
-- GitHub Pages or equivalent static deployment where technically appropriate
+- GitHub Pages or equivalent static deployment where technically appropriate (confirmat: GitHub Pages prin GitHub Actions — D-014, D-020)
 - Leaflet + OpenStreetMap for map presentation where needed
 - Browser Geolocation API
 - localStorage / IndexedDB for local progress as appropriate

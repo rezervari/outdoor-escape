@@ -31,7 +31,8 @@ Persistence:
 
 Hosting:
 - GitHub Pages (CONFIRMED — vezi D-014 în 04_DECISIONS_LOG.md)
-- Structura exactă a publicării pe GitHub Pages este încă deschisă (PROPOSED — vezi D-020).
+- Publicare prin GitHub Actions, fără framework de build (CONFIRMED — vezi D-020)
+- Aplicația: `https://rezervari.github.io/outdoor-escape/src/` (CONFIRMED — vezi D-035)
 
 Version control:
 - GitHub
@@ -42,6 +43,8 @@ AI development:
 ## 3. Suggested repository structure
 
 /
+├── .github/
+│   └── workflows/          (workflow de publicare pe GitHub Pages — D-020, încă necreat)
 ├── README.md
 ├── LICENSE                 (MIT — doar codul aplicației, vezi D-016)
 ├── LICENSE-CONTENT.md      (conținutul jocului — NU este MIT)
@@ -89,7 +92,23 @@ AI development:
 
 This is a starting structure, not an instruction to create every file immediately.
 
-Notă: GitHub Pages poate publica fie rădăcina repository-ului, fie folderul `/docs`, fie un artefact construit printr-un workflow GitHub Actions. Folderul `/docs` este deja folosit pentru documentație, iar `src/` și `content/` sunt foldere separate. Modul de publicare este o decizie deschisă (PROPOSED — vezi D-020) și nu este stabilit de această structură.
+Notă (CONFIRMED — D-020): site-ul se publică printr-un workflow GitHub Actions care publică doar fișierele statice necesare aplicației (codul din `src/` și conținutul din `content/`), fără `docs/` și `tests/`, fără framework de build. Site-ul publicat păstrează structura repository-ului (CONFIRMED — vezi D-035 și secțiunea 3a).
+
+## 3a. URL-uri și căi (CONFIRMED — D-035)
+
+| | Producție (GitHub Pages) | Local |
+| --- | --- | --- |
+| Aplicația | `https://rezervari.github.io/outdoor-escape/src/` | `http://localhost:8000/src/` |
+| Conținutul | `https://rezervari.github.io/outdoor-escape/content/...` | `http://localhost:8000/content/...` |
+
+Reguli:
+- Toate căile sunt relative; nicio cale nu începe cu `/`. Din `src/`, conținutul se accesează prin `../content/...`.
+- Manifestul PWA (`manifest.webmanifest`) și service worker-ul (`sw.js`) stau lângă `index.html`, în `src/`.
+- Pentru MVP nu există routing bazat pe URL; ecranul afișat rezultă din starea internă a jocului. Dacă va fi nevoie ulterior, se folosește hash routing.
+- Cheile din `localStorage`, numele cache-urilor (Cache API) și orice alte chei persistente au prefixul proiectului (de exemplu `outdoor-escape:`). Domeniul `rezervari.github.io` este comun tuturor site-urilor GitHub Pages ale contului.
+- Workflow-ul de publicare copiază structura necesară (`src/`, `content/`) fără transformări de căi și fără build system.
+
+Motivare: aceeași structură relativă local și online înseamnă că ce funcționează la `localhost` funcționează și pe GitHub Pages, fără cod dependent de mediu.
 
 ## 4. Game state model
 
@@ -153,6 +172,22 @@ payment confirmation
 → player activation.
 
 Never trust a frontend-only secret to authorize paid access.
+
+## 6a. Validarea răspunsurilor (CONFIRMED — D-021)
+
+Pentru MVP, răspunsurile se verifică în browser. Motorul trebuie să permită mutarea ulterioară a validării pe server fără rescrierea lui.
+
+Cerințe:
+- Validarea este izolată într-un singur modul (de exemplu `puzzles.js` sau un modul dedicat). Restul motorului (stări, UI, indicii, cronometru) nu compară răspunsuri și nu citește direct câmpurile cu răspunsuri din conținut.
+- Motorul trimite modulului identificatorul puzzle-ului și textul introdus de jucător și primește un rezultat (corect/incorect).
+- Interfața este asincronă (rezultatul vine ca `Promise`), chiar dacă implementarea MVP este locală. Astfel, o implementare viitoare care întreabă un server poate înlocui implementarea locală fără schimbări în motor.
+- Implementarea MVP poate compara text normalizat sau hash-uri. Normalizarea se aplică înainte de comparare/hash (regulile — D-024, PROPOSED).
+- Semnătura exactă a interfeței se stabilește în Faza 3.
+
+Limite acceptate:
+- Hash-ul nu este o barieră de securitate. Răspunsurile scurte pot fi ghicite prin încercări automate, iar codul și conținutul sunt publice.
+- Validarea locală funcționează și offline. O validare viitoare pe server va avea nevoie de conexiune și de o variantă de rezervă pentru semnal slab; aceasta se proiectează atunci, nu acum.
+- În faza de fundație nu există backend, API sau validare pe server (D-019).
 
 ## 7. GPS architecture
 

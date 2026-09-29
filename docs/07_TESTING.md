@@ -126,7 +126,7 @@ Reguli:
 
 ### 12.1 Pornire și consolă
 
-1. Deschide `http://localhost:8000/`.
+1. Deschide `http://localhost:8000/src/` (D-035).
 2. DevTools (`F12`) → Console: nu trebuie să existe erori.
 3. DevTools → Network: niciun fișier cu status 404.
 
@@ -227,3 +227,22 @@ Până la stabilirea unui tooling (D-023, PROPOSED):
 3. Diacriticele sunt cu virgulă (`ș`, `ț`), nu cu sedilă (`ş`, `ţ`).
 4. Numerele deciziilor (`D-xxx`) menționate în documente există în `04_DECISIONS_LOG.md`.
 5. `git diff` conține doar modificările intenționate.
+
+## 18. Verificarea publicării pe GitHub Pages (după ce există workflow-ul — D-020)
+
+1. După push pe `main`, tab-ul „Actions” din GitHub arată rularea workflow-ului de publicare ca reușită.
+2. Adresa GitHub Pages se deschide prin HTTPS și afișează versiunea din commit-ul publicat.
+3. Aplicația se deschide la `https://rezervari.github.io/outdoor-escape/src/`, iar fișierele de conținut se încarcă de la `.../outdoor-escape/content/...` (fără 404 în DevTools → Network; D-035).
+4. Nicio cerere nu merge spre `https://rezervari.github.io/` în afara lui `/outdoor-escape/` (semn al unei căi absolute greșite).
+5. `docs/` și `tests/` nu sunt accesibile pe site (workflow-ul publică doar aplicația).
+6. Service worker-ul se actualizează la noua versiune (secțiunea 12.2, pasul 5).
+7. DevTools → Application: cheile din Local Storage și numele din Cache Storage au prefixul `outdoor-escape:` (D-035).
+
+## 19. Validarea răspunsurilor (D-021)
+
+Pe lângă cazurile din secțiunea 5:
+
+1. Răspunsul corect este acceptat și în modul offline (validarea MVP este locală).
+2. Motorul obține rezultatul doar prin modulul de validare. Se verifică prin citirea codului la review.
+3. Dacă răspunsurile sunt stocate ca hash: răspunsul corect scris cu variațiile permise de normalizare (D-024) produce același rezultat ca forma de referință.
+4. Nicio documentație sau interfață nu prezintă hash-ul ca protecție reală a răspunsurilor.

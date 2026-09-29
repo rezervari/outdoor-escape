@@ -137,7 +137,7 @@ Decizie:
 Aplicația va fi găzduită pe GitHub Pages.
 
 Notă:
-Modul exact de publicare (ce folder se publică) este încă deschis — vezi D-020.
+Modul de publicare este stabilit în D-020 (GitHub Actions).
 
 ---
 
@@ -148,7 +148,7 @@ Decizie:
 Repository-ul GitHub este public.
 
 Consecință:
-Tot ce se află în repository poate fi citit de oricine, inclusiv conținutul jocului, dacă este pus în repository. Vezi D-021.
+Tot ce se află în repository poate fi citit de oricine, inclusiv conținutul jocului, dacă este pus în repository. Vezi D-021 și D-034.
 
 ---
 
@@ -190,33 +190,40 @@ Nu se implementează backend și nici Stripe în faza actuală. Confirmă D-008 
 
 ---
 
-## D-020 — Structura publicării pe GitHub Pages
-Status: PROPOSED
+## D-020 — Publicarea pe GitHub Pages prin GitHub Actions
+Status: CONFIRMED (2026-09-29)
 
-Context:
-GitHub Pages poate publica rădăcina repository-ului, folderul `/docs` sau un artefact produs de un workflow GitHub Actions. `/docs` conține documentația. Structura din `03_ARCHITECTURE.md` are aplicația în `src/` și conținutul în `content/`, foldere separate.
+Decizie:
+- Aplicația se publică pe GitHub Pages printr-un workflow GitHub Actions.
+- Repository-ul păstrează o structură normală și curată: `docs/`, `src/`, `content/`, `tests/` etc.
+- Nu se introduce un framework de build doar pentru publicare (vezi D-018).
+- Workflow-ul publică doar fișierele statice de care aplicația are nevoie (codul aplicației și conținutul jocurilor). Nu publică `docs/`, `tests/` sau alte fișiere de lucru.
 
-Opțiuni:
-- A. Publicarea rădăcinii repository-ului. Simplu, dar publică tot repository-ul, inclusiv `/docs`, iar aplicația ar fi la `/src/`.
-- B. Un workflow GitHub Actions care publică doar `src/` și `content/`, fără pas de build (doar copiere). Păstrează structura, dar adaugă un fișier de workflow.
-- C. Mutarea aplicației în rădăcină. Schimbă structura din `03_ARCHITECTURE.md`.
+Consecințe:
+- Fișierul de workflow (în `.github/workflows/`) va fi creat odată cu scheletul PWA, nu în faza de documentație.
+- În setările repository-ului (Settings → Pages), sursa de publicare va trebui setată pe „GitHub Actions”. Este un pas manual al proprietarului.
+- Odată ce workflow-ul există, fiecare push pe `main` poate publica o versiune nouă a site-ului public (vezi `06_GIT_WORKFLOW.md`).
+- Structura site-ului publicat și regulile pentru căi sunt stabilite în D-035.
 
-Recomandare Claude: B. De decis înainte de scheletul PWA.
+Opțiuni analizate anterior: publicarea rădăcinii repository-ului; workflow GitHub Actions (aleasă); mutarea aplicației în rădăcină.
 
 ---
 
-## D-021 — Răspunsurile puzzle-urilor într-un repository și un site publice
-Status: PROPOSED
+## D-021 — Validarea răspunsurilor la puzzle-uri
+Status: CONFIRMED (2026-09-29)
 
-Context:
-Repository-ul este public (D-015), iar orice fișier publicat pe GitHub Pages poate fi descărcat. Dacă răspunsurile sunt în JSON-ul jocului, oricine le poate citi. Hash-ul în browser nu este o barieră de securitate.
+Decizie:
+- Pentru MVP, răspunsurile sunt verificate în browser (client-side).
+- Se poate folosi hash pentru comparare/ascundere, dar hash-ul **nu** este o barieră de securitate.
+- Motorul de joc trebuie proiectat astfel încât validarea răspunsurilor să poată fi mutată ulterior pe server fără rescrierea motorului.
+- În faza de fundație nu se introduce backend și nici sistem de validare pe server (vezi D-019).
 
-Opțiuni:
-- A. Acceptat pentru MVP/testare: răspunsurile pot fi găsite de cine le caută.
-- B. Conținutul real al jocului este ținut în afara repository-ului public; în repository rămâne doar un joc de test.
-- C. Validarea răspunsurilor pe server, într-o fază ulterioară (necesită backend — contrar D-019 acum).
+Consecințe pentru arhitectură (detaliate în `03_ARCHITECTURE.md`, secțiunea „Validarea răspunsurilor”):
+- validarea este izolată într-un singur modul; restul motorului nu compară și nu citește direct răspunsurile;
+- interfața modulului este asincronă, ca o implementare viitoare pe server să o poată înlocui;
+- orice jucător hotărât poate afla răspunsurile din fișierele publicate; acesta este un risc acceptat pentru MVP.
 
-Recomandare Claude: B pentru conținutul real + joc de test în repository; C reevaluat odată cu plățile. De decis înainte de Faza 4.
+Rămân deschise: normalizarea răspunsurilor (D-024), formatul exact al răspunsurilor în conținut (text sau hash, stabilit odată cu D-024) și locul în care stă conținutul real al jocului (D-034).
 
 ---
 
@@ -346,3 +353,57 @@ D-017 stabilește româna ca limbă a documentației. Documentele 00–09 și `R
 De decis: dacă și când se traduc documentele existente. Traducerea ar trebui făcută separat, fără schimbări de conținut, pentru a putea fi verificată ușor în diff.
 
 Notă conexă: `README.md` și `.gitignore` au terminații de linie Windows (CRLF), iar documentele din `/docs` au terminații Unix (LF). Un fișier `.gitattributes` ar putea uniformiza acest lucru. De decis separat.
+
+---
+
+## D-034 — Conținutul real al jocului în repository-ul public
+Status: PROPOSED
+
+Context:
+Repository-ul este public (D-015), iar validarea se face în browser (D-021). Dacă traseul, puzzle-urile și răspunsurile jocului real se află în repository, oricine le poate citi, fără să cumpere jocul. Această problemă făcea parte din vechea formulare a D-021 și nu a fost acoperită de decizia confirmată.
+
+Opțiuni:
+- A. Conținutul real stă în repository-ul public (risc de spoilere acceptat).
+- B. În repository-ul public stă doar un joc de test; conținutul real stă separat (de exemplu într-un repository privat) și ajunge în site doar la publicare.
+- C. Se decide mai târziu, înainte de Faza 4.
+
+Notă: chiar și cu B, fișierele publicate pe GitHub Pages pot fi citite de oricine (D-021).
+
+Recomandare Claude: B. De decis înainte de Faza 4 (integrarea jocului real).
+
+---
+
+## D-035 — Structura site-ului publicat, URL-uri și căi
+Status: CONFIRMED (2026-09-29) — Varianta B
+
+Decizie:
+Site-ul publicat păstrează structura repository-ului. Aplicația și conținutul au aceeași poziție relativă local și online:
+
+| | Producție (GitHub Pages) | Local |
+| --- | --- | --- |
+| Aplicația | `https://rezervari.github.io/outdoor-escape/src/` | `http://localhost:8000/src/` |
+| Conținutul | `https://rezervari.github.io/outdoor-escape/content/...` | `http://localhost:8000/content/...` |
+
+Reguli tehnice asociate (CONFIRMED):
+1. Toate căile aplicației sunt relative. Nu se folosesc căi absolute care încep cu `/`.
+2. Pentru MVP nu există routing bazat pe URL. Starea aplicației este gestionată intern; dacă va fi nevoie ulterior, se poate folosi hash routing (`#...`).
+3. `localStorage`, Cache API și orice alte chei persistente au un prefix propriu proiectului (de exemplu `outdoor-escape:`).
+4. Manifestul PWA și service worker-ul stau lângă `index.html`, în `src/`.
+5. Nu se introduce build system doar pentru publicare (confirmă D-018 și D-020).
+6. Workflow-ul GitHub Actions publică structura necesară fără transformări de căi.
+
+Motivare pe scurt:
+- Cu aceeași structură local și online, căile relative (de exemplu `../content/...` din `src/`) funcționează identic în ambele medii, fără cod care verifică mediul și fără transformări la publicare.
+- Căile absolute ar indica spre `https://rezervari.github.io/...`, în afara proiectului (subfolderul `/outdoor-escape/` este impus de GitHub Pages).
+- GitHub Pages nu poate redirecționa adrese inexistente către `index.html`; routing-ul bazat pe URL ar da 404 la reîncărcare.
+- Domeniul `rezervari.github.io` este comun tuturor site-urilor GitHub Pages ale contului, deci stocarea, cache-ul și permisiunile sunt partajate; prefixul evită coliziunile.
+- Cu manifestul și service worker-ul în `src/`, aplicația instalată pornește din `src/`, iar service worker-ul controlează paginile din `src/`. Poate păstra în cache și fișierele din `content/`.
+
+Consecințe acceptate:
+- URL-ul pentru jucători conține `/src/`. Codurile QR și linkurile trebuie să indice direct spre `.../outdoor-escape/src/`.
+- Schimbarea ulterioară a adresei aplicației (alt folder sau domeniu propriu) ar face ca telefoanele să vadă o aplicație nouă. Progresul salvat și permisiunile nu s-ar transfera.
+
+Rămâne de stabilit (la implementarea workflow-ului, nu face parte din această decizie):
+- ce se afișează la `https://rezervari.github.io/outdoor-escape/` (pagină de redirecționare către `src/` sau pagină de eroare). O redirecționare nu ar funcționa offline, pentru că se află în afara zonei controlate de service worker.
+
+Opțiuni analizate: A — aplicația în rădăcina site-ului (`.../outdoor-escape/`), cu căi diferite local și online; B — aceeași structură ca repository-ul (aleasă).

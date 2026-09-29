@@ -50,6 +50,8 @@ git push origin main
 
 Then verify GitHub/deployment if applicable.
 
+Notă (D-020): după ce va exista workflow-ul GitHub Actions de publicare, un push pe `main` poate publica automat o versiune nouă a site-ului public. Push-ul pe `main` trebuie tratat ca o publicare.
+
 ## Commit principles
 
 Prefer small logical commits.
