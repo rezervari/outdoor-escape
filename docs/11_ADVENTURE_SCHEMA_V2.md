@@ -124,7 +124,7 @@ Definite o singură dată în `src/js/defaults.js`; fiecare aventură le poate s
 | `gps.nearDistance` | 150 m | Sub această distanță jucătorul este „aproape” |
 | `gps.maxAccuracy` | 60 m | O poziție mai puțin precisă este „incertă” și nu declanșează nimic |
 | `gps.exitMargin` | 20 m | Histerezis la ieșire (împotriva oscilațiilor) |
-| `gps.allowManualConfirmation` | `true` | „Am ajuns” ca rezervă (D-006) |
+| `gps.allowManualConfirmation` | `true` | „Am ajuns” ca rezervă (D-006). Când este `true`, sosirea se poate confirma **fără GPS și fără verificarea distanței** — vezi „Confirmarea manuală” (secțiunea 5) |
 | `events.maxChainDepth` | 8 | Câte niveluri de reacții în lanț sunt permise (1–32) |
 
 Valorile GPS sunt puncte de plecare; se validează pe teren (Faza 5).
@@ -184,7 +184,17 @@ geo.js        → zone, histerezis, tranziții   → events.js → progres → U
 
 Harta (M-003.2) folosește aceleași stări, fără reguli proprii: calitatea afișată pe hartă este traducerea 1:1 a `LocationDisplay` (`gps-ready` → `valid`, `gps-uncertain` → `uncertain`, restul → `none`; `weak` nu este produs), iar raza desenată este `game.getLocation(id).radiusMeters` = `geo.effectiveRadius(location, gps)` — aceeași rază folosită de `evaluateProximity`. Detalii: `12_MAP_SPECIFICATION_M-003.2.md`.
 
-Limitări acceptate (PWA): browserul suspendă JavaScript și GPS-ul în fundal sau cu ecranul blocat (mai ales pe iPhone). Motorul nu presupune urmărire continuă: evaluează fiecare observație primită, iar confirmarea manuală rămâne mereu disponibilă. Coordonatele jucătorului **nu** se salvează (doar stări și momente).
+Limitări acceptate (PWA): browserul suspendă JavaScript și GPS-ul în fundal sau cu ecranul blocat (mai ales pe iPhone). Motorul nu presupune urmărire continuă: evaluează fiecare observație primită, iar confirmarea manuală rămâne disponibilă (dacă `allowManualConfirmation` nu este `false`). Coordonatele jucătorului **nu** se salvează (doar stări și momente).
+
+### Confirmarea manuală („Am ajuns”) — `allowManualConfirmation`
+
+Comportamentul actual (documentat, nu modificat):
+
+- **Valoarea efectivă** pentru o locație: `location.fallback.allowManualConfirmation`, altfel `settings.gps.allowManualConfirmation`, altfel `true` (`defaults.js`). Aceeași regulă este folosită în `game.confirmArrival` și în `app.js` (afișarea butonului). O aventură care nu menționează setarea are confirmarea manuală **activă**; singura cale de a o dezactiva este `false` explicit.
+- **`true`:** butonul „Am ajuns” apare în cardul obiectivului misiunii curente cât timp jucătorul nu a ajuns, **indiferent de starea GPS** (oprit, refuzat, indisponibil, semnal slab sau activ). `game.confirmArrival(locationId)` nu verifică distanța, fix-ul sau precizia: refuză doar locațiile `locked` / `completed`, prezența deja `inside` și setarea `false`. Sosirea trece prin același `arrive` ca GPS-ul (`arrivalSource: "manual"`): misiunea de tip `location` devine `solved`, **punctele se acordă integral**, regulile `mission_completed` rulează (ex. deblocarea locației și misiunii următoare). Scorul nu face diferența între sosirea GPS și cea manuală. Consecință: o aventură se poate termina complet, cu toate punctele, fără prezență fizică la obiective.
+- **`false`:** butonul „Am ajuns” nu este afișat, iar `confirmArrival` întoarce `{ accepted: false, reason: "manual_not_allowed" }`. Sosirea se confirmă doar prin GPS. Atenție la D-006: fără confirmare manuală, un GPS imprecis poate bloca jocul.
+- **Intenție:** fallback pentru aventurile **casual** și **demo/testare** (D-006 — GPS-ul nu este singura cale de progres), unde punctele nu dovedesc prezența fizică. Aventura `demo-gps-brasov` folosește intenționat `true`.
+- **Aventuri competitive** (clasament, premii, recompense care depind de prezența fizică): comportamentul actual **nu** este suficient. Va fi necesară ulterior o regulă separată de validare GPS; nu este implementată și nu este decisă încă (vezi secțiunea 13).
 
 ## 6. Misiuni
 
@@ -350,4 +360,4 @@ Nou în M-002: `content` (aventura normalizată), `getCurrentMission`, `getMissi
 
 ## 13. Ce NU este implementat în această etapă
 
-Vezi tabelul din secțiunea 0. În plus, nu există: GPS în fundal / geofencing, hartă (M-003.2), audio, notificări, parteneri reali și coduri reale, plăți, backend, cache offline pentru mai multe aventuri sau pentru audio.
+Vezi tabelul din secțiunea 0. În plus, nu există: GPS în fundal / geofencing, hartă (M-003.2), audio, notificări, parteneri reali și coduri reale, plăți, backend, cache offline pentru mai multe aventuri sau pentru audio, validarea GPS a prezenței pentru aventuri competitive (confirmarea manuală acordă punctele fără verificarea distanței — secțiunea 5, „Confirmarea manuală”).
