@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 2,
+  "id": "demo-gps-brasov",
+  "demo": true,
+  "meta": {
+    "city": "Brașov",
+    "title": "[DEMO GPS] Test hartă și poziționare",
+    "description": "Aventură demonstrativă pentru testarea hărții, GPS-ului și tranzițiilor de proximitate.",
+    "estimatedTime": 30,
+    "difficulty": "easy"
+  },
+  "settings": {
+    "gps": {
+      "defaultRadius": 40,
+      "nearDistance": 150,
+      "maxAccuracy": 60,
+      "exitMargin": 20,
+      "allowManualConfirmation": true
+    }
+  },
+  "locations": [
+    {
+      "id": "start",
+      "name": "Start",
+      "type": "start",
+      "coordinates": {
+        "lat": 45.630733071109326,
+        "lng": 25.599851255693597
+      },
+      "radius": 40,
+      "initialStatus": "unlocked"
+    },
+    {
+      "id": "bariera",
+      "name": "Bariera",
+      "type": "objective",
+      "coordinates": {
+        "lat": 45.62986065640671,
+        "lng": 25.59822555618738
+      },
+      "radius": 40,
+      "initialStatus": "locked"
+    },
+    {
+      "id": "magazin",
+      "name": "Magazin",
+      "type": "finale",
+      "coordinates": {
+        "lat": 45.63013874496643,
+        "lng": 25.601041700918227
+      },
+      "radius": 40,
+      "initialStatus": "locked"
+    }
+  ],
+  "missions": [
+    {
+      "id": "m-start",
+      "type": "location",
+      "track": "main",
+      "locationId": "start",
+      "initialStatus": "pending"
+    },
+    {
+      "id": "m-bariera",
+      "type": "location",
+      "track": "main",
+      "locationId": "bariera",
+      "initialStatus": "locked"
+    },
+    {
+      "id": "m-magazin",
+      "type": "location",
+      "track": "main",
+      "locationId": "magazin",
+      "initialStatus": "locked"
+    }
+  ],
+  "events": [
+    {
+      "id": "ev-start",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "m-start"
+      },
+      "do": [
+        {
+          "action": "unlock_location",
+          "locationId": "bariera"
+        },
+        {
+          "action": "unlock_mission",
+          "missionId": "m-bariera"
+        }
+      ]
+    },
+    {
+      "id": "ev-bariera",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "m-bariera"
+      },
+      "do": [
+        {
+          "action": "unlock_location",
+          "locationId": "magazin"
+        },
+        {
+          "action": "unlock_mission",
+          "missionId": "m-magazin"
+        }
+      ]
+    },
+    {
+      "id": "ev-magazin",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "m-magazin"
+      },
+      "do": [
+        {
+          "action": "complete_adventure"
+        }
+      ]
+    }
+  ]
+}
