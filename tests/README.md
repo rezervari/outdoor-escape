@@ -23,8 +23,16 @@ Necesită Node.js 20 sau mai nou. `package.json` din rădăcină există doar pe
 | `answers.test.js` | `src/js/answers.js` | normalizarea răspunsurilor (majuscule, spații, diacritice cu virgulă și cu sedilă), compararea fără fuzzy matching, validatorul asincron, eliminarea răspunsurilor din aventură |
 | `content.test.js` | `src/js/content.js` | validitatea aventurii demo din `content/adventures/`, validarea minimă a structurii, căile relative compatibile cu `/outdoor-escape/src/`, erorile de încărcare (rețea, 404, JSON stricat, format greșit) |
 | `storage.test.js` | `src/js/storage.js` | cheia `outdoor-escape:game:<id>`, salvare/restaurare/resetare, date corupte, `localStorage` indisponibil |
-| `game.test.js` | `src/js/game.js` | stările `idle → playing → completed`, răspuns corect/incorect/gol, indiciu, stările provocărilor `solved`/`failed`/`skipped` (inclusiv restaurarea lor după refresh), calculul scorului, restaurarea după refresh, resetarea |
+| `game.test.js` | `src/js/game.js` | stările `idle → playing → completed`, răspuns corect/incorect/gol, indiciu, stările `solved`/`failed`/`skipped` (inclusiv după refresh), calculul scorului, restaurarea, resetarea — pe aventura demo V1 |
+| `schema.test.js` | `src/js/schema.js`, `defaults.js`, `content.js` | validarea V2 (structură și referințe între entități), extensibilitate, conversia V1 → V2, valorile implicite centrale, încărcarea V2 |
+| `geo.test.js` | `src/js/geo.js` | distanțe, rază, precizie („uncertain”), near / arrival / leave, exit margin |
+| `events.test.js` | `src/js/events.js` | filtre, `once`, acțiuni, duplicate, limitarea lanțurilor și a buclelor |
+| `progress-v2.test.js` | `src/js/game.js` | progresul V2 pe fixture-ul fictiv: GPS prin motor, confirmare manuală, evenimente, trasee main/bonus/secret, final, salvare/restaurare, migrarea progresului V1, lipsa logicii specifice unei aventuri |
+
+## Fixture-uri
+
+`fixtures/adventure-v2-demo.json` — aventură V2 **fictivă** (coordonate inventate lângă 0°, 0°), folosită doar de teste (D-042). Nu este publicată pe GitHub Pages și nu apare în aplicație.
 
 Interfața (DOM) nu este testată automat aici. Procedura manuală din browser: [`../docs/07_TESTING.md`](../docs/07_TESTING.md), secțiunea 22.
 
-Directorul `tests/` nu ar trebui publicat pe GitHub Pages (D-020). Vezi nota despre workflow din `07_TESTING.md`, secțiunea 22.
+Directorul `tests/` nu este publicat pe GitHub Pages: workflow-ul publică doar `index.html`, `src/` și `content/` (D-020, D-042).

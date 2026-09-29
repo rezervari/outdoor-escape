@@ -40,61 +40,41 @@ Version control:
 AI development:
 - Claude
 
-## 3. Suggested repository structure
+## 3. Structura repository-ului
 
+Structura actuală (motorul V2, fundația):
+
+```text
 /
-├── .github/
-│   └── workflows/
-│       └── deploy-pages.yml (publicare pe GitHub Pages — D-020, creat)
-├── index.html              (doar redirecționare către src/ — D-036, creat; NU este aplicația)
-├── README.md
-├── LICENSE                 (MIT — doar codul aplicației, vezi D-016)
-├── LICENSE-CONTENT.md      (conținutul jocului — NU este MIT)
-├── docs/
-│   ├── 00_PROJECT_MASTER_CONTEXT.md
-│   ├── 01_ROADMAP_AND_PHASES.md
-│   ├── 02_CLAUDE_PROJECT_INSTRUCTIONS.md
-│   ├── 03_ARCHITECTURE.md
-│   ├── 04_DECISIONS_LOG.md
-│   ├── 05_GAME_DESIGN_SPEC.md
-│   ├── 06_GIT_WORKFLOW.md
-│   ├── 07_TESTING.md
-│   ├── 08_CLAUDE_START_PROMPT.md
-│   ├── 09_CLAUDE_PROMPT_TEMPLATES.md
-│   ├── 10_LOCAL_DEVELOPMENT.md
-│   └── README_CONTEXT_PACK.md
-│
-├── src/
-│   ├── index.html
-│   ├── css/
-│   ├── js/
-│   │   ├── app.js
-│   │   ├── state.js
-│   │   ├── router.js
-│   │   ├── gps.js
-│   │   ├── timer.js
-│   │   ├── puzzles.js
-│   │   ├── hints.js
-│   │   └── storage.js
-│   ├── assets/
-│   │   ├── images/
-│   │   └── audio/
-│   ├── manifest.webmanifest
-│   └── sw.js
-│
-├── content/
-│   └── games/
-│       └── game-001/
-│           ├── game.json
-│           ├── locations.json
-│           ├── puzzles.json
-│           └── media/
-│
-└── tests/
+├── .github/workflows/deploy-pages.yml  publicare pe GitHub Pages (D-020) — publică doar index.html, src/, content/
+├── index.html                          doar redirecționare către src/ (D-036); NU este aplicația
+├── package.json                        doar pentru `npm test` (fără dependențe, D-023)
+├── README.md, LICENSE, LICENSE-CONTENT.md
+├── docs/                               documentația (00–11); nu se publică
+├── src/                                aplicația (publicată)
+│   ├── index.html, manifest.webmanifest, sw.js
+│   ├── css/app.css
+│   └── js/
+│       ├── app.js       interfața (singurul modul cu DOM)
+│       ├── content.js   încărcare + validare după schemaVersion
+│       ├── schema.js    schema V2, validare, conversie V1 → V2
+│       ├── defaults.js  valorile implicite centrale
+│       ├── events.js    modelul de evenimente (reguli declarative)
+│       ├── geo.js       modelul de locație (distanțe, zone, histerezis)
+│       ├── game.js      motorul (stări, progres V2, migrare)
+│       ├── answers.js   normalizarea și verificarea răspunsurilor
+│       └── storage.js   localStorage
+├── content/                            conținutul aventurilor (publicat)
+│   ├── adventures/brasov-centrul-vechi.json   aventura DEMO (schemaVersion 1, D-037)
+│   └── games/.gitkeep                         gol (D-037)
+└── tests/                              teste automate (nu se publică)
+    ├── *.test.js
+    └── fixtures/adventure-v2-demo.json        aventură V2 fictivă, doar pentru teste (D-042)
+```
 
-This is a starting structure, not an instruction to create every file immediately.
+Planul inițial (module `state.js`, `router.js`, `gps.js`, `timer.js`, `puzzles.js`, `hints.js`, `src/assets/`, `content/games/game-001/` cu mai multe fișiere) a fost înlocuit de structura de mai sus (D-037, D-038). Modulele pentru GPS-ul browserului, hartă și audio se adaugă în etapele lor.
 
-Stare (motorul de joc v1): pe lângă scheletul PWA (secțiunea 3b), există modulele `src/js/answers.js`, `content.js`, `game.js`, `storage.js`, aventura demo `content/adventures/brasov-centrul-vechi.json`, testele automate din `tests/` și `package.json` (doar pentru teste). Conținutul stă în `content/adventures/<id>.json` (CONFIRMED — D-037); `content/games/` este gol (`.gitkeep`). Modulele `state.js`, `router.js`, `gps.js`, `timer.js`, `puzzles.js`, `hints.js` și `src/assets/` nu există. Detalii: secțiunea 3c.
+Detalii: secțiunea 3c și [`11_ADVENTURE_SCHEMA_V2.md`](11_ADVENTURE_SCHEMA_V2.md).
 
 Notă (CONFIRMED — D-020): site-ul se publică printr-un workflow GitHub Actions care publică doar fișierele statice necesare aplicației (codul din `src/` și conținutul din `content/`), fără `docs/` și `tests/`, fără framework de build. Site-ul publicat păstrează structura repository-ului (CONFIRMED — vezi D-035 și secțiunea 3a).
 
@@ -127,6 +107,8 @@ Motivare: aceeași structură relativă local și online înseamnă că ce func�
 
 ## 3b. Scheletul PWA (fundația tehnică)
 
+Notă istorică: această secțiune descrie scheletul inițial (commit „Add Outdoor Escape MVP”). Ecranul „fundație tehnică” a fost înlocuit de interfața jocului, iar lista de fișiere din cache a crescut — starea actuală este în secțiunea 3c. Regulile de mai jos (scope, căi relative, prefixul cache-ului, redirecționarea din rădăcină, manifestul fără `id`) rămân valabile.
+
 Scheletul conține doar infrastructura tehnică. Nu conține motor de joc, GPS, hărți, puzzle-uri, validare, progres salvat sau conținut.
 
 | Fișier | Rol |
@@ -157,24 +139,30 @@ Detalii de implementare:
 
 Offline în această etapă: doar ecranul fundației se poate redeschide fără rețea, după o primă vizită online. Conținutul jocurilor, media și rădăcina **nu** sunt disponibile offline. (Actualizat pentru motorul v1: vezi secțiunea 3c — aventura demo este acum în cache.) Nu există încă o strategie offline pentru joc (secțiunea 8).
 
-## 3c. Motorul de joc v1 (fără GPS, hartă, cronometru sau backend)
+## 3c. Motorul de joc (fundația V2)
 
-Prima versiune funcțională a motorului. Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul nu conține texte sau răspunsuri de joc.
+Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul nu conține texte, răspunsuri sau logică specifică unei aventuri. Motorul V1 (provocări liniare) a fost extins în fundația V2: misiuni pe trasee, locații, evenimente, parteneri, secrete. Specificația completă a schemei și a contractelor: [`11_ADVENTURE_SCHEMA_V2.md`](11_ADVENTURE_SCHEMA_V2.md).
+
+**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele. **Pregătit, dar neimplementat în UI:** misiunile de locație, partener, secrete și cu timp, interfața naratorului, audio, GPS-ul real din browser, harta. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
 
 ### Fișiere
 
 | Fișier | Rol |
 | --- | --- |
-| `content/adventures/<id>.json` (D-037) | O aventură: date generale + lista de provocări. Aventura actuală este DEMO (fără locații reale, fără afirmații istorice). |
-| `src/js/content.js` | Încarcă JSON-ul (`fetch`, URL relativ la modul: `../../content/adventures/<id>.json`), validare minimă, erori pe înțelesul jucătorului (`AdventureLoadError`). |
-| `src/js/answers.js` | Singurul modul care citește câmpul `answer` și compară răspunsuri (D-021): `normalizeAnswer`, `answersMatch`, `createLocalValidator` (interfață asincronă `check(challengeId, input) → Promise<boolean>`), `withoutAnswers`. |
-| `src/js/game.js` | Motorul: stări, progres, scor. Fără DOM și fără stocare. Primește aventura **fără răspunsuri** și validatorul. Notifică schimbările prin `subscribe()`. |
+| `content/adventures/<id>.json` (D-037) | O aventură, `schemaVersion` 1 sau 2. Aventura actuală este DEMO, V1 (fără locații reale, fără afirmații istorice). |
+| `src/js/content.js` | Încarcă JSON-ul (`fetch`, URL relativ la modul: `../../content/adventures/<id>.json`), îl validează după `schemaVersion` (V1 minim, V2 prin `schema.js`), erori pe înțelesul jucătorului (`AdventureLoadError`). |
+| `src/js/schema.js` | Schema V2: vocabular închis, validare cu verificarea referințelor, conversia V1 → V2 în memorie, forma normalizată (`toAdventureV2`). |
+| `src/js/defaults.js` | Valorile implicite centrale (GPS, progresie, limita lanțurilor de evenimente). |
+| `src/js/events.js` | Modelul de evenimente: liste închise, filtru simplu, `once`, limită de lanț. |
+| `src/js/geo.js` | Modelul de locație: distanță haversine, zone `inside/near/outside/uncertain`, histerezis. Fără Geolocation API. |
+| `src/js/answers.js` | Singurul modul care citește câmpul `answer` și compară răspunsuri (D-021): `normalizeAnswer`, `answersMatch`, `createLocalValidator` (interfață asincronă `check(missionId, input) → Promise<boolean>`), `withoutAnswers` (V1 și V2). |
+| `src/js/game.js` | Motorul: stări, progres V2 pe entități, reguli de evenimente, tranziții de locație, scor derivat, migrarea progresului V1. Fără DOM și fără stocare. Primește aventura **fără răspunsuri** și validatorul. Notifică schimbările prin `subscribe()`; mesajele/sunetele sunt „efecte” (`takeEffects()`). |
 | `src/js/storage.js` | Salvare/restaurare/ștergere în `localStorage`, cheia `outdoor-escape:game:<id>` (prefix D-035; cheie confirmată — D-029). Nu aruncă excepții dacă stocarea lipsește. |
 | `src/js/app.js` | Leagă modulele, afișează ecranele, salvează automat la fiecare schimbare de stare, înregistrează service worker-ul. |
 
-Fluxul la pornire: `app.js` → `loadAdventure(id)` → `createLocalValidator(aventură)` + `withoutAnswers(aventură)` → `createGame({ adventure, validator, savedState })` → interfața. Aventura implicită este `brasov-centrul-vechi`; pentru teste se poate cere alta cu `src/?adventure=<id>` (id-ul este validat: litere mici, cifre, cratimă).
+Fluxul la pornire: `app.js` → `loadAdventure(id)` → `toAdventureV2(...)` → `createLocalValidator(aventură)` + `withoutAnswers(aventură)` → `createGame({ adventure, validator, savedState })` → interfața. Aventura implicită este `brasov-centrul-vechi`; pentru teste se poate cere alta cu `src/?adventure=<id>` (id-ul este validat: litere mici, cifre, cratimă).
 
-### Formatul aventurii (schemaVersion 1)
+### Formatul V1 (schemaVersion 1 — acceptat în continuare, convertit la încărcare)
 
 ```json
 {
@@ -194,23 +182,22 @@ Fluxul la pornire: `app.js` → `loadAdventure(id)` → `createLocalValidator(av
 
 Obligatorii: `id`, `title`, `challenges` (cel puțin una); pentru fiecare provocare `id` (unic), `title`, `description`, `answer`, `points` (întreg ≥ 0). Opționale: `schemaVersion`, `demo`, `city`, `description`, `estimatedTime` (minute), `difficulty` (`easy`/`medium`/`hard`), `hint`.
 
-Câmpurile necunoscute sunt permise, ca formatul să poată fi extins fără a strica validarea: coordonate, imagini, mai multe indicii, variante de răspuns, tipuri de provocări, obiective, timp limită, recompense. Niciunul nu este implementat încă.
+Formatul V2 (misiuni, locații, evenimente, audio, parteneri, secrete) și conversia V1 → V2: [`11_ADVENTURE_SCHEMA_V2.md`](11_ADVENTURE_SCHEMA_V2.md).
 
-Id-urile (`id` al aventurii și al provocărilor) trebuie să rămână stabile: progresul salvat este legat de ele.
+Id-urile (aventură, misiuni, locații etc.) trebuie să rămână stabile: progresul salvat este legat de ele.
 
 ### Stări și progres
 
 - Starea jocului: `idle` → `playing` → `completed`. „Joacă din nou” / „Începe de la capăt” readuc jocul la `idle` și șterg progresul salvat.
-- Fiecare provocare are progresul `pending` | `solved` | `failed` | `skipped`, plus `attempts` și `hintUsed`. Indiciul este o dată, nu o stare (în spiritul D-030).
-  - `solved` — rezolvată corect; singura stare care aduce puncte și care se numără la „provocări rezolvate”.
-  - `skipped` — jucătorul a apăsat „Sari peste (0 puncte)”: 0 puncte, nu este rezolvată, jocul continuă.
-  - `failed` — închisă fără rezolvare, 0 puncte. Motorul o suportă (`failChallenge()`), dar nicio acțiune din interfață nu o produce încă; este pregătită pentru reguli viitoare (de exemplu număr maxim de încercări).
-- O provocare `pending` poate deveni `solved`, `skipped` sau `failed`; o provocare închisă nu își mai schimbă starea. Trecerea la următoarea provocare cere închiderea celei curente. Toate trei stările se salvează și se restaurează după refresh.
-- Scorul = suma `points` pentru provocările `solved` (`failed` și `skipped` = 0). Nu există penalizări (D-025 rămâne deschisă). Scorul se recalculează din conținut la restaurare; valoarea salvată nu este de încredere.
-- Starea salvată: `{ schemaVersion, adventureId, status, currentIndex, score, challenges: { <id>: { status, attempts, hintUsed } }, startedAt, completedAt }`. O stare salvată pentru altă aventură sau altă versiune de schemă este ignorată (jocul pornește de la zero). Provocările noi din conținut pornesc ca `pending`; cele eliminate sunt ignorate.
-- Mesajul „Răspuns incorect” nu este salvat: după refresh, provocarea nerezolvată apare fără mesaj. Mesajul „Corect!” / „sărită” se reconstruiește din progres.
-
-Această listă simplă de stări nu înlocuiește modelul din secțiunea 4 (locații, GPS, final); acela va fi integrat când se adaugă locațiile.
+- Misiuni: `locked` → `pending` → `solved` | `failed` | `skipped`, plus `attempts`, `hintsUsed`, `startedAt`, `closedAt`. Indiciile sunt date, nu stări (în spiritul D-030).
+  - `solved` — singura stare care aduce puncte și care se numără la „rezolvate”.
+  - `skipped` — „Sari peste (0 puncte)”: 0 puncte, nu este rezolvată, jocul continuă.
+  - `failed` — închisă fără rezolvare, 0 puncte (`failChallenge()` / `failMission()` / acțiunea `fail_mission`); interfața nu o produce încă.
+- Progresia principală este liniară, după `currentMissionId` (nu după un index): închiderea misiunii curente o deschide pe următoarea principală. Misiunile `bonus` și `secret` se deschid doar prin evenimente și nu schimbă misiunea curentă.
+- Locații, parteneri, secrete și regulile de evenimente rulate au propriile stări în progres (forma completă: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 11).
+- Scorul este derivat din conținut și progres (misiuni `solved` + secrete + `award_points`); valoarea salvată nu este de încredere. Nu există penalizări (D-025 rămâne deschisă).
+- Starea salvată are `schemaVersion: 2`. Progresul salvat de versiunea anterioară (`schemaVersion: 1`, cu `currentIndex` și `challenges`) este **migrat automat** (D-043). O stare pentru altă aventură sau cu altă versiune este ignorată.
+- Mesajul „Răspuns incorect” nu este salvat: după refresh, misiunea nerezolvată apare fără mesaj. Mesajul „Corect!” / „sărită” se reconstruiește din progres.
 
 ### Normalizarea răspunsurilor (CONFIRMED — D-024)
 
@@ -218,7 +205,7 @@ Această listă simplă de stări nu înlocuiește modelul din secțiunea 4 (loc
 
 ### Service worker
 
-`SHELL_FILES` include noile module și aventura demo `../content/adventures/brasov-centrul-vechi.json` (aceeași strategie network-first). `CACHE_VERSION` = `v3`; cache-urile mai vechi cu prefixul `outdoor-escape:shell:` se șterg la activare. După o primă încărcare reușită, un refresh fără rețea încarcă aplicația și aventura demo din cache. Alte aventuri (sau alt conținut din `content/`) nu sunt puse în cache: fără rețea, ele duc la ecranul de eroare cu „Încearcă din nou”, iar progresul salvat rămâne intact.
+`SHELL_FILES` include toate modulele din `js/` (inclusiv `schema.js`, `defaults.js`, `events.js`, `geo.js`) și aventura demo `../content/adventures/brasov-centrul-vechi.json` (aceeași strategie network-first; 14 intrări). `CACHE_VERSION` = `v4`; cache-urile mai vechi cu prefixul `outdoor-escape:shell:` se șterg la activare. După o primă încărcare reușită, un refresh fără rețea încarcă aplicația și aventura demo din cache. Orice modul nou din `js/` trebuie adăugat în `SHELL_FILES` (cu versiune nouă a cache-ului), altfel aplicația nu pornește offline. Alte aventuri (sau alt conținut din `content/`) nu sunt puse în cache: fără rețea, ele duc la ecranul de eroare cu „Încearcă din nou”, iar progresul salvat rămâne intact.
 
 Limitare cunoscută (actualizări): service worker-ul folosește `fetch()` obișnuit, deci trece prin cache-ul HTTP al browserului (pe GitHub Pages, de obicei câteva minute). Imediat după o publicare nouă, un browser care a vizitat recent site-ul poate combina un `index.html` nou cu module JavaScript vechi. Se rezolvă singur la expirarea cache-ului HTTP; o soluție (URL-uri versionate sau `cache: "no-cache"` în service worker) este de decis separat.
 
@@ -241,6 +228,8 @@ NEW
 → COMPLETE
 
 Error/recovery states should be handled without losing progress.
+
+Notă (2026-09-29): modelul **implementat** nu folosește această listă de stări. Jocul are doar `idle → playing → completed`; restul (a ajuns la locație, misiune activă, indiciu folosit, locație finalizată, final) este reprezentat ca stări ale entităților (misiuni, locații) și ca evenimente (`player_arrived`, `mission_started`, `hint_requested`, `location_completed`, `finale_started` …) — vezi secțiunea 3c și `11_ADVENTURE_SCHEMA_V2.md`. Lista de mai sus rămâne ca referință istorică.
 
 Notă (PROPOSED — vezi D-030, neaprobat): `HINT_USED` descrie mai degrabă un eveniment decât o stare. Folosirea unui indiciu nu schimbă ce poate face jucătorul (puzzle-ul rămâne activ), ci modifică datele puzzle-ului (câte indicii au fost folosite, penalizarea). Propunerea este ca indiciile să fie înregistrate ca date/evenimente în starea `PUZZLE_ACTIVE`, nu ca stare separată. Lista de mai sus rămâne neschimbată până la aprobare.
 
@@ -293,7 +282,7 @@ Cerințe:
 - Validarea este izolată într-un singur modul (de exemplu `puzzles.js` sau un modul dedicat). Restul motorului (stări, UI, indicii, cronometru) nu compară răspunsuri și nu citește direct câmpurile cu răspunsuri din conținut.
 - Motorul trimite modulului identificatorul puzzle-ului și textul introdus de jucător și primește un rezultat (corect/incorect).
 - Interfața este asincronă (rezultatul vine ca `Promise`), chiar dacă implementarea MVP este locală. Astfel, o implementare viitoare care întreabă un server poate înlocui implementarea locală fără schimbări în motor.
-- Implementarea MVP poate compara text normalizat sau hash-uri. Normalizarea se aplică înainte de comparare/hash (regulile — D-024, PROPOSED).
+- Implementarea MVP poate compara text normalizat sau hash-uri. Normalizarea se aplică înainte de comparare/hash (regulile — D-024, CONFIRMED).
 - Semnătura exactă a interfeței se stabilește în Faza 3.
 
 Limite acceptate:
@@ -318,6 +307,8 @@ The GPS module should expose a simple result such as:
 }
 
 The game engine decides what that result means.
+
+Notă (2026-09-29, D-039): contractul implementat este în `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 5. Locația are `coordinates: { lat, lng }`, `radius` (metri) și `fallback`. `geo.js` întoarce `{ zone: inside | near | outside | uncertain, distanceMeters, accuracyMeters, radiusMeters, … }`; motorul primește observații prin `reportPosition(fix)` și produce tranziții (`player_near_location`, `player_arrived`, `player_left_area`). Confirmarea manuală: `confirmArrival(locationId)`. Motorul nu folosește Geolocation API; sursa observațiilor din browser este o etapă ulterioară.
 
 ## 8. Offline strategy
 

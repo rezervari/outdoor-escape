@@ -20,7 +20,7 @@ const COMBINING_MARKS = /[̀-ͯ]/g;
  *   cu sedilă (ş ţ) produse de unele tastaturi.
  * Nu elimină punctuația și nu tratează greșelile de scriere.
  *
- * Exemple: "Brașov", " BRAȘOV ", "brasov", "Braşov" → "brasov".
+ * Exemple: "Piață", " PIAȚĂ ", "piata", "Piaţă" (cu sedilă) → "piata".
  */
 export function normalizeAnswer(value) {
   if (typeof value !== "string") return "";
@@ -39,33 +39,40 @@ export function answersMatch(input, expected) {
   return normalizedInput === normalizeAnswer(expected);
 }
 
+// Lista de misiuni: V2 („missions”) sau V1 („challenges”).
+function answerItemsKey(adventure) {
+  return Array.isArray(adventure.missions) ? "missions" : "challenges";
+}
+
 /**
  * Validator local (MVP): păstrează răspunsurile într-o închidere (closure),
- * indexate după id-ul provocării.
- * Interfață: check(challengeId, input) → Promise<boolean>.
+ * indexate după id-ul misiunii (V2) sau al provocării (V1).
+ * Interfață: check(missionId, input) → Promise<boolean>.
+ * Misiunile fără răspuns (ex. „location”) nu sunt înregistrate.
  */
 export function createLocalValidator(adventure) {
   const expectedById = new Map();
-  for (const challenge of adventure.challenges) {
-    expectedById.set(challenge.id, challenge.answer);
+  for (const item of adventure[answerItemsKey(adventure)] || []) {
+    if (typeof item.answer === "string") expectedById.set(item.id, item.answer);
   }
   return {
-    async check(challengeId, input) {
-      if (!expectedById.has(challengeId)) {
-        throw new Error(`Provocare necunoscută: ${challengeId}`);
+    async check(missionId, input) {
+      if (!expectedById.has(missionId)) {
+        throw new Error(`Misiune necunoscută sau fără răspuns: ${missionId}`);
       }
-      return answersMatch(input, expectedById.get(challengeId));
+      return answersMatch(input, expectedById.get(missionId));
     },
   };
 }
 
 /**
- * Copie a aventurii fără răspunsuri, pentru motor și interfață.
+ * Copie a aventurii fără răspunsuri, pentru motor și interfață (V1 sau V2).
  * Motorul nu are nevoie de răspunsuri; validarea trece doar prin validator.
  */
 export function withoutAnswers(adventure) {
+  const key = answerItemsKey(adventure);
   return {
     ...adventure,
-    challenges: adventure.challenges.map(({ answer, ...rest }) => rest),
+    [key]: (adventure[key] || []).map(({ answer, ...rest }) => rest),
   };
 }

@@ -8,9 +8,9 @@ Primul joc este gândit pentru **Brașov**. Titlul de lucru este „Tainele Bres
 
 ## Stare
 
-**Faza 0 — fundația proiectului.** Nu există încă cod de aplicație.
+**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. Pregătit, dar încă fără interfață: misiunile de locație, partener, secrete și cu timp, naratorul, audio, GPS-ul real din browser și harta — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
 
-Repository-ul conține deocamdată documentația, deciziile și specificațiile de bază. Traseul, locațiile și puzzle-urile nu sunt finale până nu sunt verificate pe teren.
+Traseul, locațiile și puzzle-urile jocului real nu sunt finale până nu sunt verificate pe teren.
 
 ## Cum va funcționa (țintă MVP)
 
@@ -33,18 +33,22 @@ Deocamdată **nu** există backend, plăți (Stripe), conturi de utilizator sau 
 
 ## Structura repository-ului
 
-Acum:
-
 ```text
 /
-├── README.md
+├── index.html           redirecționare către src/ (nu este aplicația)
+├── src/                 aplicația: HTML, CSS, module JavaScript, manifest, service worker
+├── content/adventures/  conținutul aventurilor (JSON)
+├── tests/               teste automate (node --test) și fixture-uri
+├── docs/                documentația proiectului
+├── .github/workflows/   publicarea pe GitHub Pages (doar index.html, src/, content/)
+├── package.json         doar pentru `npm test` (fără dependențe)
 ├── LICENSE              licența MIT pentru codul aplicației
-├── LICENSE-CONTENT.md   conținutul jocurilor NU este licențiat MIT
-├── .gitignore
-└── docs/                documentația proiectului
+└── LICENSE-CONTENT.md   conținutul jocurilor NU este licențiat MIT
 ```
 
-Structura planificată pentru aplicație (`src/`, `content/`, `tests/`) este descrisă în [`docs/03_ARCHITECTURE.md`](docs/03_ARCHITECTURE.md) și nu a fost creată încă.
+Detalii: [`docs/03_ARCHITECTURE.md`](docs/03_ARCHITECTURE.md) și [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md).
+
+Teste: `npm test` (Node.js 20+, fără `npm install`).
 
 ## Documentație
 
@@ -61,6 +65,7 @@ Structura planificată pentru aplicație (`src/`, `content/`, `tests/`) este des
 | [`08_CLAUDE_START_PROMPT.md`](docs/08_CLAUDE_START_PROMPT.md) | promptul inițial pentru Claude |
 | [`09_CLAUDE_PROMPT_TEMPLATES.md`](docs/09_CLAUDE_PROMPT_TEMPLATES.md) | șabloane de prompturi |
 | [`10_LOCAL_DEVELOPMENT.md`](docs/10_LOCAL_DEVELOPMENT.md) | dezvoltare locală și testare pe telefon (HTTPS) |
+| [`11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md) | schema aventurii V2 și contractele motorului |
 | [`README_CONTEXT_PACK.md`](docs/README_CONTEXT_PACK.md) | ordinea de citire a documentației |
 
 Documentația nouă se scrie în limba română (D-017). Unele documente existente sunt încă în engleză.
@@ -69,7 +74,7 @@ Documentația nouă se scrie în limba română (D-017). Unele documente existen
 
 Vezi [`docs/10_LOCAL_DEVELOPMENT.md`](docs/10_LOCAL_DEVELOPMENT.md). Pe scurt: nu există build, fișierele se servesc cu un server static local, iar funcțiile GPS/PWA pe un telefon real necesită HTTPS.
 
-Adresele aplicației, după ce va exista (D-035):
+Adresele aplicației (D-035):
 
 - local: `http://localhost:8000/src/`
 - producție: `https://rezervari.github.io/outdoor-escape/src/`

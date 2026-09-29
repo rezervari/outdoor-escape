@@ -220,7 +220,7 @@ Alte observații:
 
 ## 17. Testarea modificărilor de documentație
 
-Până la stabilirea unui tooling (D-023, PROPOSED):
+Documentația se verifică manual (D-023 acoperă doar testele motorului; verificarea automată a linkurilor rămâne nedecisă):
 
 1. Toate linkurile relative din fișierele modificate duc la fișiere existente.
 2. Fișierele sunt în UTF-8.
@@ -266,6 +266,8 @@ Notă: `meta refresh` și linkul sunt statice, deci fără JavaScript nu pot pă
 
 ## 21. Scheletul PWA (fundația tehnică)
 
+Notă: F1, F5 și F8 descriu scheletul inițial (ecranul „fundație tehnică”, cache `v1`). Pentru versiunea actuală, rezultatele așteptate sunt cele din secțiunile 22 și 23; celelalte verificări (manifest, scope, context nesigur, rădăcină, F11) rămân valabile.
+
 Se execută local (`http://localhost:8000/src/`) și, după publicare, în producție (`https://rezervari.github.io/outdoor-escape/src/`). Înainte: „Clear site data” (secțiunea 11).
 
 | ID | Pași | Rezultat așteptat |
@@ -290,7 +292,7 @@ Limitări cunoscute ale fundației:
 
 ### 22.1 Teste automate (fără browser)
 
-Din rădăcina repository-ului: `node --test` (sau `npm test`). Node.js 20+. Rezultat așteptat: toate testele `pass`, `fail 0`. Ce acoperă: `tests/README.md`.
+Din rădăcina repository-ului: `npm test` (sau `node --test`). Node.js 20+. Rezultat așteptat: toate testele `pass`, `fail 0`. Ce acoperă: `tests/README.md` (inclusiv testele fundației V2 — secțiunea 23).
 
 ### 22.2 Teste manuale în browser
 
@@ -313,7 +315,7 @@ Se execută la `http://localhost:8000/src/` și, după publicare, la `https://re
 | G13 | Termină aventura | Ecran final: „Felicitări…”, scorul „X din 350 puncte”, „Provocări rezolvate: N din 3”, „Joacă din nou” |
 | G14 | F5 pe ecranul final, apoi „Joacă din nou” | Rezultatul rămâne după F5; „Joacă din nou” duce la start și șterge progresul |
 | G15 | `src/?adventure=inexistenta` | Ecran „Aventura nu a putut fi încărcată” + „Încearcă din nou”; fără excepții în consolă |
-| G16 | Application → Cache storage | Doar `outdoor-escape:shell:v3`, cu fișierele din `SHELL_FILES` (10 intrări: 9 din `src/` + `content/adventures/brasov-centrul-vechi.json`) |
+| G16 | Application → Cache storage | Doar `outdoor-escape:shell:v4`, cu fișierele din `SHELL_FILES` (14 intrări: 13 din `src/` + `content/adventures/brasov-centrul-vechi.json`) |
 | G17 | După o primă încărcare online: Network → „Offline”, F5 (pe ecranul de start și în timpul jocului) | Aplicația și aventura demo se încarcă din cache; progresul este păstrat; răspunsurile se verifică și offline |
 | G19 | `src/?adventure=inexistenta` cu Network → „Offline” | Ecranul de eroare („Verifică conexiunea…”) + „Încearcă din nou” — doar aventura demo este în cache |
 | G18 | Simulare mobil 360 px (secțiunea 12.3) | Fără derulare orizontală; butoanele principale pe toată lățimea, cel puțin 48 px înălțime |
@@ -321,4 +323,27 @@ Se execută la `http://localhost:8000/src/` și, după publicare, la `https://re
 Note:
 - Secțiunea 21 (F5) descrie cache-ul fundației (`v1`, 5 fișiere). Începând cu motorul v1, rezultatul așteptat este cel din G16.
 - Starea `failed` nu poate fi produsă din interfață în această etapă; este acoperită de testele automate (`tests/game.test.js`).
-- Workflow-ul actual (`.github/workflows/deploy-pages.yml`) publică întreg repository-ul (`path: .`), deci F11 (docs/ și tests/ dau 404) nu este îndeplinit în prezent. Workflow-ul nu a fost modificat în această etapă.
+- Workflow-ul (`.github/workflows/deploy-pages.yml`) publică doar `index.html`, `src/` și `content/` (asamblează `_site/` și eșuează dacă apar `docs/`, `tests/` sau `.github/`). F11 se aplică: `.../outdoor-escape/docs/`, `.../outdoor-escape/tests/` și `.../outdoor-escape/tests/fixtures/adventure-v2-demo.json` trebuie să dea 404.
+
+## 23. Fundația V2 (schema, locații, evenimente, progres)
+
+Fundația V2 nu are încă interfață pentru noile mecanici (GPS din browser, hartă, audio, misiuni de locație/bonus/secret/partener). Se testează:
+
+### 23.1 Automat — `npm test`
+
+| Fișier | Acoperă |
+| --- | --- |
+| `tests/schema.test.js` | validarea V2 (fixture-ul valid, structuri invalide, **referințe invalide**), câmpuri necunoscute permise, vocabularul de tipuri/evenimente, conversia V1 → V2, normalizarea, valorile implicite centrale, încărcarea unei aventuri V2 |
+| `tests/geo.test.js` | distanța dintre coordonate, raza, toleranța din precizie, „uncertain” la precizie slabă, near / arrival / leave, **exit margin** (fără oscilații), setări per aventură |
+| `tests/events.test.js` | filtrele `where`, `once`, acțiuni aplicate în ordine, evenimente duplicate, **limitarea lanțurilor**, bucle oprite, plafonul absolut |
+| `tests/progress-v2.test.js` | forma progresului V2, GPS prin motor, confirmare manuală, sosiri repetate fără efecte duble, acțiuni (deblocări, mesaje, partener, puncte), trasee separate main/bonus/secret, final complet, salvare/restaurare fără re-declanșare, reparare, **migrarea progresului V1**, lipsa logicii specifice unei aventuri în motor |
+
+Aventura folosită: `tests/fixtures/adventure-v2-demo.json` (fictivă, coordonate lângă 0°, 0°).
+
+### 23.2 Manual în browser (regresie + migrare)
+
+| ID | Pași | Rezultat așteptat |
+| --- | --- | --- |
+| V1 | Testele G1–G19 (secțiunea 22) | Neschimbate față de versiunea anterioară (aventura demo V1 este convertită la încărcare) |
+| V2 | Cu progres salvat de versiunea anterioară: DevTools → Application → Local Storage → cheia `outdoor-escape:game:brasov-centrul-vechi` cu o valoare `schemaVersion: 1` (de ex. `{"schemaVersion":1,"adventureId":"brasov-centrul-vechi","status":"playing","currentIndex":1,"score":100,"challenges":{"challenge-01":{"status":"solved","attempts":1,"hintUsed":true},"challenge-02":{"status":"pending","attempts":2,"hintUsed":true},"challenge-03":{"status":"pending","attempts":0,"hintUsed":false}},"startedAt":1790000000000,"completedAt":null}`), apoi F5 | Jocul continuă la „Provocarea 2 din 3”, scor 100, indiciul provocării 2 vizibil. După următoarea acțiune, cheia conține `"schemaVersion":2` și `currentMissionId` |
+| V3 | După publicare, deschide `.../outdoor-escape/tests/fixtures/adventure-v2-demo.json` | 404 (fixture-ul nu este publicat) |

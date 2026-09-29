@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 2,
+  "id": "demo-ceasul-oprit",
+  "contentVersion": "0.1.0",
+  "language": "ro",
+  "demo": true,
+  "meta": {
+    "city": "Orașul Demo",
+    "title": "[DEMO] Cazul Ceasului Oprit",
+    "description": "Aventură FICTIVĂ folosită doar de testele automate (tests/fixtures/, nepublicată). Coordonatele sunt inventate (lângă 0°, 0°) și nu corespund unor locuri reale.",
+    "estimatedTime": 45,
+    "difficulty": "easy",
+    "tags": [
+      "demo",
+      "detectiv"
+    ]
+  },
+  "settings": {
+    "progression": "linear",
+    "gps": {
+      "defaultRadius": 40,
+      "nearDistance": 150,
+      "maxAccuracy": 60,
+      "exitMargin": 20,
+      "allowManualConfirmation": true
+    }
+  },
+  "narrator": {
+    "name": "Centrala",
+    "messages": {
+      "intro": {
+        "text": "Agent, avem o problemă. Ceasul din piață s-a oprit la 7:15.",
+        "audio": "voice-intro"
+      },
+      "wrong-answer": {
+        "text": "Nu era răspunsul. Dar apreciez încrederea."
+      },
+      "correct-answer": {
+        "text": "Exact. Mergem mai departe."
+      },
+      "approaching": {
+        "text": "Ești aproape. Mai caută puțin.",
+        "audio": "sfx-approach"
+      },
+      "arrived-square": {
+        "text": "Ai ajuns. În sfârșit.",
+        "audio": "sfx-arrival"
+      },
+      "contact-intro": {
+        "text": "Agent, avem nevoie de informații suplimentare. Contactul nostru este în apropiere.",
+        "audio": "voice-contact"
+      },
+      "secret-found": {
+        "text": "Ai găsit ceva ce nu era pe hartă.",
+        "audio": "sfx-secret"
+      },
+      "gps-weak": {
+        "text": "Semnalul GPS este slab. Dacă ești la locul indicat, apasă „Am ajuns”."
+      },
+      "finale": {
+        "text": "Ceasul pornește din nou. Cazul este închis.",
+        "audio": "voice-finale"
+      }
+    }
+  },
+  "audio": {
+    "basePath": "demo-ceasul-oprit/audio/",
+    "tracks": {
+      "voice-intro": {
+        "src": "intro.mp3",
+        "kind": "voice",
+        "transcriptMessage": "intro"
+      },
+      "voice-finale": {
+        "src": "finale.mp3",
+        "kind": "voice",
+        "transcriptMessage": "finale"
+      },
+      "sfx-approach": {
+        "src": "approach.mp3",
+        "kind": "sfx"
+      },
+      "sfx-arrival": {
+        "src": "arrival.mp3",
+        "kind": "sfx"
+      },
+      "sfx-secret": {
+        "src": "secret.mp3",
+        "kind": "sfx"
+      },
+      "voice-contact": {
+        "src": "cafe.mp3",
+        "kind": "voice",
+        "transcriptMessage": "contact-intro"
+      }
+    }
+  },
+  "locations": [
+    {
+      "id": "loc-piata",
+      "name": "Piața cu ceas",
+      "type": "objective",
+      "coordinates": {
+        "lat": 0.001,
+        "lng": 0.001
+      },
+      "radius": 40,
+      "initialStatus": "unlocked",
+      "fallback": {
+        "instructions": "Caută turnul cu ceas din mijlocul pieței.",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "loc-cafenea",
+      "name": "Cafeneaua Contact",
+      "type": "partner",
+      "coordinates": {
+        "lat": 0.0018,
+        "lng": 0.0012
+      },
+      "radius": 30,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "Cafeneaua are o firmă verde, lângă colțul pieței.",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "loc-pasaj",
+      "name": "Pasajul îngust",
+      "type": "secret",
+      "coordinates": {
+        "lat": 0.0015,
+        "lng": 0.0006
+      },
+      "radius": 20,
+      "initialStatus": "locked",
+      "hiddenUntilDiscovered": true
+    },
+    {
+      "id": "loc-final",
+      "name": "Poarta veche",
+      "type": "finale",
+      "coordinates": {
+        "lat": 0.0026,
+        "lng": 0.002
+      },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "Poarta se află la capătul străzii principale.",
+        "allowManualConfirmation": true
+      }
+    }
+  ],
+  "missions": [
+    {
+      "id": "m-sosire",
+      "type": "location",
+      "track": "main",
+      "title": "Piața cu ceas",
+      "briefing": "Mergi în piața cu ceas. Confirmarea se face automat prin GPS sau manual.",
+      "locationId": "loc-piata",
+      "initialStatus": "pending",
+      "points": 50
+    },
+    {
+      "id": "m-ceas",
+      "type": "observation",
+      "track": "main",
+      "title": "Ora oprită",
+      "briefing": "Uită-te la cadranul ceasului. La ce oră s-a oprit? Răspunde în formatul HH:MM.",
+      "locationId": "loc-piata",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        {
+          "text": "Privește acele, nu cifrele de pe clădire."
+        },
+        {
+          "text": "Acul mic arată spre 7."
+        }
+      ],
+      "answer": "7:15"
+    },
+    {
+      "id": "m-contact",
+      "type": "partner",
+      "track": "main",
+      "title": "Contactul",
+      "briefing": "Intră în Cafeneaua Contact și cere „dosarul ceasornicarului”. Introdu codul primit.",
+      "locationId": "loc-cafenea",
+      "partnerId": "partner-contact",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        {
+          "text": "Codul este scris pe cartonașul primit de la personal."
+        }
+      ],
+      "answer": "ROTITA"
+    },
+    {
+      "id": "m-rapid",
+      "type": "timed",
+      "track": "bonus",
+      "title": "Contra cronometru",
+      "briefing": "Ai 3 minute: câte ferestre are fațada cafenelei la etaj?",
+      "locationId": "loc-cafenea",
+      "initialStatus": "locked",
+      "timeLimitSeconds": 180,
+      "points": 50,
+      "answer": "4"
+    },
+    {
+      "id": "m-secret-pasaj",
+      "type": "secret",
+      "track": "secret",
+      "title": "Semnul din pasaj",
+      "briefing": "Pe peretele pasajului e desenat un simbol. Ce animal este?",
+      "locationId": "loc-pasaj",
+      "initialStatus": "locked",
+      "points": 75,
+      "answer": "bufnita"
+    },
+    {
+      "id": "m-final",
+      "type": "code",
+      "track": "main",
+      "title": "Codul porții",
+      "briefing": "Combină ora oprită cu codul contactului. Codul final are forma ORA-COD (ex. 1:00-ABC).",
+      "locationId": "loc-final",
+      "initialStatus": "locked",
+      "points": 200,
+      "hints": [
+        {
+          "text": "Ora vine din prima misiune."
+        },
+        {
+          "text": "Codul vine de la cafenea."
+        }
+      ],
+      "answer": "7:15-ROTITA"
+    }
+  ],
+  "partners": [
+    {
+      "id": "partner-contact",
+      "name": "Contactul (partener fictiv)",
+      "category": "cafe",
+      "locationId": "loc-cafenea",
+      "missionId": "m-contact",
+      "verification": {
+        "method": "staff_code",
+        "instructions": "Personalul oferă un cartonaș cu un cod la cererea „dosarul ceasornicarului”."
+      },
+      "reward": {
+        "type": "discount",
+        "description": "10% la o băutură (exemplu fictiv)."
+      },
+      "validity": {
+        "from": "2026-01-01",
+        "until": "2026-12-31"
+      }
+    }
+  ],
+  "secrets": [
+    {
+      "id": "secret-pasaj",
+      "title": "Pasajul îngust",
+      "description": "Un loc care nu apare pe hartă.",
+      "locationId": "loc-pasaj",
+      "missionId": "m-secret-pasaj",
+      "points": 25
+    }
+  ],
+  "events": [
+    {
+      "id": "ev-start",
+      "on": "adventure_started",
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "intro"
+        }
+      ]
+    },
+    {
+      "id": "ev-raspuns-gresit",
+      "on": "answer_incorrect",
+      "once": false,
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "wrong-answer"
+        }
+      ]
+    },
+    {
+      "id": "ev-aproape-piata",
+      "on": "player_near_location",
+      "where": {
+        "locationId": "loc-piata"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "approaching"
+        }
+      ]
+    },
+    {
+      "id": "ev-sosire-piata",
+      "on": "player_arrived",
+      "where": {
+        "locationId": "loc-piata"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "arrived-square"
+        },
+        {
+          "action": "play_audio",
+          "trackId": "sfx-arrival"
+        }
+      ]
+    },
+    {
+      "id": "ev-cafenea-deblocata",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "m-ceas"
+      },
+      "do": [
+        {
+          "action": "unlock_location",
+          "locationId": "loc-cafenea"
+        },
+        {
+          "action": "unlock_mission",
+          "missionId": "m-rapid"
+        },
+        {
+          "action": "show_message",
+          "messageId": "contact-intro"
+        }
+      ]
+    },
+    {
+      "id": "ev-secret",
+      "on": "player_arrived",
+      "where": {
+        "locationId": "loc-pasaj"
+      },
+      "do": [
+        {
+          "action": "discover_secret",
+          "secretId": "secret-pasaj"
+        },
+        {
+          "action": "unlock_mission",
+          "missionId": "m-secret-pasaj"
+        },
+        {
+          "action": "show_message",
+          "messageId": "secret-found"
+        }
+      ]
+    },
+    {
+      "id": "ev-final-deblocat",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "m-contact"
+      },
+      "do": [
+        {
+          "action": "unlock_location",
+          "locationId": "loc-final"
+        }
+      ]
+    },
+    {
+      "id": "ev-final",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "m-final"
+      },
+      "do": [
+        {
+          "action": "award_points",
+          "points": 50,
+          "reason": "Caz închis"
+        },
+        {
+          "action": "show_message",
+          "messageId": "finale"
+        },
+        {
+          "action": "complete_adventure"
+        }
+      ]
+    },
+    {
+      "id": "ev-partener",
+      "on": "mission_started",
+      "where": {
+        "missionId": "m-contact"
+      },
+      "do": [
+        {
+          "action": "unlock_partner",
+          "partnerId": "partner-contact"
+        }
+      ]
+    }
+  ],
+  "finale": {
+    "missionId": "m-final",
+    "messageId": "finale"
+  }
+}

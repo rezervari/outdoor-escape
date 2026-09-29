@@ -227,6 +227,7 @@ button:focus-visible {
 }
 
 .hint {
+  white-space: pre-line; /* un indiciu pe rând */
   margin: 1rem 0 0;
   padding: 0.75rem;
   border: 2px dashed #d98e04;

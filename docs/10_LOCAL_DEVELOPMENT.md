@@ -4,7 +4,7 @@
 
 Acest document descrie cum se lucrează local la proiect și cum se testează funcțiile GPS/PWA pe un telefon real.
 
-Stare: există scheletul PWA (fundația tehnică, fără joc). Secțiunile 4–8 se aplică scheletului. Acolo unde procedura depinde de o decizie încă deschisă, trimiterea este la `04_DECISIONS_LOG.md` (intrările PROPOSED).
+Stare: există aplicația cu motorul de joc (fundația V2) și o aventură demonstrativă. Secțiunile 4–8 se aplică aplicației. Testele automate: `npm test` (Node.js 20+, fără `npm install`; vezi `tests/README.md`). Acolo unde procedura depinde de o decizie încă deschisă, trimiterea este la `04_DECISIONS_LOG.md` (intrările PROPOSED).
 
 ## 2. Principii
 
@@ -151,7 +151,7 @@ git log -1 --oneline
 
 ## 10. Validarea documentației
 
-Deocamdată nu există tooling de validare în repository (D-023, PROPOSED). Verificări manuale minime înainte de commit:
+Pentru cod există teste automate (`npm test`, D-023). Pentru documentație nu există încă tooling de validare. Verificări manuale minime înainte de commit:
 
 - linkurile relative dintre documente duc la fișiere existente;
 - fișierele sunt salvate în UTF-8;

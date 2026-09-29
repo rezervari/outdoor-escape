@@ -327,6 +327,8 @@ Notă (2026-09-29): motorul v1 salvează progresul cu `schemaVersion: 1` (vezi `
 
 Confirmat de proprietar (2026-09-29): cheia de stocare `outdoor-escape:game:<id>` (conformă cu D-035). Restul propunerii (versiunea schemei, câmpuri corporate) rămâne PROPOSED.
 
+Notă (2026-09-29): versiunea schemei progresului și migrarea automată sunt acum decise în D-043 (`schemaVersion: 2`). Câmpurile corporate rămân PROPOSED.
+
 ---
 
 ## D-030 — HINT_USED: eveniment, nu stare
@@ -472,3 +474,96 @@ Decizie (proprietar, 2026-09-29):
 - conținutul nu se mută în `content/games/`.
 
 Rămân deschise, pentru o etapă ulterioară: structura când apar media per aventură și soarta directorului gol `content/games/`.
+
+---
+
+## D-038 — Schema aventurii V2 și compatibilitatea cu V1
+Status: CONFIRMED (2026-09-29) — D1
+
+Decizie:
+- Aplicația acceptă aventuri `schemaVersion: 1` și `schemaVersion: 2`.
+- V1 este convertită în V2 **în memorie**, la încărcare (`upgradeV1ToV2` / `toAdventureV2` în `src/js/schema.js`); fișierul V1 nu se modifică.
+- Aventura demo `content/adventures/brasov-centrul-vechi.json` rămâne V1 deocamdată.
+- Schema V2: `meta`, `settings`, `narrator`, `audio`, `locations`, `missions`, `partners`, `secrets`, `events`, `finale`. Id-uri stabile, legate prin referințe verificate la validare. Câmpuri necunoscute permise; valori necunoscute din listele închise = erori.
+- Motorul nu conține logică sau texte specifice unei aventuri (verificat de un test automat).
+
+Specificație: `11_ADVENTURE_SCHEMA_V2.md`.
+
+---
+
+## D-039 — Modelul de locație și GPS
+Status: CONFIRMED (2026-09-29) — D2
+
+Decizie:
+- Coordonate `{ lat, lng }` (WGS84, grade zecimale), distanțe și rază în metri.
+- Valori implicite **configurabile** (nu fixate în motor), definite central în `src/js/defaults.js` și suprascrise per aventură în `settings.gps`: `defaultRadius` 40 m, `nearDistance` 150 m, `maxAccuracy` 60 m, `exitMargin` 20 m, `allowManualConfirmation` true.
+- Precizie peste `maxAccuracy` → „uncertain” (nu declanșează nimic). „Inside” dacă distanța ≤ rază + min(precizie, rază/2). Histerezis cu `exitMargin` la ieșire.
+- Confirmarea manuală („Am ajuns”) este rezerva standard (D-006).
+- Motorul este **independent de Geolocation API**: primește observații (`reportPosition`) și produce tranziții/evenimente. GPS-ul browserului se implementează într-o etapă ulterioară.
+
+Rămân deschise: validarea valorilor pe teren (Faza 5), comportamentul în fundal / ecran stins (D-028).
+
+---
+
+## D-040 — Limbajul evenimentelor
+Status: CONFIRMED (2026-09-29) — D3
+
+Decizie:
+- Regulă = eveniment (`on`) + filtru simplu (`where`, egalitate) + acțiuni (`do`), din liste închise. Fără expresii și fără mini-limbaj de programare.
+- `once` este true implicit; regulile rulate se salvează în progres.
+- Reacțiile în lanț sunt limitate (`settings.events.maxChainDepth`, implicit 8, maxim 32) și există un plafon absolut per acțiune.
+- Acțiunile sunt idempotente; `award_points` nu este permis în reguli repetabile.
+- Motorul nu afișează și nu redă nimic: produce efecte pentru interfață.
+
+Prioritate: predictibilitate și testabilitate.
+
+---
+
+## D-041 — Terminologie: „mission”
+Status: CONFIRMED (2026-09-29) — D4
+
+Decizie:
+- În cod și în schema V2 se folosește `mission`.
+- Textele prezentate jucătorului vin din conținut / interfață și se decid ulterior. Terminologia de produs nu se fixează în motor.
+
+Notă: pentru compatibilitate, API-ul motorului păstrează numele V1 (`getCurrentChallenge`, `skipChallenge`, `ChallengeStatus`) ca alias-uri.
+
+---
+
+## D-042 — Fixture-uri de test
+Status: CONFIRMED (2026-09-29) — D5
+
+Decizie:
+- Aventurile fictive folosite de teste stau în `tests/fixtures/` (ex. `adventure-v2-demo.json`).
+- Nu se publică pe GitHub Pages: workflow-ul copiază doar `index.html`, `src/` și `content/` (verificat prin rularea locală a pasului de asamblare).
+
+---
+
+## D-043 — Progresul salvat V2 și migrarea automată
+Status: CONFIRMED (2026-09-29) — D6
+
+Decizie:
+- Progresul salvat are `schemaVersion: 2`: `currentMissionId` (în locul lui `currentIndex`) și stări pe entități (misiuni, locații, parteneri, secrete, reguli rulate). Cheia rămâne `outdoor-escape:game:<id>`.
+- Listele cerute de produs (misiuni rezolvate/eșuate/sărite, locații vizitate, secrete, evenimente declanșate) sunt **derivate** din aceste stări; scorul este derivat din conținut.
+- Progresul `schemaVersion: 1` se migrează automat, fără a cere jucătorului să o ia de la zero.
+- Nu se salvează coordonatele sau traseul jucătorului.
+
+Forma completă și regulile de migrare: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 11.
+
+---
+
+## D-044 — Închiderea M-002: reguli confirmate
+Status: CONFIRMED (2026-09-29)
+
+Decizie (confirmată de proprietar după implementarea M-002):
+- `src/sw.js`: modificarea din M-002 constă doar în adăugarea modulelor V2 (`defaults.js`, `events.js`, `geo.js`, `schema.js`) în `SHELL_FILES` și în trecerea `CACHE_VERSION` de la `v3` la `v4`. Strategia de cache nu s-a schimbat. Se păstrează.
+- `pending` rămâne starea internă a unei misiuni disponibile (compatibilitate cu motorul V1 și cu progresul salvat).
+- Se păstrează regulile introduse în M-002:
+  - legătura partener ↔ misiune este verificată în ambele sensuri (`partner.missionId` ↔ `mission.partnerId`);
+  - o misiune de tip `location` se rezolvă la sosire (GPS sau confirmare manuală);
+  - o locație devine vizibilă (`unlocked`) când misiunea asociată devine activă;
+  - o locație ascunsă (`hiddenUntilDiscovered`) nu apare în rezultatul `reportPosition` până la descoperire (este totuși evaluată, ca trecerea prin zonă să o poată descoperi).
+- `Claude outputs/` (fișiere de lucru generate de Claude) este ignorat de Git.
+
+Stare implementat / pregătit: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
+

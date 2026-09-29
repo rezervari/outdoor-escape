@@ -24,3 +24,6 @@ build/
 # Temporary files
 .tmp/
 temp/
+
+# Claude working files (proposals, exports) - not part of the project
+Claude outputs/

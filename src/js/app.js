@@ -2,7 +2,8 @@
  * Outdoor Escape — punctul de intrare JavaScript.
  *
  * Leagă modulele între ele și desenează interfața minimă:
- * - content.js — încarcă și validează aventura (JSON din ../content/);
+ * - content.js — încarcă și validează aventura (JSON din ../content/, schema V1 sau V2);
+ * - schema.js  — conversia V1 → V2 și forma normalizată pentru motor;
  * - answers.js — validarea răspunsurilor (D-021);
  * - game.js    — motorul de joc (stări, scor, progres);
  * - storage.js — salvarea progresului în localStorage.
@@ -12,6 +13,7 @@
  */
 
 import { loadAdventure, isValidId } from "./content.js";
+import { toAdventureV2 } from "./schema.js";
 import { createLocalValidator, withoutAnswers } from "./answers.js";
 import { createGame, GameStatus, ChallengeStatus } from "./game.js";
 import { createStorage } from "./storage.js";
@@ -68,28 +70,29 @@ function requestedAdventureId() {
 }
 
 function setupGameUi(game, storage) {
-  const { adventure } = game;
+  const adventure = game.content; // forma normalizată V2 (fără răspunsuri)
+  const meta = adventure.meta;
   let feedback = null; // { kind: "correct" | "incorrect" | "empty" | "skipped" | "failed", text }
 
   function renderStart() {
-    $("adventure-title").textContent = adventure.title;
-    $("adventure-description").textContent = adventure.description || "";
-    $("adventure-city").textContent = adventure.city || "—";
-    $("adventure-time").textContent = adventure.estimatedTime ? `aprox. ${adventure.estimatedTime} minute` : "—";
-    $("adventure-difficulty").textContent = DIFFICULTY_LABELS[adventure.difficulty] || adventure.difficulty || "—";
-    $("adventure-count").textContent = String(adventure.challenges.length);
+    $("adventure-title").textContent = meta.title;
+    $("adventure-description").textContent = meta.description || "";
+    $("adventure-city").textContent = meta.city || "—";
+    $("adventure-time").textContent = meta.estimatedTime ? `aprox. ${meta.estimatedTime} minute` : "—";
+    $("adventure-difficulty").textContent = DIFFICULTY_LABELS[meta.difficulty] || meta.difficulty || "—";
+    $("adventure-count").textContent = String(game.getSummary().total); // misiunile principale
     showScreen("screen-start");
   }
 
   function renderPlay() {
-    const current = game.getCurrentChallenge();
-    const { challenge, progress, index, total, isLast } = current;
+    const current = game.getCurrentMission();
+    const { mission: challenge, progress, index, total, isLast } = current;
     const closed = progress.status !== ChallengeStatus.PENDING;
 
     $("challenge-progress").textContent = `Provocarea ${index + 1} din ${total}`;
     $("current-score").textContent = String(game.getSummary().score);
     $("challenge-title").textContent = challenge.title;
-    $("challenge-description").textContent = challenge.description;
+    $("challenge-description").textContent = challenge.briefing;
 
     // După închiderea provocării (inclusiv după refresh), mesajul vine din progres.
     let message = feedback;
@@ -110,11 +113,15 @@ function setupGameUi(game, storage) {
     $("btn-next").hidden = !closed;
     $("btn-next").textContent = isLast ? "Vezi rezultatul" : "Continuă";
 
-    const hasHint = typeof challenge.hint === "string" && challenge.hint !== "";
-    $("hint-area").hidden = !hasHint || closed;
-    $("btn-hint").hidden = progress.hintUsed;
-    $("hint-text").hidden = !progress.hintUsed;
-    $("hint-text").textContent = progress.hintUsed ? `Indiciu: ${challenge.hint}` : "";
+    // Indiciile se dezvăluie pe rând; toate cele dezvăluite rămân vizibile.
+    const hints = challenge.hints;
+    const revealed = hints.slice(0, progress.hintsUsed).map((hint, i) =>
+      hints.length === 1 ? `Indiciu: ${hint.text}` : `Indiciul ${i + 1}: ${hint.text}`
+    );
+    $("hint-area").hidden = hints.length === 0 || closed;
+    $("btn-hint").hidden = progress.hintsUsed >= hints.length;
+    $("hint-text").hidden = revealed.length === 0;
+    $("hint-text").textContent = revealed.join("\n");
 
     showScreen("screen-play");
   }
@@ -169,11 +176,12 @@ function setupGameUi(game, storage) {
     const input = $("answer-input");
     const button = $("btn-check");
     button.disabled = true;
+    // Misiunea este reținută înainte de verificare: un eveniment poate încheia aventura.
+    const mission = game.getCurrentMission()?.mission;
     try {
       const { result } = await game.submitAnswer(input.value);
       if (result === "correct") {
-        const { challenge } = game.getCurrentChallenge();
-        feedback = { kind: "correct", text: `Corect! +${challenge.points} puncte.` };
+        feedback = { kind: "correct", text: `Corect! +${mission.points} puncte.` };
         input.value = "";
       } else if (result === "incorrect") {
         feedback = { kind: "incorrect", text: "Răspuns incorect. Mai încearcă sau folosește indiciul." };
@@ -230,7 +238,8 @@ async function startGame() {
   const adventureId = requestedAdventureId();
   let adventure;
   try {
-    adventure = await loadAdventure(adventureId);
+    // V1 sau V2 în fișier; motorul lucrează cu forma V2 (conversie în memorie — D-038).
+    adventure = toAdventureV2(await loadAdventure(adventureId));
   } catch (error) {
     console.error(`[${APP_NAME}] Încărcarea aventurii „${adventureId}” a eșuat:`, error, error.details || "");
     showError(error.name === "AdventureLoadError" ? error.message : "A apărut o eroare neașteptată.");

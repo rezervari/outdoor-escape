@@ -148,16 +148,24 @@ test("restoreState: respinge sau repară stări nepotrivite", () => {
   assert.equal(restoreState(demo, { schemaVersion: 1, adventureId: "alta", status: "playing" }), null);
   assert.equal(restoreState(demo, { schemaVersion: 1, adventureId: demo.id, status: "ciudat" }), null);
 
-  const saved = createInitialState(demo);
-  saved.status = "playing";
-  saved.currentIndex = 42; // în afara listei
-  saved.score = 99999; // scorul salvat nu este de încredere
-  saved.challenges["challenge-01"].status = "solved";
-  saved.challenges["provocare-stearsa"] = { status: "solved" };
+  // Stare salvată în formatul V1 (currentIndex + challenges), migrată la V2 (D-043).
+  const saved = {
+    schemaVersion: 1,
+    adventureId: demo.id,
+    status: "playing",
+    currentIndex: 42, // în afara listei
+    score: 99999, // scorul salvat nu este de încredere
+    challenges: {
+      "challenge-01": { status: "solved", attempts: 1, hintUsed: false },
+      "challenge-02": { status: "pending", attempts: 0, hintUsed: false },
+      "challenge-03": { status: "pending", attempts: 0, hintUsed: false },
+      "provocare-stearsa": { status: "solved" },
+    },
+  };
   const state = restoreState(demo, saved);
-  assert.equal(state.currentIndex, 2);
+  assert.equal(state.currentMissionId, "challenge-03"); // indexul 42 este limitat la ultima misiune
   assert.equal(state.score, 100);
-  assert.equal("provocare-stearsa" in state.challenges, false);
+  assert.equal("provocare-stearsa" in state.missions, false);
 });
 
 test("start după completed pornește un joc nou", async () => {
@@ -206,7 +214,7 @@ test("skipped: 0 puncte, nu este rezolvată, jocul continuă, se păstrează dup
   // Refresh după „Continuă”: provocarea anterioară rămâne skipped.
   restored = newGame(storage.loadGame(demo.id));
   assert.equal(restored.getCurrentChallenge().index, 2);
-  assert.equal(restored.getState().challenges["challenge-02"].status, ChallengeStatus.SKIPPED);
+  assert.equal(restored.getState().missions["challenge-02"].status, ChallengeStatus.SKIPPED);
   await restored.submitAnswer("arici");
   restored.next();
   assert.deepEqual(restored.getSummary(), { score: 250, maxScore: 350, solved: 2, total: 3 });

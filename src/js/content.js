@@ -6,13 +6,23 @@
  * funcționează identic la http://localhost:8000/src/ și la
  * https://rezervari.github.io/outdoor-escape/src/ (D-035).
  *
+ * Sunt acceptate două versiuni ale schemei (D-038):
+ * - schemaVersion 1 (sau absent): formatul inițial cu `challenges`;
+ * - schemaVersion 2: formatul extins (misiuni, locații, evenimente …), validat de schema.js.
+ * loadAdventure() întoarce aventura exact cum este în fișier, după validare;
+ * conversia V1 → V2 pentru motor se face cu toAdventureV2() (schema.js).
+ *
  * validateAdventure() nu folosește API-uri de browser și poate fi testată în Node.
  */
 
-export const SUPPORTED_SCHEMA_VERSION = 1;
+import { isValidId, validateAdventureV2, SCHEMA_V1, SCHEMA_V2 } from "./schema.js";
 
-// Id stabil: litere mici, cifre și cratimă. Împiedică și căi de tip "../".
-const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export { isValidId };
+
+/** Versiunea schemei V1 (formatul inițial). */
+export const SUPPORTED_SCHEMA_VERSION = SCHEMA_V1;
+/** Toate versiunile de schemă pe care aplicația le poate încărca. */
+export const SUPPORTED_SCHEMA_VERSIONS = Object.freeze([SCHEMA_V1, SCHEMA_V2]);
 
 export class AdventureLoadError extends Error {
   constructor(message, { cause, details } = {}) {
@@ -23,28 +33,34 @@ export class AdventureLoadError extends Error {
   }
 }
 
-export function isValidId(value) {
-  return typeof value === "string" && ID_PATTERN.test(value);
-}
-
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim() !== "";
 }
 
 /**
- * Validare minimă a structurii. Câmpurile necunoscute sunt permise, ca
- * formatul să poată fi extins (coordonate, imagini, indicii multiple etc.).
- * Întoarce { valid, errors }.
+ * Validează o aventură, după versiunea schemei. Întoarce { valid, errors }.
+ * V2 → validateAdventureV2 (schema.js); V1 → validarea minimă de mai jos.
  */
 export function validateAdventure(data) {
+  if (data !== null && typeof data === "object" && !Array.isArray(data) && data.schemaVersion === SCHEMA_V2) {
+    return validateAdventureV2(data);
+  }
+  return validateAdventureV1(data);
+}
+
+/**
+ * Validare minimă V1. Câmpurile necunoscute sunt permise.
+ * Întoarce { valid, errors }.
+ */
+export function validateAdventureV1(data) {
   const errors = [];
 
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
     return { valid: false, errors: ["Aventura trebuie să fie un obiect JSON."] };
   }
 
-  if (data.schemaVersion !== undefined && data.schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
-    errors.push(`schemaVersion ${data.schemaVersion} nu este suportată (se așteaptă ${SUPPORTED_SCHEMA_VERSION}).`);
+  if (data.schemaVersion !== undefined && data.schemaVersion !== SCHEMA_V1) {
+    errors.push(`schemaVersion ${data.schemaVersion} nu este suportată (versiuni suportate: ${SUPPORTED_SCHEMA_VERSIONS.join(", ")}).`);
   }
   if (!isValidId(data.id)) errors.push("id lipsește sau nu este valid (litere mici, cifre, cratimă).");
   if (!isNonEmptyString(data.title)) errors.push("title lipsește.");
