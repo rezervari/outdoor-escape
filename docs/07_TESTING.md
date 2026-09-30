@@ -106,7 +106,7 @@ Critical bugs block release.
 
 ## 10. Proceduri concrete de testare
 
-Secțiunile 1–9 de mai sus definesc *ce* se testează. Secțiunile 10–17 descriu *cum* se testează. Procedurile pentru aplicație se aplică după ce există scheletul PWA; până atunci se aplică doar secțiunea 17 (documentație).
+Secțiunile 1–9 de mai sus definesc *ce* se testează. Secțiunile 10–17 descriu *cum* se testează. Procedurile pentru aplicație se aplică aplicației existente (scheletul PWA — secțiunea 21 — și motorul — secțiunile 22–25); pentru modificările care ating doar documentația se aplică secțiunea 17.
 
 Reguli:
 
@@ -158,7 +158,7 @@ DevTools → meniul `⋮` → More tools → Sensors → Location:
 | Permisiune refuzată | iconița din bara de adrese → Location → Block, apoi reîncărcare | mesaj clar + cale de continuare |
 | Achiziție lentă | Network → throttling + observarea stării de așteptare | indicator de așteptare, fără blocare |
 
-Precizia slabă (valoare `accuracy` mare) nu poate fi simulată exact din panoul Sensors. Se testează pe telefon (secțiunea 13) sau prin teste automate, când vor exista (D-023).
+Precizia slabă (valoare `accuracy` mare) nu poate fi simulată exact din panoul Sensors. Se testează pe telefon (secțiunea 13) și prin testele automate existente (`npm test`, D-023): `tests/geo.test.js` și `tests/location-integration.test.js` (vezi secțiunea 24.1).
 
 ### 12.5 Persistența progresului
 
