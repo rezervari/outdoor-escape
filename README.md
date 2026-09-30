@@ -6,14 +6,20 @@ Echipele (2–4 jucători) urmează o poveste, merg fizic prin oraș, observă d
 
 Primul joc este gândit pentru **Brașov**. Titlul de lucru este „Tainele Breslei Pierdute din Kronstadt” (nu este final).
 
+## Platforma (V1.1 — arhitectură decisă, neimplementată)
+
+Outdoor Escape evoluează spre o platformă cu două produse care folosesc același motor: **Walk** (`walk.outdoor-escape.ro`, aventuri pietonale, inițial în Brașov) și **Bike** (`bike.outdoor-escape.ro`, aventuri cu bicicleta, primul operator: Funsy Bike). AR nu este produs separat, ci o capabilitate viitoare pentru ambele. Adresele sunt planificate; aplicația rămâne deocamdată pe GitHub Pages (mai jos).
+
+Arhitectura V1.1 (rută ≠ aventură ≠ sesiune, echipe și participanți, continuitatea sesiunii, stare comună, offline-first, versiuni de aventură, GPS adaptiv, bypass) este **decisă, dar neimplementată**: [`docs/13_PLATFORM_V1.1.md`](docs/13_PLATFORM_V1.1.md). Backend, plăți, rezervări și dashboard rămân viitoare.
+
 ## Stare
 
-**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. **M-003.1:** poziția reală a telefonului (Browser Geolocation API, doar cu aplicația deschisă) este conectată la motor: stare GPS, permisiune explicată, obiectivul misiunii și „Am ajuns” ca rezervă. Aventura demo publică nu are încă locații, deci pe ea GPS-ul este doar informativ. **M-003.2:** harta Leaflet (1.9.4, inclusă local) + OpenStreetMap, doar pentru orientare, afișată în joc numai pentru aventurile cu locații — implementată, în review. Pregătit, dar încă fără interfață: misiunile partener, secrete și cu timp, naratorul, audio, GPS-ul în fundal și notificările — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
+**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. **M-003.1:** poziția reală a telefonului (Browser Geolocation API, doar cu aplicația deschisă) este conectată la motor: stare GPS, permisiune explicată, obiectivul misiunii și „Am ajuns” ca rezervă. Aventura demo publică nu are încă locații, deci pe ea GPS-ul este doar informativ. **M-003.2:** harta Leaflet (1.9.4, inclusă local) + OpenStreetMap, doar pentru orientare, afișată în joc numai pentru aventurile cu locații — implementată și comisă, în review-ul proprietarului. Pregătit, dar încă fără interfață: misiunile partener, secrete și cu timp, naratorul, audio, GPS-ul în fundal și notificările — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
 
 Milestone-uri curente:
 
 - M-003.1 — Browser Geolocation: COMPLETED
-- M-003.2 — Map: IMPLEMENTED — PENDING OWNER REVIEW (D-046–D-049; necomis; test pe telefon cu locații reale amânat, D-049-M)
+- M-003.2 — Map: IMPLEMENTED — PENDING OWNER REVIEW (D-046–D-049; comis — `39a6b28`; test pe telefon cu locații reale amânat, D-049-M)
 
 Traseul, locațiile și puzzle-urile jocului real nu sunt finale până nu sunt verificate pe teren.
 
@@ -44,7 +50,7 @@ Deocamdată **nu** există backend, plăți (Stripe), conturi de utilizator sau 
 ├── src/                 aplicația: HTML, CSS, module JavaScript, manifest, service worker
 ├── content/adventures/  conținutul aventurilor (JSON)
 ├── tests/               teste automate (node --test) și fixture-uri
-├── docs/                documentația proiectului
+├── docs/                documentația proiectului (00–15)
 ├── .github/workflows/   publicarea pe GitHub Pages (doar index.html, src/, content/)
 ├── package.json         doar pentru `npm test` (fără dependențe)
 ├── LICENSE              licența MIT pentru codul aplicației
@@ -72,6 +78,9 @@ Teste: `npm test` (Node.js 20+, fără `npm install`).
 | [`10_LOCAL_DEVELOPMENT.md`](docs/10_LOCAL_DEVELOPMENT.md) | dezvoltare locală și testare pe telefon (HTTPS) |
 | [`11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md) | schema aventurii V2 și contractele motorului |
 | [`12_MAP_SPECIFICATION_M-003.2.md`](docs/12_MAP_SPECIFICATION_M-003.2.md) | specificația hărții (M-003.2, D-046–D-049) și criteriile de acceptare |
+| [`13_PLATFORM_V1.1.md`](docs/13_PLATFORM_V1.1.md) | **Outdoor Escape Platform V1.1** — arhitectura consolidată (D-050–D-063) |
+| [`14_EDGE_CASES.md`](docs/14_EDGE_CASES.md) | scenarii limită V1.1, orientate spre implementare |
+| [`15_SESSION_SYNC.md`](docs/15_SESSION_SYNC.md) | sincronizarea stării sesiunii (evenimente, coadă locală, offline) |
 | [`README_CONTEXT_PACK.md`](docs/README_CONTEXT_PACK.md) | ordinea de citire a documentației |
 
 Documentația nouă se scrie în limba română (D-017). Unele documente existente sunt încă în engleză.

@@ -440,3 +440,9 @@ Ca la 24.2: copie locală servită prin HTTP (`localhost`), cu fixture-ul copiat
 ### 25.3 Manual pe telefon
 
 Nu se poate face încă cu obiective: aventura publică nu are locații (D-049-M). Pe aventura publică se verifică doar că harta **nu** apare și că M-003.1 funcționează ca înainte (24.3). Testul pe teren cere o aventură cu coordonate reale.
+
+## 26. Platform V1.1 — scenarii de testat (arhitectură decisă, neimplementată)
+
+Nu există încă funcționalități V1.1 de testat. Scenariile limită care vor deveni teste la implementare (acces, continuitate, echipă, conectivitate, GPS, conținut, joc) sunt în [`14_EDGE_CASES.md`](14_EDGE_CASES.md); cele de sincronizare în [`15_SESSION_SYNC.md`](15_SESSION_SYNC.md) §13. Pentru fiecare funcționalitate se testează calea normală și calea de eșec / recuperare.
+
+Regresia existentă rămâne `npm test` (132 de teste verzi la 2026-09-30, înainte de orice implementare V1.1).

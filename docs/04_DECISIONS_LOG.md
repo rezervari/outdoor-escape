@@ -281,10 +281,14 @@ Notă (2026-09-29): motorul v1 calculează scorul ca sumă a punctelor provocăr
 
 Notă tehnică: timpul trebuie calculat din momente salvate (timestamp), nu dintr-un contor care rulează în pagină, pentru că browserul poate suspenda pagina (vezi D-028).
 
+Constrângere (2026-09-30, D-059): pentru aventurile **Bike**, scorul nu poate recompensa viteza sau folosirea telefonului în mers. Orice variantă aleasă aici trebuie să permită dezactivarea timpului ca factor de scor per aventură. Tot aici se decide efectul în scor al unui bypass (D-061). Statusul rămâne PROPOSED.
+
 ---
 
 ## D-026 — Un telefon sau mai multe per echipă
-Status: PROPOSED
+Status: SUPERSEDED (2026-09-30) — înlocuită de D-054 (anterior: PROPOSED)
+
+Notă (2026-09-30): D-054 decide ambele moduri, `shared_device` și `multi_device`. Un telefon principal per echipă rămâne un mod suportat (`shared_device`), dar nu mai este singura direcție. Observația de mai jos rămâne corectă: `multi_device` cere un server, deci se implementează doar odată cu backend-ul (D-019). Textul original se păstrează ca istoric.
 
 Context:
 Sincronizarea progresului între mai multe telefoane ale aceleiași echipe necesită un server (contrar D-019 acum).
@@ -331,6 +335,8 @@ Notă (2026-09-29): motorul v1 salvează progresul cu `schemaVersion: 1` (vezi `
 Confirmat de proprietar (2026-09-29): cheia de stocare `outdoor-escape:game:<id>` (conformă cu D-035). Restul propunerii (versiunea schemei, câmpuri corporate) rămâne PROPOSED.
 
 Notă (2026-09-29): versiunea schemei progresului și migrarea automată sunt acum decise în D-043 (`schemaVersion: 2`). Câmpurile corporate rămân PROPOSED.
+
+Notă (2026-09-30): D-051 – D-053 introduc la nivel arhitectural identitatea de sesiune și participant (`sessionId`, `participantId`, echipa), nu doar pentru corporate. Forma exactă a progresului salvat cu sesiuni se decide la implementare, cu migrare automată (principiul D-043).
 
 ---
 
@@ -551,6 +557,8 @@ Decizie:
 - Progresul `schemaVersion: 1` se migrează automat, fără a cere jucătorului să o ia de la zero.
 - Nu se salvează coordonatele sau traseul jucătorului.
 
+Notă (2026-09-30): rămâne valabilă și în Platform V1.1. „Eventuala poziție GPS” a unei sesiuni și monitorizarea live (FUTURE) cer o decizie separată de confidențialitate înainte de orice implementare (`13_PLATFORM_V1.1.md` §15.3). Sincronizarea transmite fapte (ex. sosirea la un checkpoint), nu coordonate (`15_SESSION_SYNC.md` §3.2).
+
 Forma completă și regulile de migrare: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 11.
 
 ---
@@ -677,7 +685,7 @@ Harta primește doar acest model:
 ---
 
 ## D-049 — Comportamentul vizual și UX al hărții (Map V1)
-Status: CONFIRMED (2026-09-29) — specificație aprobată; implementarea M-003.2 NU a început
+Status: CONFIRMED (2026-09-29) — specificație aprobată; implementarea M-003.2 a fost făcută și comisă (`39a6b28`, „feat: implement M-003.2 map”), în review-ul proprietarului (actualizat 2026-09-30; anterior: „implementarea M-003.2 NU a început”)
 
 Specificația completă (cu cele 30 de criterii de acceptare): [`12_MAP_SPECIFICATION_M-003.2.md`](12_MAP_SPECIFICATION_M-003.2.md). Propunerea originală (`Claude outputs/PROPUNERE_D-049_MAP_V1.md`, ignorată de Git, D-044) rămâne doar ca artefact local istoric. Deciziile esențiale sunt rezumate mai jos.
 
@@ -704,3 +712,247 @@ Decizii:
 Principiu general: harta **nu afectează progresul**. Cercul obiectivului este doar reprezentare vizuală; sosirea este decisă exclusiv de `geo.js` / `game.js`, iar „Am ajuns” rămâne rezerva (D-006).
 
 Fișiere de modificat la implementare: `src/js/map.js` (nou), `src/js/map-model.js` (nou), `src/vendor/leaflet/` (nou), `src/index.html`, `src/css/app.css`, `src/js/app.js`, `src/js/defaults.js`, `src/sw.js` (`CACHE_VERSION` `v6`), `src/js/game.js` (doar `radiusMeters`, aditiv), `src/js/geo.js` (doar `effectiveRadius`, aditiv), teste noi (testele existente rămân nemodificate), documentația.
+
+---
+
+## D-050 — Outdoor Escape Platform V1.1: produse
+Status: CONFIRMED (2026-09-30) — arhitectural; neimplementat
+
+Decizie:
+- Platforma are două produse publice planificate care folosesc **același motor**: **Walk** (`walk.outdoor-escape.ro`, aventuri pietonale, inițial în Brașov) și **Bike** (`bike.outdoor-escape.ro`, aventuri cu bicicleta, primul operator: Funsy Bike).
+- **AR** nu este produs separat, ci o capabilitate transversală viitoare, utilizabilă în Walk și Bike.
+- Diferențele Walk / Bike vin din configurația aventurii (profil GPS, reguli de siguranță), nu din cod separat (D-005).
+
+Neschimbat: aplicația rămâne la adresa din D-035. Data și modul mutării pe subdomenii nu sunt decise; consecințele D-035 (altă origine = aplicație nouă, fără progres și permisiuni transferate) se aplică.
+
+Documentul principal: [`13_PLATFORM_V1.1.md`](13_PLATFORM_V1.1.md).
+
+---
+
+## D-051 — Modelul de domeniu: Route, Adventure, Session, Pass, roluri
+Status: CONFIRMED (2026-09-30) — arhitectural; neimplementat
+
+Decizie:
+- **Route ≠ Adventure.** Ruta este infrastructura geografică; aventura este experiența construită peste o rută. Aceeași rută poate găzdui mai multe aventuri.
+- **Adventure ≠ Adventure Session.** Aventura este definiția jocului; sesiunea este o rulare concretă de către o echipă. Aceeași aventură poate avea simultan oricâte sesiuni, fiecare cu echipă, participanți, progres, răspunsuri, indicii, checkpoint, stare, timpi și evenimente proprii.
+- **Buyer ≠ Team Leader ≠ Participant.** Roluri distincte conceptual; pot coincide, dar nu obligatoriu.
+- **Adventure Pass** = dreptul de acces la o participare. Model: Purchase / Booking → Adventure Pass → Adventure Session → Team → Participants. Plățile și rezervările rămân viitoare (D-008, D-019); arhitectura trebuie să permită modelul.
+- Motorul nu conține referințe la Funsy Bike, Circuitul Șirnea sau altă rută / operator (extinde regula din D-038).
+
+Stare în cod: există doar aventura (fișier JSON) și o sesiune locală implicită, una per aventură per browser (`outdoor-escape:game:<id>`).
+
+---
+
+## D-052 — Lifecycle-ul sesiunii și al echipei
+Status: CONFIRMED (2026-09-30) — arhitectural; neimplementat
+
+Decizie:
+- Sesiune: `CREATED`, `TEAM_FORMING`, `READY`, `LOCKED`, `ACTIVE`, `PAUSED`, `COMPLETED`, `ABANDONED`, `EXPIRED`, `CANCELLED`. Nu toate trebuie implementate deodată.
+- Echipă: `TEAM FORMING → READY → LOCKED → ACTIVE → COMPLETED`, plus stări de excepție.
+- După `LOCKED`: nu mai intră participanți noi; invite link-ul nu creează o altă sesiune; încercările ulterioare de join sunt tratate explicit.
+- Stările jocului implementate (`idle → playing → completed`) rămân neschimbate până la implementare.
+
+Rămân deschise: parametrii de timp (`EXPIRED`, `PAUSED`), lista stărilor de excepție ale echipei. Sursa unică a stării: închisă de D-064 (Session; stările echipei sunt derivate).
+
+---
+
+## D-053 — Session Continuity, Rejoin și Team Leader
+Status: CONFIRMED (2026-09-30) — cerință arhitecturală obligatorie; parțial implementat (doar continuitatea locală)
+
+Decizie:
+- Închiderea accidentală a browserului, a tab-ului sau a aplicației **nu** înseamnă părăsirea aventurii. Sesiunea rămâne activă; la revenire se restaurează sesiunea, echipa, identitatea, rolul, progresul, checkpoint-ul și provocarea curentă, starea jocului, indiciile și evenimentele relevante.
+- Nu ne bazăm exclusiv pe `localStorage`. Arhitectura permite un rejoin persistent: link personal de rejoin, cod de recuperare sau o combinație.
+- Rejoin-ul duce la sesiunea existentă; nu creează niciodată o sesiune nouă.
+- Team Leader-ul nu este single point of failure; sesiunea continuă fără el. Arhitectura permite ulterior transferul rolului.
+
+Implementat azi: continuitatea în același browser (reload / închidere — `tests/persistence-reload.test.js`). Rejoin pe alt browser / telefon: cere backend (FUTURE, D-019).
+
+Rămân deschise: formatul exact al codului de recuperare (legat de D-032); regulile transferului automat al rolului. Mecanismul de rejoin: închis de D-065 (link personal + cod de recuperare).
+
+---
+
+## D-054 — Shared Team State; `shared_device` și `multi_device`
+Status: CONFIRMED (2026-09-30) — arhitectural; neimplementat — înlocuiește D-026
+
+Decizie:
+- Toți participanții aceleiași echipe aparțin aceleiași sesiuni și văd aceeași stare logică (ex. o provocare rezolvată de A deblochează checkpoint-ul următor și pentru B).
+- Un indiciu folosit se reflectă pentru toată echipa atunci când aventura îl definește ca `shared`.
+- O aventură poate suporta modurile `shared_device` (un telefon conduce experiența) și `multi_device` (fiecare participant pe propriul dispozitiv, aceeași stare comună).
+- Nu se presupune că Leader-ul este singurul care poate rezolva provocări.
+
+Consecință: `multi_device` cere un serviciu de sincronizare persistent (backend, FUTURE). Până atunci, singurul mod funcțional este `shared_device`.
+
+---
+
+## D-055 — Sincronizarea stării
+Status: CONFIRMED (2026-09-30) — arhitectural; neimplementat
+
+Decizie:
+- Direcția: UI local → optimistic update → coadă locală de evenimente → HTTP sync / short polling → stare persistentă a sesiunii.
+- WebSocket **nu** este cerință V1; poate fi introdus ulterior doar dacă este justificat.
+- Mecanismul trebuie să permită: retry, protecție la evenimente duplicate (idempotență pe `event_id`), consistență eventuală, reconectare, sincronizare după revenirea conexiunii.
+
+Specificație: [`15_SESSION_SYNC.md`](15_SESSION_SYNC.md).
+
+---
+
+## D-056 — Offline First și Adventure Package
+Status: CONFIRMED (2026-09-30) — arhitectural; neimplementat
+
+Decizie:
+- Outdoor Escape se proiectează offline-capable, nu „online cu fallback”.
+- Înainte de START (cu conectivitate bună): `READY / LOCKED → CONTENT DOWNLOAD → VALIDATE PACKAGE → CACHE READY → START`.
+- Pachetul (identificat prin `adventure_id` + `version`) conține conținutul aventurii și al provocărilor, imagini, audio, instrucțiuni, geometria rutei și geofence-urile, alte asset-uri necesare.
+- **Tile-urile OpenStreetMap standard nu fac parte din pachet** (alegerea proprietarului, 2026-09-30): D-046 rămâne neschimbată (fără prefetch, bulk download sau stocare offline de tile-uri). Fără conexiune, harta poate rămâne fără fundal; jocul nu depinde de ea.
+- Cache-ul este limitat la zona și resursele aventurii.
+- Fără internet în timpul jocului: GPS → motor local → stare locală → coadă locală; la revenire: sincronizare.
+
+Stare în cod: service worker network-first pentru shell, Leaflet local și aventura demo (`CACHE_VERSION` `v6`). Network-first pentru conținut este incompatibil cu D-057 și se schimbă în milestone-ul care implementează pachetul.
+
+Deschis: harta offline cu alt provider — D-063.
+
+---
+
+## D-057 — Adventure Versioning
+Status: CONFIRMED (2026-09-30) — arhitectural; parțial pregătit (`contentVersion`)
+
+Decizie:
+- O sesiune rulează pe o versiune fixă a aventurii. Sesiunile noi folosesc cea mai nouă versiune publicată.
+- O versiune publicată este imuabilă; conținutul unei sesiuni active nu se modifică retrospectiv.
+- În schemă, versiunea aventurii este `contentVersion` (existent, opțional); `schemaVersion` rămâne versiunea formatului.
+- Starea de disponibilitate a checkpoint-urilor (D-061) nu este conținut și se poate schimba în timpul unei sesiuni.
+
+Stare în cod: `contentVersion` este copiat în progres, dar nu este comparat la restaurare; restaurarea tolerantă aplică conținutul nou unei sesiuni locale existente. Se corectează la implementarea sesiunilor / pachetului.
+
+Precizat pentru Session în D-066 (`adventure_id` + `adventure_version` obligatorii pentru o Session reală).
+
+---
+
+## D-058 — GPS adaptiv și strategia de baterie
+Status: CONFIRMED (2026-09-30) — arhitectural; neimplementat
+
+Decizie:
+- Frecvența observațiilor GPS este adaptivă: mai rară departe de checkpoint, mai deasă aproape de el. Factori: baterie, precizie, capabilitățile dispozitivului, mișcare, distanța față de rută și de checkpoint, raza geofence-ului.
+- **Nicio valoare nu este fixată în arhitectură**; toate sunt parametri configurabili, optimizați prin testare reală.
+- Pentru Bike (3–4 ore): fără polling continuu la frecvență maximă; minimizarea procesării și a render-ului inutil; folosirea cache-ului local.
+- Regulile de zonă (D-039) nu se schimbă; strategia decide doar cât de des se cer observații.
+
+Constrângere tehnică: Geolocation API nu are parametru de interval; controlul este indirect și trebuie măsurat pe Android și iPhone. Legătură: D-028 (fundal / ecran stins) rămâne deschisă.
+
+---
+
+## D-059 — Bike Safety Loop; audio și haptic de siguranță
+Status: CONFIRMED (2026-09-30) — regulă de design; audio/haptic neimplementat
+
+Decizie:
+- Bucla Bike: pedalează → observă → ajungi la punct → oprește → folosește telefonul → rezolvă → deblochează → pune telefonul deoparte → continuă.
+- Nu se introduc mecanisme care recompensează viteza, folosirea telefonului în mers sau interacțiunea cu telefonul în timpul deplasării (constrângere pentru D-025).
+- Beep, vibrație, text-to-speech și prompturi audio sunt posibile funcționalități de **siguranță / UX**, nu mecanici de joc.
+- Nu se presupune că browserul poate reda audio în fundal sau cu ecranul oprit pe toate dispozitivele; limitările sunt risc tehnic de testat pe dispozitive reale.
+
+---
+
+## D-060 — Discovery, validarea provocărilor și integritatea
+Status: CONFIRMED (2026-09-30) — arhitectural; hash neimplementat
+
+Decizie:
+- Modelul în două niveluri: GPS confirmă prezența → discovery / observație → provocare → deblocare. GPS-ul singur nu este întotdeauna dovada finală.
+- Pentru răspunsuri sensibile la cheat, conținutul poate folosi `answer_hash = SHA-256(normalized_answer)`, comparat în client. **Hash-ul în client nu reprezintă securitate anti-cheat reală** (confirmă D-021).
+- MVP: validare locală / hash pentru funcționare offline, integritate de bază și reducerea expunerii răspunsului în clar.
+- Viitor: validarea pe server devine autoritatea pentru scor competitiv, Treasure Hunt, clasamente, rezultate comerciale, anti-cheat real.
+- GPS-ul nu este singura dovadă acolo unde integritatea contează: cod fizic, QR, observație, obiect real, validare de operator. QR-ul nu este obligatoriu pentru toate aventurile.
+
+Stare în cod: răspunsurile sunt în text clar, validate local prin `answers.js`.
+
+---
+
+## D-061 — Route Health, Skip și Bypass
+Status: CONFIRMED (2026-09-30) — arhitectural; neimplementat (skip de jucător: implementat)
+
+Decizie:
+- Fiecare checkpoint / segment are o stare de disponibilitate: `ACTIVE`, `UNAVAILABLE`, `BYPASSED` (cauze: lucrări, acces blocat, obiectiv închis, vreme, siguranță, intervenția operatorului). Starea aparține rutei (strat operațional), nu versiunii aventurii.
+- Motorul trebuie să permită bypass-ul unui checkpoint, astfel încât aventura să continue. Tipuri: `AUTOMATIC SKIP`, `OPERATOR SKIP`, `ADMIN / CONTENT SKIP`.
+- Fiecare bypass păstrează un eveniment de audit (checkpoint, tip, motiv, actor, moment, sesiune).
+- Bypass-ul este distinct de „Sari peste” (skip de jucător, misiune `skipped`, 0 puncte — implementat).
+
+Deschis: efectul bypass-ului în scor (D-025).
+
+---
+
+## D-062 — Flux liniar și graf; rutare dinamică
+Status: CONFIRMED (2026-09-30) — arhitectural; doar `linear` implementat
+
+Decizie:
+- Motorul nu este limitat la flux strict liniar. Model conceptual `flow.type: linear | graph`, reprezentat în schemă prin `settings.progression` (azi doar `"linear"`).
+- Primele aventuri pot fi liniare; motorul trebuie proiectat astfel încât graful / ramificarea să poată fi introduse fără refactorizare fundamentală.
+- Se separă: geometria rutei, progresia aventurii, disponibilitatea checkpoint-urilor, ordinea checkpoint-urilor. Un checkpoint poate fi dezactivat fără rescrierea rutei.
+
+Extensii de schemă propuse (provizorii): `11_ADVENTURE_SCHEMA_V2.md` §14.
+
+---
+
+## D-063 — Harta offline
+Status: PROPOSED
+
+Context:
+Platform V1.1 cere un pachet offline care include „relevant map data”. D-046 (CONFIRMED) și politica OpenStreetMap interzic prefetch-ul, descărcarea în bloc și stocarea offline a tile-urilor standard OSM. Proprietarul a ales (2026-09-30): tile-urile OSM sunt excluse din pachet; D-046 rămâne neschimbată (vezi D-056).
+
+De decis:
+- dacă este nevoie de o hartă offline (în special pentru Bike, în zone fără semnal);
+- dacă da: un provider care permite explicit utilizarea offline (tile-uri proprii / self-hosted generate din date OSM cu licența respectată, sau un provider comercial cu licență offline), cu costurile și atribuirea aferente;
+- ce se descarcă (doar zona rutei, nivelurile de zoom necesare).
+
+Până la decizie: fără conexiune, harta rămâne fără fundal; jocul continuă prin geofence-uri, instrucțiuni, geometria rutei și „Am ajuns” (principiul M-003.2).
+
+---
+
+## D-064 — Adventure Session ca sursă a stării
+Status: CONFIRMED (2026-09-30) — arhitectural / neimplementat
+
+Decizie:
+- **Adventure Session** este sursa logică a stării jocului.
+- În `multi_device`, starea canonică este derivată din evenimentele acceptate de server (ordinea: `server_seq` — `15_SESSION_SYNC.md` §7).
+- **Team** este structura de membri și roluri asociată unei Session; **nu are un state machine independent**. Stările de echipă din D-052 (`TEAM FORMING → READY → LOCKED → ACTIVE → COMPLETED`) sunt o vedere derivată din starea sesiunii, nu o a doua sursă de stare.
+- În `shared_device`, starea locală rămâne sursa funcțională cât timp nu există backend (comportamentul actual).
+
+Precizează D-052 (închide recomandarea deschisă din `13_PLATFORM_V1.1.md` §3.3) și D-054. Nu schimbă modelul de evenimente din D-055.
+
+---
+
+## D-065 — Rejoin: link personal și cod de recuperare
+Status: CONFIRMED (2026-09-30) — arhitectural / neimplementat
+
+Decizie:
+- Mecanismul normal de rejoin este un **personal rejoin link**.
+- Există și un **recovery code**, ca mecanism alternativ / de recuperare (ex. linkul nu mai este disponibil).
+- Ambele identifică **participantul existent** și îl readuc în **Session existentă**, cu același rol.
+- Rejoin-ul **nu creează niciodată** o Session nouă (confirmă D-053).
+- Formatul exact al recovery code rămâne pentru implementare (legat de D-032).
+
+Precizează D-053 (închide întrebarea „link, cod sau ambele”). Necesită backend pentru rejoin pe alt browser / telefon (FUTURE, D-019).
+
+---
+
+## D-066 — Versionarea Session
+Status: CONFIRMED (2026-09-30) — arhitectural / neimplementat
+
+Decizie:
+- O Adventure Session reală este legată **obligatoriu** de `adventure_id` + `adventure_version`.
+- `adventure_version` este versiunea publicată și imuabilă pe care rulează Session.
+- `contentVersion` poate rămâne **opțional** în schema actuală (`11_ADVENTURE_SCHEMA_V2.md`) până la implementarea completă a versionării.
+- Distincția nu schimbă D-057; o face explicită pentru Session.
+
+Stare în cod: sesiunea locală implicită (`outdoor-escape:game:<id>`) nu este încă o Session reală în sensul acestei decizii (`contentVersion` este copiat în progres, dar necomparat — D-057).
+
+---
+
+## D-067 — Bike: joc fără închiriere
+Status: CONFIRMED (2026-09-30) — arhitectural / neimplementat
+
+Decizie:
+- Aceeași Adventure Bike poate fi oferită comercial în două variante:
+  - `GAME_ONLY` — participantul folosește bicicleta proprie;
+  - `GAME_PLUS_BIKE_RENTAL` — bicicleta este furnizată printr-un partener / operator.
+- Adventure și Route **nu depind** de închirierea bicicletei.
+- Nu se introduc acum entități `Product`, `Booking`, `RentalProvider` etc.; acestea rămân pentru faza comercială ulterioară (D-008, D-019).
+- Funsy Bike nu se hardcodează în motor (confirmă D-051).

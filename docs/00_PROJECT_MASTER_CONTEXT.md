@@ -1,5 +1,7 @@
 # OUTDOOR ESCAPE — PROJECT MASTER CONTEXT
 
+> **Notă (2026-09-30):** arhitectura consolidată a platformei este descrisă în [`13_PLATFORM_V1.1.md`](13_PLATFORM_V1.1.md) — **OUTDOOR ESCAPE PLATFORM V1.1** (produsele Walk și Bike, rută ≠ aventură ≠ sesiune, echipe, continuitate, stare comună, offline-first, versiuni; decizii D-050 – D-063). Acest document rămâne contextul de produs inițial; unde V1.1 este mai specific, V1.1 are prioritate.
+
 ## 1. Project identity
 
 Working name: Outdoor Escape
@@ -198,3 +200,5 @@ No production application architecture is considered implemented yet.
 
 Next objective:
 create the repository, documentation/context pack, development rules, and product specification before substantial coding.
+
+Notă (2026-09-30): secțiunea de mai sus este istorică. Stare actuală: motorul de joc (fundația V2) este implementat și publicat; M-003.1 (Browser Geolocation) este finalizat; M-003.2 (hartă) este implementat și comis, în review-ul proprietarului. Arhitectura Platform V1.1 este decisă, dar neimplementată. Tabelul complet IMPLEMENTAT / DECIS / FUTURE: `13_PLATFORM_V1.1.md` §17.

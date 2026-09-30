@@ -1,6 +1,6 @@
 # OUTDOOR ESCAPE — SCHEMA AVENTURII V2 ȘI CONTRACTELE MOTORULUI
 
-Stare: implementat (fundația V2). Decizii: D-038 – D-043 în [`04_DECISIONS_LOG.md`](04_DECISIONS_LOG.md).
+Stare: implementat (fundația V2). Decizii: D-038 – D-043 în [`04_DECISIONS_LOG.md`](04_DECISIONS_LOG.md). Extensiile Platform V1.1 (pregătite, nevalidate, fără efect în motor): secțiunea 14.
 Exemplu complet, fictiv și validat de teste: [`../tests/fixtures/adventure-v2-demo.json`](../tests/fixtures/adventure-v2-demo.json) (nu se publică pe GitHub Pages).
 
 Principiul: **motorul este stabil, conținutul este extensibil.** Motorul nu știe nimic despre un oraș sau o aventură anume; tot ce ține de Brașov (sau de orice altă aventură) vine din JSON. Un test automat verifică faptul că modulele motorului nu menționează nicio aventură.
@@ -44,7 +44,7 @@ Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii, s�
 | Audio | schemă (`audio.tracks`, text alternativ obligatoriu); efecte `audio` | player, activarea sunetului, cache offline pentru fișiere |
 | GPS în fundal / ecran blocat, geofencing | — (M-003.1 acoperă doar pagina activă) | nu este garantat de browser/PWA; D-028 rămâne deschisă |
 | Notificări | — | tot |
-| Hartă | **implementată în M-003.2 (în review, necomisă)** — `map-model.js` + `map.js` + Leaflet 1.9.4 local, OSM configurabil; doar afișare (`12_MAP_SPECIFICATION_M-003.2.md`) | test pe telefon cu o aventură reală cu locații (D-049-M) |
+| Hartă | **implementată în M-003.2 (comisă — `39a6b28`, în review-ul proprietarului)** — `map-model.js` + `map.js` + Leaflet 1.9.4 local, OSM configurabil; doar afișare (`12_MAP_SPECIFICATION_M-003.2.md`) | test pe telefon cu o aventură reală cu locații (D-049-M) |
 
 ## 1. Module
 
@@ -360,4 +360,154 @@ Nou în M-002: `content` (aventura normalizată), `getCurrentMission`, `getMissi
 
 ## 13. Ce NU este implementat în această etapă
 
-Vezi tabelul din secțiunea 0. În plus, nu există: GPS în fundal / geofencing, hartă (M-003.2), audio, notificări, parteneri reali și coduri reale, plăți, backend, cache offline pentru mai multe aventuri sau pentru audio, validarea GPS a prezenței pentru aventuri competitive (confirmarea manuală acordă punctele fără verificarea distanței — secțiunea 5, „Confirmarea manuală”).
+Vezi tabelul din secțiunea 0. În plus, nu există: GPS în fundal / geofencing, hartă offline (harta online este implementată în M-003.2), audio, notificări, parteneri reali și coduri reale, plăți, backend, cache offline pentru mai multe aventuri sau pentru audio, validarea GPS a prezenței pentru aventuri competitive (confirmarea manuală acordă punctele fără verificarea distanței — secțiunea 5, „Confirmarea manuală”).
+
+Nu există nici elementele Platform V1.1: sesiuni cu identitate, echipe, participanți, rejoin, stare comună / sincronizare, pachet offline per versiune, fixarea sesiunii pe versiune, GPS adaptiv, Route Health / bypass, flux graf, `answerHash` — vezi secțiunea 14 și `13_PLATFORM_V1.1.md` §17.
+
+## 14. Extensii Platform V1.1 (PREGĂTIT PENTRU VIITOR)
+
+Stare: **documentat, nevalidat, fără efect în motor.** Decizii: D-051, D-053 – D-062 în [`04_DECISIONS_LOG.md`](04_DECISIONS_LOG.md). Arhitectura: [`13_PLATFORM_V1.1.md`](13_PLATFORM_V1.1.md).
+
+Această secțiune arată cum se integrează cerințele V1.1 în schema V2 **fără a rupe compatibilitatea**. Numele câmpurilor noi sunt **provizorii**; se fixează (și se adaugă în `schema.js`) doar în milestone-ul care implementează funcționalitatea respectivă, cu o decizie în jurnal.
+
+### 14.1 Reguli de compatibilitate
+
+1. Aventurile V1 și V2 existente rămân valide, fără modificări. Conversia V1 → V2 nu se schimbă.
+2. Toate câmpurile noi sunt **opționale**. O aventură fără ele se comportă exact ca azi (liniar, `shared_device`, fără pachet offline dedicat).
+3. Se păstrează convențiile existente: câmpuri în **camelCase**, id-uri cu litere mici, cifre și cratimă (`isValidId`). Exemplul conceptual V1.1 (snake_case, id-uri cu `_`) este tradus în aceste convenții, nu invers.
+4. Nu se introduce o structură paralelă pentru ce există deja: coordonatele rămân în `locations[]`, provocările în `missions[]`, modul de progresie în `settings.progression`, versiunea conținutului în `contentVersion`.
+5. Verificat la 2026-09-30 (rulare locală a `validateAdventureV2` pe o copie a fixture-ului): câmpurile noi de mai jos sunt **acceptate și ignorate** de validatorul actual (câmpuri necunoscute permise), iar `settings.progression: "graph"` este **respins** (lista închisă conține doar `linear`). Acesta este comportamentul dorit până la implementare: o aventură-graf nu poate rula pe un motor liniar.
+6. Dacă noile câmpuri cer `schemaVersion: 3` sau rămân opționale în V2: DESCHIS (de decis la primul milestone care le implementează).
+
+### 14.2 Corespondența exemplului conceptual V1.1 cu schema V2
+
+| Exemplu conceptual V1.1 | Schema V2 (existent sau propus) | Status |
+| --- | --- | --- |
+| `id` | `id` | existent |
+| `version` (`"1.0"`) | `contentVersion` | existent (opțional); devine obligatoriu pentru aventurile publicate (D-057) — regulă viitoare |
+| `title` | `meta.title` | existent |
+| `route_id` | `routeId` | propus |
+| `start_condition { type: "geofence", lat, lng, radius_meters }` | o locație `type: "start"` (coordonate + `radius`) + `startCondition: { "type": "geofence" \| "manual", "locationId": "…" }` | locația: existentă; `startCondition`: propus |
+| `nodes[]` | `locations[]` (prezența fizică) + `missions[]` cu `locationId` (discovery / provocare) | existent |
+| `node.geofence { lat, lng, radius_meters }` | `location.coordinates { lat, lng }` + `location.radius` | existent (D-039) |
+| `node.name` | `location.name` | existent |
+| `node.safety_warning` | `location.safetyWarning` | propus |
+| `node.discovery.text` | misiune `type: "observation"` legată de locație (`briefing`) sau `location.discovery.text` | misiunea: existentă; câmpul pe locație: propus |
+| `challenge.type: "numeric_input"` | misiune `riddle` / `code` + `inputMode: "numeric"` (indiciu pentru tastatura telefonului, nu regulă de validare) | `inputMode`: propus |
+| `challenge.question` | `mission.briefing` | existent |
+| `challenge.answer_hash` | `mission.answerHash` + `answerHashAlgorithm: "sha-256"`; hash-ul se calculează pe răspunsul **normalizat** (D-024). Doar `answers.js` îl citește (D-021) | propus (azi: `answer` în text clar) |
+| `hints[].delay_seconds` | `mission.hints[].delaySeconds` (indiciul devine disponibil după N secunde de la deschiderea misiunii; timpul din timestamp-uri — D-025, D-028) | propus |
+| `flow.type: linear \| graph` | `settings.progression: "linear" \| "graph"` | `linear`: existent; `graph`: propus |
+
+### 14.3 Câmpuri propuse (provizorii)
+
+**Nivel superior și `settings`:**
+
+```json
+{
+  "contentVersion": "1.0",
+  "routeId": "route-circuit-exemplu",
+  "startCondition": { "type": "geofence", "locationId": "start" },
+  "settings": {
+    "progression": "linear",
+    "session": {
+      "deviceMode": "shared_device | multi_device | either",
+      "hints": "shared | per_participant",
+      "maxParticipants": 4
+    },
+    "gpsPolling": { "profile": "walk | bike" },
+    "integrity": "casual | verified"
+  },
+  "offline": {
+    "assets": ["media/intro.jpg", "audio/intro.mp3"]
+  }
+}
+```
+
+- `settings.session` — D-054. `deviceMode` spune ce moduri permite aventura; `hints` spune dacă indiciile sunt comune echipei.
+- `settings.gpsPolling` — D-058. Doar alegerea unui **profil**; valorile concrete (intervale, praguri de distanță) stau în `defaults.js`, ca opțiunile `watchPosition` de azi (D-045), și **nu sunt fixate în arhitectură**.
+- `settings.integrity` — D-060. `casual`: comportamentul de azi (GPS sau „Am ajuns”). `verified`: checkpoint-urile cer o dovadă suplimentară (`location.proof`), iar confirmarea manuală nu acordă singură punctele. Regula exactă: DESCHIS (legat de secțiunea 5, „Aventuri competitive”).
+- `offline.assets` — D-056. Lista explicită a fișierelor din pachet (căi relative, aceleași reguli ca `audio.basePath`). **Nu** conține tile-uri de hartă (D-046).
+
+**Locații:**
+
+```json
+{
+  "id": "cp-01",
+  "type": "objective",
+  "coordinates": { "lat": 0.001, "lng": 0.001 },
+  "radius": 20,
+  "safetyWarning": "Oprește bicicleta pe marginea drumului înainte de a debloca!",
+  "proof": { "method": "gps | code | qr | observation | physical_item | operator" },
+  "bypass": { "allowed": true, "instructions": "…" }
+}
+```
+
+- `safetyWarning` — D-059; afișat înainte de interacțiunea cu telefonul la checkpoint.
+- `proof.method` — D-060; reutilizează vocabularul existent din `partner.verification.method` acolo unde se suprapune.
+- `bypass` — D-061; spune dacă și cum se poate trece peste checkpoint. **Starea de disponibilitate** (`ACTIVE / UNAVAILABLE / BYPASSED`) **nu** stă în conținut: este strat operațional al rutei (Route Health), ca să se poată schimba fără o versiune nouă.
+
+**Misiuni (flux graf — D-062):**
+
+```json
+{ "id": "m-05", "track": "main", "after": ["m-02", "m-03"], "join": "all | any" }
+```
+
+- `after` / `join` au sens doar cu `settings.progression: "graph"`. În `linear`, ordinea rămâne ordinea din listă (comportamentul actual).
+- Progresul pe entități (secțiunea 11) se păstrează; în graf pot exista mai multe misiuni principale deschise simultan, deci `currentMissionId` devine insuficient — schimbarea formei progresului se decide la implementare, cu migrare automată (principiul D-043).
+
+**Rezervat:** `ar` (capabilitate AR viitoare, D-050) — fără structură definită.
+
+### 14.4 Ce NU intră în schema aventurii
+
+| Informație | Unde stă | Motiv |
+| --- | --- | --- |
+| Geometria rutei, starea de disponibilitate a checkpoint-urilor | Route / Route Health | aceeași rută servește mai multe aventuri (D-051, D-061) |
+| Sesiune, echipă, participanți, roluri, rejoin | Adventure Session (stare, nu conținut) | aceeași aventură are multe sesiuni simultane (D-051) |
+| Adventure Pass, cumpărare, rezervare | business (FUTURE) | `03_ARCHITECTURE.md` §5 |
+| Tile-uri de hartă | providerul configurat (D-046) | politica OSM; harta offline: D-063 |
+| Valori concrete de polling GPS | `defaults.js` | țin de dispozitiv și de testarea pe teren (D-058) |
+
+### 14.5 Exemplu conceptual V1.1 tradus în convențiile V2
+
+**Ilustrativ.** Coordonatele sunt aproximative și **nevalidate**; „Ursa Mică” este doar un nume de exemplu; textele nu sunt conținut real și nu conțin afirmații istorice (D-011). Traseul Funsy Bike / Șirnea se validează pe teren înainte de orice conținut real (`13_PLATFORM_V1.1.md` §16).
+
+```json
+{
+  "schemaVersion": 2,
+  "id": "adv-sirnea-mystery-01",
+  "contentVersion": "1.0",
+  "routeId": "route-sirnea-circuit",
+  "meta": { "title": "Misterul Șirnei" },
+  "startCondition": { "type": "geofence", "locationId": "start" },
+  "settings": { "progression": "linear" },
+  "locations": [
+    { "id": "start", "name": "Start", "type": "start", "coordinates": { "lat": 45.421, "lng": 25.332 }, "radius": 30, "initialStatus": "unlocked" },
+    {
+      "id": "cp-01-ursa-mica",
+      "name": "Punctul de observație Ursa Mică",
+      "type": "objective",
+      "coordinates": { "lat": 45.425, "lng": 25.338 },
+      "radius": 20,
+      "safetyWarning": "Oprește bicicleta pe marginea drumului înainte de a debloca!"
+    }
+  ],
+  "missions": [
+    {
+      "id": "m-01-anul-gravat",
+      "type": "code",
+      "track": "main",
+      "title": "Placa memorială",
+      "briefing": "Caută anul gravat pe placa memorială de lângă intrare. Care este anul gravat?",
+      "locationId": "cp-01-ursa-mica",
+      "inputMode": "numeric",
+      "answerHash": "…",
+      "answerHashAlgorithm": "sha-256",
+      "hints": [ { "text": "Uită-te în partea stângă a porții.", "delaySeconds": 180 } ],
+      "points": 100
+    }
+  ]
+}
+```
+
+Notă: cu validatorul actual, acest exemplu **nu** trece validarea, pentru că misiunea de tip `code` cere `answer` (nu există încă suport pentru `answerHash`). Este un exemplu de formă, nu un fișier de conținut.

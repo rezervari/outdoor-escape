@@ -213,3 +213,16 @@ Once the first game works reliably:
 - reusable location/puzzle components;
 - multilingual content;
 - additional cities.
+
+---
+
+## Notă — Platform V1.1 (2026-09-30)
+
+Arhitectura consolidată (`13_PLATFORM_V1.1.md`, D-050 – D-063) nu schimbă ordinea fazelor și nu pornește niciun milestone. Ea stabilește cerințe pe care fazele viitoare trebuie să le respecte:
+
+- produsele Walk (Brașov) și Bike (Funsy Bike, Fundata / Șirnea) folosesc același motor;
+- sesiuni, echipe, participanți, rejoin, stare comună și `multi_device` cer un backend; acesta se introduce doar într-un milestone care îl cere explicit (D-019);
+- pachetul offline, versiunile de aventură, GPS-ul adaptiv, Route Health / bypass și fluxul graf sunt DECISE, dar neimplementate;
+- rutele și locațiile reale (Walk și Bike) se validează pe teren înainte de conținutul final (Faza 2, Faza 5).
+
+Planificarea acestor elemente pe faze / milestone-uri este o decizie a proprietarului, încă nefăcută.

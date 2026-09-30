@@ -50,7 +50,7 @@ Structura actuală (motorul V2, fundația):
 ├── index.html                          doar redirecționare către src/ (D-036); NU este aplicația
 ├── package.json                        doar pentru `npm test` (fără dependențe, D-023)
 ├── README.md, LICENSE, LICENSE-CONTENT.md
-├── docs/                               documentația (00–11); nu se publică
+├── docs/                               documentația (00–15); nu se publică
 ├── src/                                aplicația (publicată)
 │   ├── index.html, manifest.webmanifest, sw.js
 │   ├── css/app.css
@@ -147,7 +147,7 @@ Offline în această etapă: doar ecranul fundației se poate redeschide fără 
 
 Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul nu conține texte, răspunsuri sau logică specifică unei aventuri. Motorul V1 (provocări liniare) a fost extins în fundația V2: misiuni pe trasee, locații, evenimente, parteneri, secrete. Specificația completă a schemei și a contractelor: [`11_ADVENTURE_SCHEMA_V2.md`](11_ADVENTURE_SCHEMA_V2.md).
 
-**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele; din M-003.1: adaptorul Browser Geolocation (`location.js`), urmărirea poziției cu pagina activă, starea GPS și explicația permisiunii în interfață, obiectivul misiunii curente cu „Am ajuns”. **Pregătit, dar neimplementat:** misiunile partener, secrete și cu timp în UI, interfața naratorului, audio, harta, GPS în fundal / geofencing, notificări. **Harta (M-003.2):** implementată conform `12_MAP_SPECIFICATION_M-003.2.md` (D-046–D-049) — `map-model.js`, `map.js`, Leaflet 1.9.4 local; în review, necomisă la data scrierii. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
+**Implementat:** schema V2, migrarea V1 → V2 (conținut și progres), modelul de locație, motorul de evenimente, progresul V2, testele; din M-003.1: adaptorul Browser Geolocation (`location.js`), urmărirea poziției cu pagina activă, starea GPS și explicația permisiunii în interfață, obiectivul misiunii curente cu „Am ajuns”. **Pregătit, dar neimplementat:** misiunile partener, secrete și cu timp în UI, interfața naratorului, audio, harta, GPS în fundal / geofencing, notificări. **Harta (M-003.2):** implementată conform `12_MAP_SPECIFICATION_M-003.2.md` (D-046–D-049) — `map-model.js`, `map.js`, Leaflet 1.9.4 local; comisă (`39a6b28`), în review-ul proprietarului. Tabelul complet: `11_ADVENTURE_SCHEMA_V2.md`, secțiunea 0.
 
 ### Fișiere
 
@@ -238,6 +238,8 @@ NEW
 Error/recovery states should be handled without losing progress.
 
 Notă (2026-09-29): modelul **implementat** nu folosește această listă de stări. Jocul are doar `idle → playing → completed`; restul (a ajuns la locație, misiune activă, indiciu folosit, locație finalizată, final) este reprezentat ca stări ale entităților (misiuni, locații) și ca evenimente (`player_arrived`, `mission_started`, `hint_requested`, `location_completed`, `finale_started` …) — vezi secțiunea 3c și `11_ADVENTURE_SCHEMA_V2.md`. Lista de mai sus rămâne ca referință istorică.
+
+Notă (2026-09-30, D-052): Platform V1.1 adaugă un lifecycle al **sesiunii** (`CREATED → TEAM_FORMING → READY → LOCKED → ACTIVE ⇄ PAUSED → COMPLETED`, plus `ABANDONED` / `EXPIRED` / `CANCELLED`) și unul al **echipei**, deasupra stărilor jocului. Stările jocului implementate (`idle → playing → completed`) rămân neschimbate; lifecycle-ul sesiunii este DECIS, neimplementat — `13_PLATFORM_V1.1.md` §3.
 
 Notă (PROPOSED — vezi D-030, neaprobat): `HINT_USED` descrie mai degrabă un eveniment decât o stare. Folosirea unui indiciu nu schimbă ce poate face jucătorul (puzzle-ul rămâne activ), ci modifică datele puzzle-ului (câte indicii au fost folosite, penalizarea). Propunerea este ca indiciile să fie înregistrate ca date/evenimente în starea `PUZZLE_ACTIVE`, nu ca stare separată. Lista de mai sus rămâne neschimbată până la aprobare.
 
@@ -332,6 +334,8 @@ Do not promise complete offline functionality until it has been tested.
 
 Stare: în scheletul PWA doar fișierele fundației sunt în cache (secțiunea 3b). Conținutul jocului și media nu sunt încă în cache.
 
+Actualizare (2026-09-30): starea curentă a cache-ului este în secțiunea 3c (shell, Leaflet local și aventura demo, network-first). Direcția decisă pentru V1.1 este **offline-first** cu un **Adventure Package** identificat prin `adventure_id` + `version`, descărcat și validat înainte de START; tile-urile OpenStreetMap sunt excluse din pachet (D-046, D-056). DECIS, neimplementat — `13_PLATFORM_V1.1.md` §8 și `15_SESSION_SYNC.md` §9.
+
 ## 9. Accessibility
 
 Minimum:
@@ -375,3 +379,21 @@ Possible later modules:
 - corporate mode.
 
 These are not part of the initial technical foundation unless required.
+
+## 13. Platform V1.1 (arhitectură decisă — 2026-09-30)
+
+Documentul principal: [`13_PLATFORM_V1.1.md`](13_PLATFORM_V1.1.md) (D-050 – D-063). Rezumat pentru arhitectura tehnică:
+
+| Aspect | Direcție V1.1 | Stare în cod |
+| --- | --- | --- |
+| Model de domeniu | Route ≠ Adventure ≠ Adventure Session; Adventure Pass; Team; Participant; roluri Buyer / Team Leader / Participant | doar Adventure (fișier JSON) + o sesiune locală implicită per aventură, per browser |
+| Continuitate | închiderea aplicației nu este părăsire; rejoin persistent (link personal / cod de recuperare) către sesiunea existentă | continuitate locală (același browser) implementată |
+| Stare comună | `shared_device` / `multi_device`; evenimente, coadă locală, optimistic UI, HTTP sync / short polling; WebSocket neobligatoriu — [`15_SESSION_SYNC.md`](15_SESSION_SYNC.md) | neimplementat; `multi_device` cere backend (FUTURE, D-019) |
+| Offline | Adventure Package (`adventure_id` + `version`), fără tile-uri OSM | shell + demo în cache |
+| Versiuni | sesiune fixată pe o versiune publicată, imuabilă (`contentVersion`) | `contentVersion` copiat în progres, necomparat |
+| GPS | polling adaptiv, parametri configurabili, fără valori fixate în arhitectură | `watchPosition` cu opțiuni fixe (D-045) |
+| Rută | Route Health (`ACTIVE / UNAVAILABLE / BYPASSED`), bypass auditat, flux `linear` / `graph` | doar `linear`; skip de jucător implementat |
+
+Scenariile limită: [`14_EDGE_CASES.md`](14_EDGE_CASES.md). Extensiile de schemă (pregătite, nevalidate): [`11_ADVENTURE_SCHEMA_V2.md`](11_ADVENTURE_SCHEMA_V2.md) §14.
+
+Regulile din secțiunile anterioare rămân valabile. În special: nu se introduce backend, autentificare, plăți sau WebSocket înainte ca un milestone să le ceară explicit (D-019).
