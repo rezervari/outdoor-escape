@@ -385,6 +385,12 @@ De decis: dacă și când se traduc documentele existente. Traducerea ar trebui 
 
 Notă conexă: `README.md` și `.gitignore` au terminații de linie Windows (CRLF), iar documentele din `/docs` au terminații Unix (LF). Un fișier `.gitattributes` ar putea uniformiza acest lucru. De decis separat.
 
+Notă (2026-09-30) — situația actuală a terminațiilor de linie (nota conexă de mai sus rămâne ca istoric; nu mai este factuală):
+- Repository-ul stochează fișierele text cu LF (inclusiv `README.md` și `.gitignore`).
+- Pe Windows, `core.autocrlf=true` poate produce CRLF în working tree și avertismentele Git „LF will be replaced by CRLF”; acestea sunt locale și nu schimbă conținutul stocat.
+- `src/vendor/leaflet/**` rămâne protejat intenționat prin `.gitattributes` (`-text -diff`), ca fișierele Leaflet să rămână identice byte cu byte (D-046, D-049-A).
+- În acest moment nu există o problemă funcțională; o decizie privind uniformizarea globală a terminațiilor de linie nu este necesară pentru UI/UX și rămâne, eventual, de luat separat.
+
 ---
 
 ## D-034 — Conținutul real al jocului în repository-ul public
