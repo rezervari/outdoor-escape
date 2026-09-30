@@ -315,7 +315,7 @@ Se execută la `http://localhost:8000/src/` și, după publicare, la `https://re
 | G13 | Termină aventura | Ecran final: „Felicitări…”, scorul „X din 350 puncte”, „Provocări rezolvate: N din 3”, „Joacă din nou” |
 | G14 | F5 pe ecranul final, apoi „Joacă din nou” | Rezultatul rămâne după F5; „Joacă din nou” duce la start și șterge progresul |
 | G15 | `src/?adventure=inexistenta` | Ecran „Aventura nu a putut fi încărcată” + „Încearcă din nou”; fără excepții în consolă |
-| G16 | Application → Cache storage | Doar `outdoor-escape:shell:v4`, cu fișierele din `SHELL_FILES` (14 intrări: 13 din `src/` + `content/adventures/brasov-centrul-vechi.json`) |
+| G16 | Application → Cache storage | Un singur cache shell al proiectului, `outdoor-escape:shell:<CACHE_VERSION>` (valoarea din `src/sw.js`), care conține exact intrările din `SHELL_FILES` din `src/sw.js` — nici mai multe, nici mai puține; niciun cache `outdoor-escape:shell:` cu altă versiune (la momentul actual: `v6`, 19 intrări: 18 din `src/` + `content/adventures/brasov-centrul-vechi.json`) |
 | G17 | După o primă încărcare online: Network → „Offline”, F5 (pe ecranul de start și în timpul jocului) | Aplicația și aventura demo se încarcă din cache; progresul este păstrat; răspunsurile se verifică și offline |
 | G19 | `src/?adventure=inexistenta` cu Network → „Offline” | Ecranul de eroare („Verifică conexiunea…”) + „Încearcă din nou” — doar aventura demo este în cache |
 | G18 | Simulare mobil 360 px (secțiunea 12.3) | Fără derulare orizontală; butoanele principale pe toată lățimea, cel puțin 48 px înălțime |

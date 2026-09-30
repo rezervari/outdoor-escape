@@ -91,17 +91,15 @@ Provide a recovery path.
 
 Keep game content structured.
 
-Prefer:
+One adventure = one JSON file (D-037):
 
 content/
-  games/
-    game-001/
-      game.json
-      locations.json
-      puzzles.json
-      media/
+  adventures/
+    <id>.json
 
-over hard-coded content spread across source files.
+The file follows Adventure Schema V2 (D-038, `11_ADVENTURE_SCHEMA_V2.md`). Do not hard-code adventure content (texts, locations, puzzles, answers) in the application source files.
+
+Still open under D-037 (do not resolve without an owner decision): the structure for per-adventure media, and the fate of the empty `content/games/` directory.
 
 ## UX rule
 
