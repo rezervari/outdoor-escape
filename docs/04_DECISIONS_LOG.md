@@ -341,15 +341,21 @@ Notă (2026-09-30): D-051 – D-053 introduc la nivel arhitectural identitatea d
 ---
 
 ## D-030 — HINT_USED: eveniment, nu stare
-Status: PROPOSED
+Status: CONFIRMED (2026-09-30) — decizie restrânsă (anterior: PROPOSED)
 
 Context:
-`03_ARCHITECTURE.md` listează `HINT_USED` ca stare. Folosirea unui indiciu nu schimbă acțiunile posibile ale jucătorului (puzzle-ul rămâne activ).
+`03_ARCHITECTURE.md` listează `HINT_USED` ca stare. Folosirea unui indiciu nu schimbă acțiunile posibile ale jucătorului (misiunea rămâne activă).
 
-Propunere:
-Folosirea indiciilor se înregistrează ca date ale puzzle-ului (număr de indicii folosite, penalizare), în starea `PUZZLE_ACTIVE`. Lista stărilor din `03_ARCHITECTURE.md` nu a fost modificată; a fost adăugată doar o notă.
+Propunere (restrânsă la confirmare, 2026-09-30):
+Folosirea indiciilor se înregistrează ca date ale misiunii (numărul de indicii folosite), cât timp misiunea este `pending`, nu ca stare separată. Lista stărilor din `03_ARCHITECTURE.md` nu a fost modificată; a fost adăugată doar o notă. Formularea inițială includea și penalizarea și starea `PUZZLE_ACTIVE`; ambele au fost scoase din D-030 (penalizarea → D-025; `PUZZLE_ACTIVE` nu există în modelul implementat, echivalentul este misiunea `pending`).
 
-Notă (2026-09-29): motorul v1 aplică deja această idee: indiciul este marcat `hintUsed` în progresul provocării, nu este o stare separată.
+Decizie (proprietar, 2026-09-30):
+- Folosirea unui indiciu **nu** reprezintă o stare a jocului sau a misiunii (nu există `HINT_USED` ca stare).
+- Numărul de indicii folosite se păstrează ca dată a misiunii: `hintsUsed` (întreg, în progresul misiunii).
+- Folosirea unui indiciu generează evenimentul `hint_requested`.
+- Penalizarea pentru folosirea indiciilor **nu** face parte din D-030; rămâne deschisă și se tratează separat în D-025 (PROPOSED).
+
+Notă (2026-09-29; actualizată 2026-09-30): motorul aplică deja această decizie: `hintsUsed` este păstrat în progresul misiunii (V2; progresul V1 cu `hintUsed` este migrat automat la `hintsUsed`), iar fiecare dezvăluire emite `hint_requested`; indiciul nu este o stare separată. Nu există penalizare (D-025).
 
 ---
 

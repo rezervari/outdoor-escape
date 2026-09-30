@@ -201,7 +201,7 @@ Id-urile (aventură, misiuni, locații etc.) trebuie să rămână stabile: prog
 ### Stări și progres
 
 - Starea jocului: `idle` → `playing` → `completed`. „Joacă din nou” / „Începe de la capăt” readuc jocul la `idle` și șterg progresul salvat.
-- Misiuni: `locked` → `pending` → `solved` | `failed` | `skipped`, plus `attempts`, `hintsUsed`, `startedAt`, `closedAt`. Indiciile sunt date, nu stări (în spiritul D-030).
+- Misiuni: `locked` → `pending` → `solved` | `failed` | `skipped`, plus `attempts`, `hintsUsed`, `startedAt`, `closedAt`. Indiciile sunt date, nu stări (D-030, CONFIRMED).
   - `solved` — singura stare care aduce puncte și care se numără la „rezolvate”.
   - `skipped` — „Sari peste (0 puncte)”: 0 puncte, nu este rezolvată, jocul continuă.
   - `failed` — închisă fără rezolvare, 0 puncte (`failChallenge()` / `failMission()` / acțiunea `fail_mission`); interfața nu o produce încă.
@@ -245,7 +245,7 @@ Notă (2026-09-29): modelul **implementat** nu folosește această listă de st�
 
 Notă (2026-09-30, D-052): Platform V1.1 adaugă un lifecycle al **sesiunii** (`CREATED → TEAM_FORMING → READY → LOCKED → ACTIVE ⇄ PAUSED → COMPLETED`, plus `ABANDONED` / `EXPIRED` / `CANCELLED`) și unul al **echipei**, deasupra stărilor jocului. Stările jocului implementate (`idle → playing → completed`) rămân neschimbate; lifecycle-ul sesiunii este DECIS, neimplementat — `13_PLATFORM_V1.1.md` §3.
 
-Notă (PROPOSED — vezi D-030, neaprobat): `HINT_USED` descrie mai degrabă un eveniment decât o stare. Folosirea unui indiciu nu schimbă ce poate face jucătorul (puzzle-ul rămâne activ), ci modifică datele puzzle-ului (câte indicii au fost folosite, penalizarea). Propunerea este ca indiciile să fie înregistrate ca date/evenimente în starea `PUZZLE_ACTIVE`, nu ca stare separată. Lista de mai sus rămâne neschimbată până la aprobare.
+Notă (CONFIRMED — D-030, 2026-09-30): `HINT_USED` nu este o stare. Folosirea unui indiciu nu schimbă ce poate face jucătorul (misiunea rămâne `pending`); numărul de indicii folosite se păstrează ca dată a misiunii (`hintsUsed`), iar fiecare dezvăluire emite evenimentul `hint_requested`. Penalizarea pentru indicii nu face parte din D-030 și rămâne deschisă în D-025. Lista de mai sus rămâne neschimbată, ca referință istorică.
 
 ## 5. Separation of concerns
 
