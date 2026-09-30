@@ -627,4 +627,4 @@ Aceeași Adventure Bike poate fi oferită comercial în două variante:
 - Efectul bypass-ului în scor (D-025).
 - Confidențialitatea poziției în sesiune și în monitorizarea live (§15.3, D-043).
 - Mutarea pe `walk.` / `bike.outdoor-escape.ro` (D-035).
-- D-028 (fundal / ecran stins), D-025 (cronometru și scor), D-034 (conținut real în repository public) — rămân deschise, neschimbate.
+- D-028 (fundal / ecran stins), D-025 (cronometru și scor) — rămân deschise, neschimbate. D-034 (conținut real în repository public) a fost închisă la 2026-09-30: Varianta B, CONFIRMED.

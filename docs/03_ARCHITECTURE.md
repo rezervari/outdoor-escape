@@ -68,13 +68,17 @@ Structura actuală (motorul V2, fundația):
 │       ├── map-model.js modelul vizual al hărții (M-003.2, pur)
 │       ├── map.js       harta Leaflet, strat exclusiv vizual (M-003.2)
 │       └── storage.js   localStorage
-├── content/                            conținutul aventurilor (publicat)
+├── content/                            conținutul aventurilor (publicat) — numai test / demo (D-034)
 │   ├── adventures/brasov-centrul-vechi.json   aventura DEMO (schemaVersion 1, D-037)
 │   └── games/.gitkeep                         gol (D-037)
 └── tests/                              teste automate (nu se publică)
     ├── *.test.js
     └── fixtures/adventure-v2-demo.json        aventură V2 fictivă, doar pentru teste (D-042)
 ```
+
+Regulă (CONFIRMED — D-034): `content/` din repository-ul public conține **numai** aventuri de test / demo. Conținutul real al jocurilor comerciale stă într-o sursă separată, neversionată în repository-ul public, și ajunge în producție doar la publicare. Tot ce se publică pe GitHub Pages rămâne lizibil de oricine (D-021).
+
+Excepție (CONFIRMED — D-068): `content/adventures/demo-gps-brasov.json` (`demo: true`) este autorizat explicit ca demo public și conține intenționat coordonate reale din Brașov, pentru testarea GPS-ului și a hărții. Excepția acoperă doar acest demo; nu autorizează publicarea altor aventuri reale sau a conținutului sensibil (`Claude outputs/` rămâne nepublicat) și nu schimbă regula D-034 pentru aventurile reale nepublicate sau comerciale.
 
 Planul inițial (module `state.js`, `router.js`, `gps.js`, `timer.js`, `puzzles.js`, `hints.js`, `src/assets/`, `content/games/game-001/` cu mai multe fișiere) a fost înlocuit de structura de mai sus (D-037, D-038). Modulele pentru GPS-ul browserului, hartă și audio se adaugă în etapele lor.
 
@@ -153,7 +157,7 @@ Conținutul este separat de cod: aventura stă într-un fișier JSON, iar codul 
 
 | Fișier | Rol |
 | --- | --- |
-| `content/adventures/<id>.json` (D-037) | O aventură, `schemaVersion` 1 sau 2. Aventura actuală este DEMO, V1 (fără locații reale, fără afirmații istorice). |
+| `content/adventures/<id>.json` (D-037) | O aventură, `schemaVersion` 1 sau 2. Aventura implicită `brasov-centrul-vechi` este DEMO, V1 (fără locații, fără afirmații istorice). Excepție (D-068): `demo-gps-brasov` este DEMO, V2 (`demo: true`), cu coordonate reale din Brașov, intenționat publice pentru testarea GPS-ului și a hărții. |
 | `src/js/content.js` | Încarcă JSON-ul (`fetch`, URL relativ la modul: `../../content/adventures/<id>.json`), îl validează după `schemaVersion` (V1 minim, V2 prin `schema.js`), erori pe înțelesul jucătorului (`AdventureLoadError`). |
 | `src/js/schema.js` | Schema V2: vocabular închis, validare cu verificarea referințelor, conversia V1 → V2 în memorie, forma normalizată (`toAdventureV2`). |
 | `src/js/defaults.js` | Valorile implicite centrale (GPS, progresie, limita lanțurilor de evenimente) și configurația hărții (M-003.2): `MAP_LIBRARY_VERSION`, `DEFAULT_MAP_TILES` (provider OSM, atribuire), `DEFAULT_MAP_VIEW` (valori strict vizuale). |

@@ -382,7 +382,7 @@ Notă conexă: `README.md` și `.gitignore` au terminații de linie Windows (CRL
 ---
 
 ## D-034 — Conținutul real al jocului în repository-ul public
-Status: PROPOSED
+Status: CONFIRMED (2026-09-30) — Varianta B (anterior: PROPOSED)
 
 Context:
 Repository-ul este public (D-015), iar validarea se face în browser (D-021). Dacă traseul, puzzle-urile și răspunsurile jocului real se află în repository, oricine le poate citi, fără să cumpere jocul. Această problemă făcea parte din vechea formulare a D-021 și nu a fost acoperită de decizia confirmată.
@@ -395,6 +395,17 @@ Opțiuni:
 Notă: chiar și cu B, fișierele publicate pe GitHub Pages pot fi citite de oricine (D-021).
 
 Recomandare Claude: B. De decis înainte de Faza 4 (integrarea jocului real).
+
+Decizie (proprietar, 2026-09-30) — Varianta B:
+- Repository-ul public conține **doar** jocuri / conținut de test și demo.
+- Conținutul real al jocurilor comerciale (poveste, traseu, locații, puzzle-uri, răspunsuri, indicii, coduri de partener, media) este păstrat **separat** de repository-ul public și este introdus în producție **doar la publicare**.
+- **Limită explicită:** orice conținut publicat efectiv pe GitHub Pages poate fi citit de oricine (D-021). Separarea protejează conținutul real **înainte** de publicare (în repository, în istoricul Git, în pull request-uri), **nu după** publicare.
+
+Regula tehnică rezultată:
+- `content/` din repository-ul public = **numai** conținut de test / demo (marcat `demo: true`; fără traseu, răspunsuri sau coduri reale). Fixture-urile din `tests/fixtures/` rămân fictive (D-042).
+- Conținutul real al jocurilor = sursă separată, **neversionată** în repository-ul public.
+
+Nu se decid și nu se implementează acum: forma sursei separate (de exemplu un repository privat), mecanismul prin care conținutul real ajunge în producție la publicare și managementul conținutului real. Acestea se stabilesc printr-o decizie ulterioară, înainte de integrarea jocului real (Faza 4). Codul aplicației nu se schimbă prin această decizie.
 
 ---
 
@@ -956,3 +967,26 @@ Decizie:
 - Adventure și Route **nu depind** de închirierea bicicletei.
 - Nu se introduc acum entități `Product`, `Booking`, `RentalProvider` etc.; acestea rămân pentru faza comercială ulterioară (D-008, D-019).
 - Funsy Bike nu se hardcodează în motor (confirmă D-051).
+
+---
+
+## D-068 — Excepție pentru demo-ul GPS public (Public demo GPS exception)
+Status: CONFIRMED (2026-09-30)
+
+Context:
+D-034 (CONFIRMED) cere ca `content/` din repository-ul public să conțină numai conținut de test / demo. Aventura `content/adventures/demo-gps-brasov.json` (`schemaVersion` 2, `demo: true`) este publicată pe GitHub Pages și folosește coordonate reale din Brașov, necesare pentru testarea GPS-ului și a hărții pe teren. Documentația afirma, contradictoriu, că demo-ul public nu are locații reale.
+
+Decizie (proprietar, 2026-09-30):
+- `content/adventures/demo-gps-brasov.json` este autorizat explicit ca demo public și poate conține coordonate reale din Brașov.
+- Coordonatele reale din acest fișier sunt **intenționat publice**, pentru testarea / demonstrarea GPS-ului și a hărții.
+- Fișierul trebuie să rămână clar identificabil ca demo: `demo: true` (și titlul marcat „[DEMO GPS]”).
+
+Scope:
+- Doar acest demo / conținut marcat `demo: true`.
+- Excepția **nu** se extinde automat la alte aventuri, la alte locații reale sau la conținut real (poveste, traseu comercial, puzzle-uri, răspunsuri, indicii, coduri de partener, media).
+- Excepția **nu** autorizează publicarea altor aventuri reale sau a conținutului sensibil. `Claude outputs/` rămâne sensibil și nu se publică (D-044).
+
+Relația cu D-034:
+Aceasta este o excepție explicită pentru demo-ul public și **nu** modifică regula generală D-034: conținutul real al aventurilor nepublicate, inclusiv al aventurilor care urmează să fie publicate comercial, rămâne în afara repository-ului public.
+
+Nu se schimbă: motorul, schema V2, aplicația, conținutul fișierului `demo-gps-brasov.json` și testele.

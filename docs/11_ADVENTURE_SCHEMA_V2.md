@@ -251,7 +251,7 @@ Comportamentul actual (documentat, nu modificat):
 - Model **generic**: `category` este text liber; motorul nu tratează diferit o cafenea, un muzeu sau un hotel.
 - Partenerul descrie relația; misiunea asociată (`type: "partner"`) descrie jocul. Legătura este verificată în ambele sensuri (`partner.missionId` ↔ `mission.partnerId`).
 - Starea `unlocked` se obține prin acțiunea `unlock_partner` (emite `partner_unlocked`).
-- `validity` și `reward` sunt doar descrise; nu sunt aplicate. Fără plăți și fără verificarea automată a cumpărăturii. Codurile reale de partener nu se pun într-un repository public înainte de decizia D-034.
+- `validity` și `reward` sunt doar descrise; nu sunt aplicate. Fără plăți și fără verificarea automată a cumpărăturii. Codurile reale de partener sunt conținut real și nu se pun în repository-ul public (D-034, CONFIRMED).
 
 ## 8. Secrete
 
