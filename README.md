@@ -14,12 +14,12 @@ Arhitectura V1.1 (rută ≠ aventură ≠ sesiune, echipe și participanți, con
 
 ## Stare
 
-**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. **M-003.1:** poziția reală a telefonului (Browser Geolocation API, doar cu aplicația deschisă) este conectată la motor: stare GPS, permisiune explicată, obiectivul misiunii și „Am ajuns” ca rezervă. Aventura demo publică nu are încă locații, deci pe ea GPS-ul este doar informativ. **M-003.2:** harta Leaflet (1.9.4, inclusă local) + OpenStreetMap, doar pentru orientare, afișată în joc numai pentru aventurile cu locații — implementată și comisă, în review-ul proprietarului. Pregătit, dar încă fără interfață: misiunile partener, secrete și cu timp, naratorul, audio, GPS-ul în fundal și notificările — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
+**Motorul de joc — fundația V2.** Aplicația este publicată la `https://rezervari.github.io/outdoor-escape/src/` și rulează o aventură **demonstrativă** (3 provocări, fără locații reale). Implementat: schema de aventură V2, migrarea V1 → V2, modelul de locație, motorul de evenimente, progresul V2 și testele. **M-003.1:** poziția reală a telefonului (Browser Geolocation API, doar cu aplicația deschisă) este conectată la motor: stare GPS, permisiune explicată, obiectivul misiunii și „Am ajuns” ca rezervă. Aventura demo publică nu are încă locații, deci pe ea GPS-ul este doar informativ. **M-003.2:** harta Leaflet (1.9.4, inclusă local) + OpenStreetMap, doar pentru orientare, afișată în joc numai pentru aventurile cu locații — implementată, comisă și **acceptată de proprietar la 30.09.2026** (milestone închis). Pregătit, dar încă fără interfață: misiunile partener, secrete și cu timp, naratorul, audio, GPS-ul în fundal și notificările — vezi [`docs/11_ADVENTURE_SCHEMA_V2.md`](docs/11_ADVENTURE_SCHEMA_V2.md), secțiunea 0.
 
 Milestone-uri curente:
 
 - M-003.1 — Browser Geolocation: COMPLETED
-- M-003.2 — Map: IMPLEMENTED — PENDING OWNER REVIEW (D-046–D-049; comis — `39a6b28`; test pe telefon cu locații reale amânat, D-049-M)
+- M-003.2 — Map: ACCEPTED — CLOSED (acceptat de proprietar la 30.09.2026; D-046–D-049; implementare `39a6b28`; testul pe telefon cu locații reale a fost amânat explicit prin D-049-M și nu este un criteriu ratat)
 
 Traseul, locațiile și puzzle-urile jocului real nu sunt finale până nu sunt verificate pe teren.
 

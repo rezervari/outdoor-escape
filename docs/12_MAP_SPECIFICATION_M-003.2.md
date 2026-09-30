@@ -2,10 +2,10 @@
 
 | | |
 | --- | --- |
-| **Status** | SPECIFICATION APPROVED — IMPLEMENTED, PENDING OWNER REVIEW |
+| **Status** | SPECIFICATION APPROVED — IMPLEMENTED — **ACCEPTED — CLOSED** (owner acceptance: 30.09.2026) |
 | **Decisions** | D-046, D-047, D-048, D-049 (`04_DECISIONS_LOG.md`) |
 | **Milestone** | M-003.2 |
-| **Implementation status** | **Implementat și comis (`39a6b28`), în review-ul proprietarului** — `src/js/map.js`, `src/js/map-model.js`, `src/vendor/leaflet/` (1.9.4), `geo.effectiveRadius` + `game.getLocation().radiusMeters` (R2), teste; verificare: `07_TESTING.md` §25. Milestone-ul se închide după review-ul proprietarului |
+| **Implementation status** | **Implementat și comis (`39a6b28`); acceptat de proprietar la 30.09.2026** — `src/js/map.js`, `src/js/map-model.js`, `src/vendor/leaflet/` (1.9.4), `geo.effectiveRadius` + `game.getLocation().radiusMeters` (R2), teste; verificare: `07_TESTING.md` §25. Milestone-ul este **închis** (§18) |
 | **Aprobat** | 2026-09-29, de proprietarul proiectului |
 | **Alegeri finale** | D-049-C → `uncertain`; D-049-D → R2; D-049-A, B, C2, E…M în forma din §13 |
 
@@ -514,4 +514,6 @@ export const DEFAULT_MAP_VIEW = Object.freeze({
 
 - 2026-09-30 — constatat la consolidarea V1.1: implementarea este comisă (`39a6b28`, „feat: implement M-003.2 map”). Statusul rămâne „pending owner review”.
 
-**Implementarea M-003.2 este făcută și comisă, dar milestone-ul nu este închis** până la review-ul proprietarului.
+- 2026-09-30 — **owner acceptance:** review-ul manual al proprietarului este finalizat („Am făcut toate testele. Este ok, inclusiv testele din zilele trecute. Funcționează corect toate.”). M-003.2 este **ACCEPTAT** și **ÎNCHIS**. Criteriile de acceptare rămân cele 30 din §15. La închidere, suita completă `node --test` are **132 de teste, toate verzi** — acesta este totalul actual al suitei, care include cele 128 de la implementarea M-003.2 (§18, 2026-09-29) și testele de regresie adăugate ulterior; nu toate sunt teste introduse de M-003.2. Testul pe telefon cu o aventură reală cu locații a fost amânat explicit prin D-049-M și nu este un criteriu ratat.
+
+**M-003.2 este implementat, comis (`39a6b28`), acceptat de proprietar la 30.09.2026 și închis.**

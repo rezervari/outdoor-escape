@@ -201,4 +201,4 @@ No production application architecture is considered implemented yet.
 Next objective:
 create the repository, documentation/context pack, development rules, and product specification before substantial coding.
 
-Notă (2026-09-30): secțiunea de mai sus este istorică. Stare actuală: motorul de joc (fundația V2) este implementat și publicat; M-003.1 (Browser Geolocation) este finalizat; M-003.2 (hartă) este implementat și comis, în review-ul proprietarului. Arhitectura Platform V1.1 este decisă, dar neimplementată. Tabelul complet IMPLEMENTAT / DECIS / FUTURE: `13_PLATFORM_V1.1.md` §17.
+Notă (2026-09-30): secțiunea de mai sus este istorică. Stare actuală: motorul de joc (fundația V2) este implementat și publicat; M-003.1 (Browser Geolocation) este finalizat; M-003.2 (hartă) este implementat, comis și acceptat de proprietar la 30.09.2026 (milestone închis). Arhitectura Platform V1.1 este decisă, dar neimplementată. Tabelul complet IMPLEMENTAT / DECIS / FUTURE: `13_PLATFORM_V1.1.md` §17.

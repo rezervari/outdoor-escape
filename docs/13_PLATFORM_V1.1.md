@@ -571,7 +571,7 @@ Aceeași Adventure Bike poate fi oferită comercial în două variante:
 
 | Funcționalitate | Status | Detalii |
 | --- | --- | --- |
-| Adventure Engine | **IMPLEMENTAT** (fundația V2, liniar) | schemă V2, evenimente, progres pe entități, GPS cu pagina activă (M-003.1), hartă (M-003.2, comisă, review proprietar în curs); 132 de teste `node --test` verzi (rulate la 2026-09-30) |
+| Adventure Engine | **IMPLEMENTAT** (fundația V2, liniar) | schemă V2, evenimente, progres pe entități, GPS cu pagina activă (M-003.1), hartă (M-003.2, comisă, acceptată de proprietar la 30.09.2026 — închisă); 132 de teste `node --test` verzi (rulate la 2026-09-30) |
 | Adventure Session | PARȚIAL / DECIS | sesiune locală implicită, una per aventură per browser; `sessionId`, lifecycle-ul complet, Session ca sursă a stării (D-064), legarea de `adventure_id` + `adventure_version` (D-066): DECIS |
 | Team | DECIS | neimplementat |
 | Participant | DECIS | neimplementat |
@@ -610,7 +610,7 @@ Aceeași Adventure Bike poate fi oferită comercial în două variante:
 | 1 | V1.1 cere „relevant map data” offline; D-046 + politica OSM interzic prefetch / stocare offline de tile-uri. | Decizia proprietarului: tile-urile OSM **sunt excluse** din pachet; D-046 rămâne neschimbată; harta offline cu alt provider = D-063 (PROPOSED). |
 | 2 | D-026 (PROPOSED: un telefon per echipă) vs. `multi_device` (V1.1). | Decizia proprietarului: D-054 CONFIRMED, D-026 SUPERSEDED. `shared_device` rămâne mod suportat. |
 | 3 | Numerotare: `12_MAP_SPECIFICATION_M-003.2.md` exista deja. | Decizia proprietarului: documentele noi sunt `13_PLATFORM_V1.1.md`, `14_EDGE_CASES.md`, `15_SESSION_SYNC.md`. |
-| 4 | Documentația spunea că M-003.2 este „necomisă”; git log arată commit-ul `39a6b28` („feat: implement M-003.2 map”). | Decizia proprietarului: corectat doar faptul („comisă”); statusul „pending owner review” rămâne. |
+| 4 | Documentația spunea că M-003.2 este „necomisă”; git log arată commit-ul `39a6b28` („feat: implement M-003.2 map”). | Decizia proprietarului: corectat doar faptul („comisă”); statusul „pending owner review” rămâne. Ulterior: M-003.2 acceptat de proprietar și închis la 30.09.2026. |
 | 5 | Restaurarea tolerantă + network-first aplică conținut nou unei sesiuni locale în curs; D-057 cere versiune fixă. | Nu este o contradicție între documente, ci o diferență între codul actual și arhitectura decisă. Documentată ca neimplementată (§8.4, §9). |
 | 6 | D-025 / `00` §4 menționează „time/scoring system”; Bike Safety Loop interzice recompensarea vitezei. | Documentată ca constrângere pentru D-025 (Bike: timpul nu e factor de scor); D-025 rămâne PROPOSED. |
 | 7 | „Eventuala poziție GPS” a sesiunii / live monitoring vs. D-043 (nu se salvează coordonatele). | D-043 rămâne valabilă; orice stocare/transmitere de poziție cere decizie separată (§15.3). |

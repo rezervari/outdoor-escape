@@ -44,7 +44,7 @@ Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii, s�
 | Audio | schemă (`audio.tracks`, text alternativ obligatoriu); efecte `audio` | player, activarea sunetului, cache offline pentru fișiere |
 | GPS în fundal / ecran blocat, geofencing | — (M-003.1 acoperă doar pagina activă) | nu este garantat de browser/PWA; D-028 rămâne deschisă |
 | Notificări | — | tot |
-| Hartă | **implementată în M-003.2 (comisă — `39a6b28`, în review-ul proprietarului)** — `map-model.js` + `map.js` + Leaflet 1.9.4 local, OSM configurabil; doar afișare (`12_MAP_SPECIFICATION_M-003.2.md`) | test pe telefon cu o aventură reală cu locații (D-049-M) |
+| Hartă | **implementată în M-003.2 (comisă — `39a6b28`; acceptată de proprietar la 30.09.2026, milestone închis)** — `map-model.js` + `map.js` + Leaflet 1.9.4 local, OSM configurabil; doar afișare (`12_MAP_SPECIFICATION_M-003.2.md`) | test pe telefon cu o aventură reală cu locații (D-049-M) |
 
 ## 1. Module
 

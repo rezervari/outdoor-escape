@@ -685,7 +685,7 @@ Harta primește doar acest model:
 ---
 
 ## D-049 — Comportamentul vizual și UX al hărții (Map V1)
-Status: CONFIRMED (2026-09-29) — specificație aprobată; implementarea M-003.2 a fost făcută și comisă (`39a6b28`, „feat: implement M-003.2 map”), în review-ul proprietarului (actualizat 2026-09-30; anterior: „implementarea M-003.2 NU a început”)
+Status: CONFIRMED (2026-09-29) — specificație aprobată; implementarea M-003.2 a fost făcută și comisă (`39a6b28`, „feat: implement M-003.2 map”) și trimisă în review-ul proprietarului (actualizat 2026-09-30; anterior: „implementarea M-003.2 NU a început”). **M-003.2 ACCEPTAT și ÎNCHIS de proprietar la 30.09.2026** (review manual finalizat; testul pe telefon cu locații reale rămâne amânat conform D-049-M, nu este un criteriu ratat)
 
 Specificația completă (cu cele 30 de criterii de acceptare): [`12_MAP_SPECIFICATION_M-003.2.md`](12_MAP_SPECIFICATION_M-003.2.md). Propunerea originală (`Claude outputs/PROPUNERE_D-049_MAP_V1.md`, ignorată de Git, D-044) rămâne doar ca artefact local istoric. Deciziile esențiale sunt rezumate mai jos.
 
