@@ -17,7 +17,7 @@
  * Separat de map-model.js, care construiește modelul hărții (D-048).
  */
 
-import { GameStatus, ChallengeStatus, MissionStatus, LocationStatus, isMissionClosed, deriveProgress, maxScore, countSolved } from "./game.js";
+import { GameStatus, ChallengeStatus, MissionStatus, LocationStatus, isMissionClosed, deriveProgress, maxScore, countSolved, collectedItems } from "./game.js";
 import { ANSWER_MISSION_TYPES } from "./schema.js";
 
 /** Ce vizualizare corespunde stării motorului. */
@@ -94,6 +94,8 @@ function buildPuzzle(mission, progress) {
     type: mission.type,
     title: mission.title,
     question: mission.briefing,
+    // Variantele de răspuns afișate ca butoane (mission.choices); null = răspuns tastat.
+    choices: Array.isArray(mission.choices) ? [...mission.choices] : null,
     points: mission.points,
     status: progress.status,
     available: pending,
@@ -146,6 +148,48 @@ function buildStops(content, state, currentLocationId) {
 }
 
 /**
+ * Jurnalul naratorului: mesajele `show_message` ale regulilor deja declanșate.
+ * Se derivă din starea salvată (`firedEvents`: id-ul regulii → momentul declanșării),
+ * nu din efectele trecătoare ale motorului (takeEffects), deci rezistă la reîncărcare.
+ * Ordinea: momentul declanșării, apoi ordinea regulilor și a acțiunilor din conținut.
+ * `epilogue` este mesajul `finale.messageId`, doar după încheierea aventurii.
+ */
+function buildStory(content, state) {
+  const messages = content.narrator?.messages || {};
+  const fired = state.firedEvents || {};
+  const entries = [];
+  (content.events || []).forEach((rule, ruleIndex) => {
+    const at = fired[rule.id];
+    if (at === undefined) return;
+    (rule.do || []).forEach((action, actionIndex) => {
+      if (action.action !== "show_message") return;
+      const text = messages[action.messageId]?.text;
+      if (!text) return;
+      entries.push({ key: `${rule.id}:${actionIndex}`, messageId: action.messageId, text, at, order: ruleIndex * 1000 + actionIndex });
+    });
+  });
+  entries.sort((a, b) => a.at - b.at || a.order - b.order);
+  const finaleId = content.finale?.messageId;
+  const epilogue = state.status === GameStatus.COMPLETED && finaleId ? messages[finaleId]?.text || null : null;
+  return {
+    narratorName: content.narrator?.name || null,
+    entries: entries.map(({ key, messageId, text, at }) => ({ key, messageId, text, at })),
+    epilogue,
+  };
+}
+
+/** Obiectele obținute (collect_item), în ordinea obținerii, cu textele din conținut. */
+function buildItems(content, state) {
+  const byId = new Map((content.items || []).map((item) => [item.id, item]));
+  return collectedItems(content, state.firedEvents || {})
+    .filter((id) => byId.has(id))
+    .map((id) => {
+      const item = byId.get(id);
+      return { id, name: item.name, description: item.description || null, icon: item.icon || null };
+    });
+}
+
+/**
  * Construiește modelul interfeței.
  *   content — aventura normalizată V2 (game.content)
  *   state   — starea motorului (game.getState())
@@ -170,6 +214,8 @@ export function buildViewModel({ content, state }) {
     actions: { confirmArrival: false, submitAnswer: false, requestHint: false, skip: false, continue: false },
     progress: { missionIndex: null, missionTotal: main.length, stops: buildStops(content, state, null) },
     summary,
+    story: buildStory(content, state),
+    items: buildItems(content, state),
   };
 
   if (state.status === GameStatus.IDLE) return { ...base, primaryAction: PrimaryAction.START };

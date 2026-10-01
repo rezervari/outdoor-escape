@@ -42,7 +42,7 @@
 
     <section id="screen-start" class="screen" hidden aria-labelledby="adventure-title">
       <h2 id="adventure-title"></h2>
-      <p id="adventure-description"></p>
+      <p id="adventure-description" class="text-block"></p>
       <dl class="facts">
         <dt>Oraș</dt>
         <dd id="adventure-city"></dd>
@@ -76,7 +76,7 @@
               <p class="objective-kicker">📍 Locație</p>
               <p id="objective-status" class="objective-status"></p>
             </div>
-            <p id="objective-instructions" class="objective-instructions" hidden></p>
+            <p id="objective-instructions" class="objective-instructions text-block" hidden></p>
             <button type="button" class="button button-primary" id="btn-arrived">Am ajuns</button>
             <!-- După sosire: deschide provocarea / continuă (din viewModel, prin play-ui.js). -->
             <button type="button" class="button button-primary" id="btn-objective-action" hidden></button>
@@ -99,7 +99,24 @@
       </section>
 
       <h2 id="challenge-title"></h2>
-      <p id="challenge-description"></p>
+      <p id="challenge-description" class="text-block"></p>
+
+      <!-- Jurnalul naratorului (viewModel.story): mesajele regulilor deja declanșate, derivate din
+           progresul salvat. Apare doar dacă aventura are mesaje și cel puțin unul a fost primit. -->
+      <section id="story-panel" class="story-panel" hidden aria-labelledby="story-title">
+        <h3 id="story-title" class="story-title"></h3>
+        <p id="story-latest" class="story-latest text-block" aria-live="polite"></p>
+        <details id="story-history" class="story-history" hidden>
+          <summary id="story-history-summary"></summary>
+          <ol id="story-list" class="story-list"></ol>
+        </details>
+      </section>
+
+      <!-- Obiectele obținute (viewModel.items, din collect_item). Apar doar după primul obiect. -->
+      <section id="items-panel" class="items-panel" hidden aria-labelledby="items-title">
+        <h3 id="items-title" class="items-title"></h3>
+        <ul id="items-list" class="items-list"></ul>
+      </section>
 
       <!-- Panoul puzzle-ului (TASK 4, pasul 4). Pentru o misiune cu obiectiv pe hartă este un
            overlay peste scenă (harta rămâne în DOM, dedesubt); altfel (ex. V1) stă în pagină.
@@ -111,14 +128,19 @@
             <button type="button" class="button button-secondary puzzle-close" id="btn-puzzle-close">Închide</button>
           </div>
           <h2 id="puzzle-title" class="puzzle-title" tabindex="-1"></h2>
-          <p id="puzzle-question" class="puzzle-question"></p>
+          <p id="puzzle-question" class="puzzle-question text-block"></p>
 
           <form id="answer-form" novalidate>
-            <label for="answer-input">Răspunsul tău</label>
-            <input id="answer-input" name="answer" type="text"
-                   autocomplete="off" autocapitalize="off" autocorrect="off"
-                   spellcheck="false" enterkeyhint="done">
-            <button type="submit" class="button button-primary" id="btn-check">Verifică răspunsul</button>
+            <!-- Variante de răspuns (mission.choices): fiecare buton trimite varianta prin același
+                 formular și aceeași verificare (game.submitAnswer → answers.js). -->
+            <div id="choice-list" class="choice-list" role="group" aria-label="Alege răspunsul" hidden></div>
+            <div id="typed-answer">
+              <label for="answer-input">Răspunsul tău</label>
+              <input id="answer-input" name="answer" type="text"
+                     autocomplete="off" autocapitalize="off" autocorrect="off"
+                     spellcheck="false" enterkeyhint="done">
+              <button type="submit" class="button button-primary" id="btn-check">Verifică răspunsul</button>
+            </div>
           </form>
 
           <p id="feedback" class="feedback" role="status" aria-live="polite" hidden></p>
@@ -160,6 +182,12 @@
     <section id="screen-end" class="screen" hidden aria-labelledby="end-title">
       <h2 id="end-title" tabindex="-1">Felicitări! Ai terminat aventura.</h2>
       <p id="end-adventure" class="end-adventure"></p>
+      <!-- Epilogul (finale.messageId), dacă aventura are unul (viewModel.story.epilogue). -->
+      <blockquote id="end-epilogue" class="end-epilogue text-block" hidden></blockquote>
+      <section id="end-items-panel" class="items-panel" hidden aria-labelledby="end-items-title">
+        <h3 id="end-items-title" class="items-title"></h3>
+        <ul id="end-items-list" class="items-list"></ul>
+      </section>
       <dl class="facts">
         <dt>Scor</dt>
         <dd id="end-score"></dd>

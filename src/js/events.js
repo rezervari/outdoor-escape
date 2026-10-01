@@ -62,6 +62,7 @@ export const ACTION_TYPES = Object.freeze({
   discover_secret: { secretId: "secrets" },
   unlock_partner: { partnerId: "partners" },
   award_points: { points: "points" },
+  collect_item: { itemId: "items" },
   start_finale: {},
   complete_adventure: {},
 });

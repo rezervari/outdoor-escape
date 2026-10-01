@@ -26,7 +26,7 @@
  */
 
 const CACHE_PREFIX = "outdoor-escape:shell:";
-const CACHE_VERSION = "v7";
+const CACHE_VERSION = "v8";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 // Relative la sw.js, adică la src/.

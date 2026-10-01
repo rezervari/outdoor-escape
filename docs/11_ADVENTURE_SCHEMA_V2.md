@@ -41,7 +41,7 @@ Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii (de
 | Misiuni partener (`partner`) | schemă generică (`partners`, `verification`, `reward`, `validity`); `unlock_partner` | interfață; aplicarea `validity`/`reward`; parteneri și coduri reale |
 | Misiuni secrete (`secret`, traseul `secret`) | schemă; descoperire prin trecere pe lângă o locație ascunsă; deblocare prin evenimente | interfață pentru misiunile din afara traseului principal |
 | Misiuni cu timp (`timed`) | schemă (`timeLimitSeconds`); `startedAt` salvat | aplicarea limitei de timp (D-025, D-028); interfață |
-| Game Master / narator (UI) | `narrator.messages`; efecte `message` produse de motor (`takeEffects()`) | afișarea mesajelor în interfață |
+| Game Master / narator (UI) | `narrator.messages`; efecte `message` produse de motor (`takeEffects()`); **jurnalul în interfață** (2026-10-01): mesajele `show_message` ale regulilor rulate, derivate din `firedEvents` (`viewModel.story`), și epilogul `finale.messageId` pe ecranul de rezultat | redarea audio a mesajelor |
 | Audio | schemă (`audio.tracks`, text alternativ obligatoriu); efecte `audio` | player, activarea sunetului, cache offline pentru fișiere |
 | GPS în fundal / ecran blocat, geofencing | — (M-003.1 acoperă doar pagina activă) | nu este garantat de browser/PWA; D-028 rămâne deschisă |
 | Notificări | — | tot |
@@ -99,8 +99,9 @@ Conversia V1 → V2:
 | `missions` | da | secțiunea 6; cel puțin o misiune pe traseul `main` |
 | `partners` | nu | secțiunea 7 |
 | `secrets` | nu | secțiunea 8 |
+| `items` | nu | obiecte colecționabile: `[{ "id", "name", "description"?, "icon"? }]`; se obțin prin acțiunea `collect_item` (secțiunea 9) |
 | `events` | nu | secțiunea 9 |
-| `finale` | nu | `missionId` (misiune principală) + `messageId` |
+| `finale` | nu | `missionId` (misiune principală) + `messageId`; mesajul este afișat ca epilog pe ecranul de rezultat |
 
 Câmpurile necunoscute sunt permise (extensibilitate: media, variante de răspuns, sezoane…). Valorile necunoscute din **listele închise** (tipuri, stări, acțiuni, evenimente, metode) sunt erori, ca greșelile de scriere să fie prinse la validare, nu pe teren.
 
@@ -232,6 +233,8 @@ Comportamentul actual (documentat, nu modificat):
 
 - `hints`: se dezvăluie pe rând (`hintsUsed`); fiecare dezvăluire emite `hint_requested`. Fără penalizări (D-025). În interfață, un indiciu se deschide numai după confirmarea jucătorului; anularea confirmării nu atinge motorul (D-030, extinderea din 2026-10-01).
 - `answer`: verificat doar prin `answers.js` (D-021, D-024). Motorul primește aventura fără răspunsuri.
+- `choices` (opțional, doar pentru misiunile cu răspuns): 2–6 texte nevide, diferite. Interfața le afișează ca butoane în locul câmpului de text; varianta aleasă este trimisă ca răspuns prin aceeași verificare (`answers.js`, cu normalizarea D-024), deci `answer` trebuie să corespundă uneia dintre variante după normalizare. Schema nu face această verificare (doar `answers.js` citește răspunsurile — D-021).
+- Rândurile noi din `briefing`, din indicii, din `fallback.instructions` și din mesajele naratorului sunt păstrate la afișare.
 
 ## 7. Parteneri
 
@@ -301,7 +304,9 @@ Descoperiri separate de traseul principal (acțiunea `discover_secret`, evenimen
 
 **Filtru (`where`)**: egalitate simplă pe `missionId`, `locationId`, `secretId`, `partnerId`; toate cheile trebuie să corespundă. Fără expresii.
 
-**Acțiuni (`do`)** — listă închisă: `show_message {messageId}`, `play_audio {trackId}`, `unlock_mission {missionId}`, `complete_mission {missionId}`, `fail_mission {missionId}`, `unlock_location {locationId}`, `discover_location {locationId}`, `discover_secret {secretId}`, `unlock_partner {partnerId}`, `award_points {points, reason?}`, `start_finale`, `complete_adventure`.
+**Acțiuni (`do`)** — listă închisă: `show_message {messageId}`, `play_audio {trackId}`, `unlock_mission {missionId}`, `complete_mission {missionId}`, `fail_mission {missionId}`, `unlock_location {locationId}`, `discover_location {locationId}`, `discover_secret {secretId}`, `unlock_partner {partnerId}`, `award_points {points, reason?}`, `collect_item {itemId}`, `start_finale`, `complete_adventure`.
+
+`collect_item` (adăugată 2026-10-01): marchează obiectul `itemId` (din `items`) ca obținut. Ca punctele din `award_points`, obiectele obținute **nu** se salvează separat: se derivă din regulile rulate (`firedEvents`) prin `collectedItems(adventure, firedEvents)` din `game.js`, în ordinea rulării, fără duplicate (`getProgressSummary().collectedItems`, `viewModel.items`). Motorul emite și efectul `{ type: "item", itemId }`. Un obiect legat de rezolvarea unei misiuni (`mission_completed`) nu se obține dacă misiunea este sărită; conținutul trebuie să ofere o cale de continuare (D-006).
 
 **Protecții:**
 
@@ -358,6 +363,8 @@ Cheia rămâne `outdoor-escape:game:<id>`. Forma V2:
 Compatibil cu versiunea anterioară: `start`, `submitAnswer`, `useHint`, `skipChallenge`, `failChallenge`, `next`, `reset`, `getState`, `subscribe`, `getSummary`, `getCurrentChallenge` (alias pentru `getCurrentMission`).
 
 Nou în M-002: `content` (aventura normalizată), `getCurrentMission`, `getMission`, `getOpenMissions`, `getLocation`, `getProgressSummary`, `takeEffects`, `submitMissionAnswer(missionId, input)`, `requestHint(missionId?)`, `skipMission`, `failMission`, `reportPosition(fix)`, `confirmArrival(locationId)`.
+
+Adăugat 2026-10-01 (aditiv): `getProgressSummary().collectedItems` și funcția exportată `collectedItems(adventure, firedEvents)`.
 
 ## 13. Ce NU este implementat în această etapă
 

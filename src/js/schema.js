@@ -129,7 +129,7 @@ export function validateAdventureV2(data) {
   const settings = resolveSettings(isObject(data.settings) ? data.settings : {});
 
   // Colecții: id-uri unice, păstrate pentru verificarea referințelor.
-  const ids = { missions: new Set(), locations: new Set(), partners: new Set(), secrets: new Set(), messages: new Set(), tracks: new Set() };
+  const ids = { missions: new Set(), locations: new Set(), partners: new Set(), secrets: new Set(), items: new Set(), messages: new Set(), tracks: new Set() };
 
   function collectArray(key, required) {
     const value = data[key];
@@ -154,6 +154,7 @@ export function validateAdventureV2(data) {
   const missions = collectArray("missions", true);
   const partners = collectArray("partners", false);
   const secrets = collectArray("secrets", false);
+  const items = collectArray("items", false);
 
   // narrator.messages și audio.tracks sunt dicționare: cheia este id-ul.
   const messages = collectDictionary("narrator", "messages");
@@ -277,6 +278,14 @@ export function validateAdventureV2(data) {
 
     if (ANSWER_MISSION_TYPES.includes(mission.type) && !isNonEmptyString(mission.answer)) err(`${where}.answer lipsește.`);
     if (mission.type === "location" && mission.answer !== undefined) err(`${where}: o misiune „location” nu are answer.`);
+    // choices: variantele afișate ca butoane; varianta aleasă este trimisă ca răspuns (validat de answers.js).
+    if (mission.choices !== undefined) {
+      if (!ANSWER_MISSION_TYPES.includes(mission.type)) err(`${where}.choices este permis doar pentru misiunile cu răspuns.`);
+      else if (!Array.isArray(mission.choices) || mission.choices.length < 2 || mission.choices.length > 6
+        || !mission.choices.every(isNonEmptyString) || new Set(mission.choices).size !== mission.choices.length) {
+        err(`${where}.choices trebuie să fie o listă de 2–6 texte nevide, diferite.`);
+      }
+    }
     if (mission.type === "timed" && !(Number.isInteger(mission.timeLimitSeconds) && mission.timeLimitSeconds > 0)) {
       err(`${where}.timeLimitSeconds trebuie să fie un întreg pozitiv pentru o misiune „timed”.`);
     }
@@ -329,6 +338,15 @@ export function validateAdventureV2(data) {
     ref("locations", secret.locationId, `${where}.locationId`);
     ref("missions", secret.missionId, `${where}.missionId`);
     if (secret.points !== undefined && !isNonNegativeInteger(secret.points)) err(`${where}.points trebuie să fie un întreg ≥ 0.`);
+  });
+
+  // items (obiecte colecționabile): se obțin prin acțiunea collect_item a unei reguli.
+  items.forEach((item, index) => {
+    const where = `items[${index}]`;
+    if (!isObject(item)) return err(`${where} trebuie să fie un obiect.`);
+    if (!isNonEmptyString(item.name)) err(`${where}.name lipsește.`);
+    if (item.description !== undefined && typeof item.description !== "string") err(`${where}.description trebuie să fie text.`);
+    if (item.icon !== undefined && typeof item.icon !== "string") err(`${where}.icon trebuie să fie text.`);
   });
 
   // events
@@ -457,6 +475,7 @@ export function toAdventureV2(data) {
     missions,
     partners: (source.partners || []).map((partner) => ({ ...partner, initialStatus: partner.initialStatus ?? "locked" })),
     secrets: source.secrets || [],
+    items: source.items || [],
     events: (source.events || []).map((rule) => ({ ...rule, once: rule.once !== false })),
     finale: source.finale || null,
   };

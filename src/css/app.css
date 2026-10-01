@@ -324,6 +324,7 @@ html[data-overlay="open"] {
 }
 
 .hint-list li {
+  white-space: pre-line;
   margin: 0.5rem 0 0;
   padding: 0.75rem;
   border: 2px dashed #d98e04;
@@ -711,4 +712,104 @@ a:focus-visible,
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* ---------- Text narativ: rândurile noi din conținut sunt păstrate ---------- */
+
+.text-block {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Jurnalul naratorului (viewModel.story) ---------- */
+
+.story-panel {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #1f3a2e;
+  border-radius: 0.25rem;
+  background: #fff;
+}
+
+.story-panel .story-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  color: #3f4a44;
+}
+
+.story-latest {
+  margin: 0;
+}
+
+.story-history {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+}
+
+.story-history summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.story-list {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.story-list li {
+  margin: 0.5rem 0 0;
+  white-space: pre-line;
+}
+
+/* Epilogul pe ecranul de rezultat (finale.messageId). */
+.end-epilogue {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #1f3a2e;
+  background: #fff;
+  font-style: italic;
+}
+
+/* ---------- Variante de răspuns (mission.choices) ---------- */
+
+.choice-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.choice-list .choice {
+  min-height: 48px;
+  margin: 0;
+  font-weight: 700;
+}
+
+/* ---------- Obiectele obținute (collect_item) ---------- */
+
+.items-panel {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 2px dashed #1f3a2e;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.items-panel .items-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  color: #3f4a44;
+}
+
+.items-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.items-list li {
+  margin: 0.25rem 0 0;
 }

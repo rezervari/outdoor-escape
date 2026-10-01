@@ -42,6 +42,9 @@ const PRESENCE_LABELS = {
 
 const DIFFICULTY_LABELS = { easy: "ușoară", medium: "medie", hard: "dificilă" };
 
+// „ +N puncte.” doar pentru misiunile care dau puncte (un checkpoint cu 0 puncte nu afișează „+0”).
+const pointsSuffix = (points) => (points > 0 ? ` +${points} puncte.` : "");
+
 const $ = (id) => document.getElementById(id);
 
 function setStatus(id, text) {
@@ -393,8 +396,8 @@ function setupGameUi(game, storage) {
     let message = feedback;
     if (!message && progress.status === ChallengeStatus.SOLVED) {
       message = isLocationMission
-        ? { kind: "correct", text: `Ai ajuns la obiectiv! +${challenge.points} puncte.` }
-        : { kind: "correct", text: `Corect! +${challenge.points} puncte.` };
+        ? { kind: "correct", text: `Ai ajuns la obiectiv!${pointsSuffix(challenge.points)}` }
+        : { kind: "correct", text: `Corect!${pointsSuffix(challenge.points)}` };
     } else if (!message && progress.status === ChallengeStatus.SKIPPED) {
       message = { kind: "skipped", text: "Ai sărit peste această provocare (0 puncte)." };
     } else if (!message && progress.status === ChallengeStatus.FAILED) {
@@ -411,9 +414,34 @@ function setupGameUi(game, storage) {
     $("btn-next").hidden = !actions.continue;
     $("btn-next").textContent = mission.isLast ? "Vezi rezultatul" : "Continuă";
 
+    renderStory(viewModel);
+    renderItems(viewModel.items, { panel: "items-panel", title: "items-title", list: "items-list" });
     renderObjective(viewModel);
     showScreen("screen-play");
     renderPuzzle(viewModel); // după card și ecran: focusul (deschidere / închidere) are unde să meargă
+  }
+
+  /**
+   * Jurnalul naratorului (viewModel.story): ultimul mesaj primit, vizibil, și mesajele anterioare
+   * într-un <details>. Textele vin din conținut și intră doar prin textContent.
+   */
+  function renderStory(viewModel) {
+    const { narratorName, entries } = viewModel.story;
+    const panel = $("story-panel");
+    panel.hidden = entries.length === 0;
+    if (entries.length === 0) return;
+    const latest = entries[entries.length - 1];
+    $("story-title").textContent = narratorName ? `📡 Mesaj de la ${narratorName}` : "📡 Mesaj nou";
+    $("story-latest").textContent = latest.text;
+    const earlier = entries.slice(0, -1);
+    $("story-history").hidden = earlier.length === 0;
+    $("story-history-summary").textContent = `Mesajele anterioare (${earlier.length})`;
+    $("story-list").replaceChildren(...earlier.map(({ key, text }) => {
+      const item = document.createElement("li");
+      item.dataset.key = key;
+      item.textContent = text;
+      return item;
+    }));
   }
 
   /**
@@ -430,7 +458,44 @@ function setupGameUi(game, storage) {
     $("puzzle-question").textContent = puzzle.question || "";
     $("puzzle-location").textContent = puzzle.locationName ? `📍 ${puzzle.locationName}` : "";
     renderHints(viewModel);
+    renderChoices(viewModel);
     setOverlayOpen(puzzle.open);
+  }
+
+  /**
+   * Variantele (viewModel.puzzle.choices): un buton per variantă, în locul câmpului de text.
+   * Butonul pune varianta în câmp și trimite formularul: aceeași cale ca un răspuns tastat.
+   */
+  function renderChoices(viewModel) {
+    const choices = viewModel.actions.submitAnswer ? viewModel.puzzle?.choices : null;
+    const list = $("choice-list");
+    list.hidden = !choices;
+    $("typed-answer").hidden = Boolean(choices);
+    list.replaceChildren(...(choices || []).map((choice) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "button button-secondary choice";
+      button.textContent = choice;
+      button.addEventListener("click", () => {
+        $("answer-input").value = choice;
+        $("answer-form").requestSubmit();
+      });
+      return button;
+    }));
+  }
+
+  /** Obiectele obținute (viewModel.items), într-un panou dat. Textele intră doar prin textContent. */
+  function renderItems(items, { panel, title, list }) {
+    $(panel).hidden = items.length === 0;
+    $(title).textContent = `🎒 Ce ați găsit (${items.length})`;
+    $(list).replaceChildren(...items.map((item) => {
+      const entry = document.createElement("li");
+      const name = document.createElement("strong");
+      name.textContent = `${item.icon ? item.icon + " " : ""}${item.name}`;
+      entry.append(name);
+      if (item.description) entry.append(document.createTextNode(` — ${item.description}`));
+      return entry;
+    }));
   }
 
   /**
@@ -497,6 +562,10 @@ function setupGameUi(game, storage) {
   function renderEnd(viewModel) {
     const { summary } = viewModel;
     $("end-adventure").textContent = meta.title;
+    const { epilogue } = viewModel.story;
+    $("end-epilogue").textContent = epilogue || "";
+    $("end-epilogue").hidden = !epilogue;
+    renderItems(viewModel.items, { panel: "end-items-panel", title: "end-items-title", list: "end-items-list" });
     $("end-score").textContent = `${summary.score} din ${summary.maxScore} puncte`;
     $("end-solved").textContent = `${summary.solved} din ${summary.total}`;
     $("end-hints").textContent = String(summary.hintsUsed);
@@ -609,7 +678,7 @@ function setupGameUi(game, storage) {
     try {
       const { result } = await game.submitAnswer(input.value);
       if (result === "correct") {
-        feedback = { kind: "correct", text: `Corect! +${mission.points} puncte.` };
+        feedback = { kind: "correct", text: `Corect!${pointsSuffix(mission.points)}` };
         input.value = "";
       } else if (result === "incorrect") {
         // Indiciul este recomandat doar dacă mai există unul de deschis (din motor).

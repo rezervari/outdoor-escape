@@ -141,6 +141,25 @@ export function countSolved(adventure, missionsProgress, track = "main") {
 }
 
 /**
+ * Obiectele obținute: acțiunile collect_item din regulile deja rulate, în ordinea rulării
+ * (apoi ordinea din conținut). Fără duplicate. Derivate, ca scorul: nu se salvează separat.
+ */
+export function collectedItems(adventure, firedEvents = {}) {
+  const content = toAdventureV2(adventure);
+  const found = [];
+  content.events.forEach((rule, order) => {
+    if (!Object.prototype.hasOwnProperty.call(firedEvents, rule.id)) return;
+    for (const action of rule.do) {
+      if (action.action === "collect_item") found.push({ itemId: action.itemId, at: firedEvents[rule.id], order });
+    }
+  });
+  found.sort((a, b) => a.at - b.at || a.order - b.order);
+  const ids = [];
+  for (const { itemId } of found) if (!ids.includes(itemId)) ids.push(itemId);
+  return ids;
+}
+
+/**
  * Listele derivate din progres (nu se salvează separat, ca să existe o singură sursă de adevăr).
  */
 export function deriveProgress(adventure, state) {
@@ -161,6 +180,7 @@ export function deriveProgress(adventure, state) {
     discoveredSecrets: content.secrets.filter((s) => state.secrets[s.id]).map((s) => s.id),
     unlockedPartners: content.partners.filter((p) => state.partners[p.id]?.status === PartnerStatus.UNLOCKED).map((p) => p.id),
     triggeredEvents: Object.keys(state.firedEvents),
+    collectedItems: collectedItems(content, state.firedEvents),
     score: calculateScore(content, state.missions, state),
   };
 }
@@ -449,6 +469,10 @@ export function createGame({ adventure, validator, savedState = null, now = () =
       case "award_points":
         // Punctele se derivă din regulile rulate (calculateScore); aici doar anunțăm interfața.
         ctx.effects.push({ type: "points", points: action.points, reason: action.reason ?? null });
+        return [];
+      case "collect_item":
+        // Obiectele obținute se derivă din regulile rulate (firedEvents), ca punctele; aici doar anunțăm interfața.
+        ctx.effects.push({ type: "item", itemId: action.itemId });
         return [];
       case "unlock_mission": return unlockMission(ctx, action.missionId);
       case "complete_mission": return closeMission(ctx, action.missionId, ChallengeStatus.SOLVED);
