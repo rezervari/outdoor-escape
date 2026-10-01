@@ -74,7 +74,7 @@ Pe calculator, geolocația reală este aproximativă (bazată pe Wi-Fi/IP). Pent
 
 ## 6. Testarea pe un telefon real
 
-Metoda standard pentru proiect nu este încă aleasă (D-031, PROPOSED). Opțiunile tehnice sunt:
+Metoda standard pentru proiect (D-031, CONFIRMED la 2026-10-01): testele pe teren, pe Android și pe iPhone / Safari, se fac pe versiunea publicată pe GitHub Pages (varianta A). USB / ADB (varianta B) se folosește doar pentru depanare și consolă. Tunelul HTTPS către serverul local (varianta C) nu se folosește. Opțiunile tehnice sunt:
 
 ### A. Adresa HTTPS de pe GitHub Pages
 
@@ -97,6 +97,8 @@ Telefonul vede adresa ca `localhost`, deci GPS-ul și service worker-ul funcțio
 Un serviciu de tunel (de exemplu Cloudflare Tunnel sau ngrok) oferă o adresă HTTPS publică temporară către serverul local. Funcționează pe Android și iPhone.
 
 Limitare: serverul local devine accesibil public cât timp tunelul este pornit, iar tunelul este un serviciu terț. Se oprește imediat după test.
+
+**Nu se folosește (D-031):** serverul local servește rădăcina repository-ului (secțiunea 4), deci tunelul ar expune public și fișiere care nu trebuie publicate (inclusiv `Claude outputs/` — D-034, D-044).
 
 ### D. Certificat HTTPS local (de exemplu mkcert)
 

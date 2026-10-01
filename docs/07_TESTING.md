@@ -536,4 +536,73 @@ Observații:
 3. **Back fizic (U2 / D-035).** Primul Back a închis doar confirmarea indiciului, următorul overlay-ul puzzle-ului (FT1-F8, FT1-F9); fără straturi deschise, Back a fost navigarea normală a browserului (FT1-F20).
 4. **Reset.** „Joacă din nou” (în raportul testerului: „Joacă un joc nou”) a pornit o sesiune nouă, cu progresul la 0, primul obiectiv și fără indicii consumate.
 
-Neacoperit de Field Test 1: iPhone / Safari (secțiunea 14), starea service worker-ului pe telefon, modul offline, ecranul blocat, aplicația în fundal, instalarea pe ecranul de pornire și ceilalți pași din secțiunea 13. Metoda standard de testare pe telefon rămâne nedecisă (D-031, PROPOSED); acest test a folosit varianta B din `10_LOCAL_DEVELOPMENT.md` §6.
+Neacoperit de Field Test 1: iPhone / Safari (secțiunea 14), starea service worker-ului pe telefon, modul offline, ecranul blocat, aplicația în fundal, instalarea pe ecranul de pornire și ceilalți pași din secțiunea 13. La data testului, metoda standard de testare pe telefon era nedecisă (D-031, PROPOSED — confirmată ulterior, la 2026-10-01); acest test a folosit varianta B din `10_LOCAL_DEVELOPMENT.md` §6. Golurile rămase se acoperă în TASK 5 (secțiunea 28).
+
+## 28. TASK 5 — Field Test 2: Real-Coordinate GPS & Cross-Device Validation
+
+Status: **planificat, neexecutat** (D-069, 2026-10-01). Toate punctele sunt `NETESTAT` până la rulare.
+
+Scope și excluderi: D-069. Fără cod nou. Validează versiunea **publicată** pe GitHub Pages (D-031), cu codul de la TASK 4 (`37f4450`) sau ulterior, pe Android și pe iPhone / Safari. USB / ADB servește doar pentru consolă. Nu se modifică Engine V2, schema, contractele dintre module, `src/sw.js`, interfața sau `demo-gps-brasov.json`. Defectele găsite nu se repară în TASK 5.
+
+Aventura: `src/?adventure=demo-gps-brasov` (demo public, coordonate reale — D-068; fișierul nu se modifică). Are 3 misiuni `location`: Start → Bariera → Magazin, la aproximativ 160 m și 220 m distanță. Raza 40 m, `maxAccuracy` 60 m, `exitMargin` 20 m, `allowManualConfirmation: true`, scor maxim 200.
+
+Raportul se face în formatul secțiunii 16, cu ID-urile `FT2-…`, separat pentru fiecare dispozitiv. Un `FAIL` care arată un defect devine un task de corectare separat. Un rezultat care confirmă o limită documentată nu este un defect.
+
+Legendă: **OBL** = obligatoriu · **OPȚ** = opțional · **EXCLUS** = blocat de o decizie `PROPOSED`, nu intră în TASK 5.
+
+### 28.1 Deja validat în Field Test 1 (nu se repetă ca obiectiv)
+
+Harta ca suprafață principală, cardul peste hartă, atribuirea OSM, „Vezi obiectivele”, sosirea manuală („Am ajuns”, D-006), overlay-ul puzzle-ului, indiciile cu confirmare (D-030), Back fizic (U2 / D-035), persistența după reîncărcare, rezultatul și „Joacă din nou”. Toate au fost validate pe Android, prin USB, cu coordonate fictive (secțiunea 27.3).
+
+### 28.2 Precondiții
+
+1. Pregătirea dispozitivului Android destinat FT2, înainte de publicarea versiunii FT2: dispozitivul accesează versiunea publicată actuală, cât timp service worker-ul `v6` este versiunea relevantă, astfel încât `v6` să fie instalat. Datele aplicației de pe acest dispozitiv nu se șterg înainte de FT2-E3.
+2. Codul TASK 4 este publicat pe GitHub Pages (push pe `main` la cererea explicită a proprietarului — D-020). Verificarea publicării se face conform secțiunii 18.
+3. Se notează commit-ul publicat, dispozitivul, sistemul de operare, browserul cu versiunea și bateria la start.
+
+### 28.3 Checklist
+
+| ID | Verificare | Rezultat așteptat | Marcaj |
+| --- | --- | --- | --- |
+| FT2-A1 | Adresa publicată servește commit-ul notat (rularea din „Actions” și secțiunea 18) | nu este servită versiunea veche (pre-TASK 4, `CACHE_VERSION` `v6`) | OBL |
+| FT2-A2 | Date de site șterse, apoi deschiderea adresei | ecranul de start al demo-ului GPS | OBL |
+| FT2-B1 | „Activează locația” → Permite, afară | GPS activ, precizia afișată | OBL |
+| FT2-B2 | Apropierea de Start **fără** „Am ajuns” | starea „aproape”, apoi sosirea decisă de motor în rază (precizie ≤ 60 m); scorul 50; obiectivul următor este Bariera | OBL |
+| FT2-B3 | La fel pentru Bariera și Magazin | sosiri automate; aventura se încheie; rezultatul 200/200, 3/3 | OBL |
+| FT2-B4 | La fiecare locație: precizia raportată, distanța aproximativă la sosire, condițiile | date notate (secțiunea 15); fără prag numeric | OBL |
+| FT2-B5 | După sosire: ieșire din rază și reintrare | nicio dublare de puncte sau de evenimente (histerezis) | OBL |
+| FT2-B6 | Semnal slab (lângă sau în clădire) | „Semnal GPS slab” peste 60 m; nicio sosire falsă; „Am ajuns” disponibil | OBL |
+| FT2-B7 | Permisiune refuzată, apoi „Reîncearcă” | mesaj clar; obiectivele pe hartă fără jucător; „Am ajuns” rezolvă misiunea (H13, D-006) | OBL |
+| FT2-B8 | Reîncărcare pe traseu, online | progresul restaurat; GPS-ul se reactivează manual (D-045) | OPȚ |
+| FT2-B9 | Nicio coordonată a jucătorului în `localStorage` (consola prin USB / ADB) | D-043 respectată | OBL pe Android (consola prin USB / ADB, D-031); N/A pe iPhone (fără Mac) |
+| FT2-C1 | Tile-uri OSM și atribuire | H2 | OBL |
+| FT2-C2 | Markerul jucătorului și cercul de acuratețe la poziția reală | H3, H5 | OBL |
+| FT2-C3 | Obiectivul curent evidențiat, cercul razei; locațiile `locked` ascunse | H2, D-049-B | OBL |
+| FT2-C4 | Primul fix produce o singură mișcare a hărții; fix-urile următoare nu o mișcă; pan sau zoom manual se păstrează | H3, H4 | OBL |
+| FT2-C5 | „Centrează pe mine” produce o singură centrare; „Vezi obiectivele” funcționează | H6 | OBL |
+| FT2-C6 | După sosire, cercul obiectivului dispare; obiectivul nou produce o singură recentrare | H7 | OBL |
+| FT2-C7 | Atribuirea neacoperită; „Am ajuns” vizibil fără derulare; lizibil în soare | H9, secțiunea 13.9 | OBL |
+| FT2-C8 | Rotirea ecranului | interfața rămâne utilizabilă | OPȚ |
+| FT2-D1 | Parcurgere completă pe stradă (Android) | fără blocaje (secțiunea 9) | OBL |
+| FT2-D2 | Bateria la start și la final, durata | observație, fără prag (D-058) | OPȚ |
+| FT2-D3 | Închidere din aplicațiile recente, apoi redeschidere | progresul păstrat | OPȚ |
+| FT2-D4 | Instalare pe ecranul de pornire, pornire din iconiță | aplicația pornește | OPȚ |
+| FT2-E1 | Starea service worker-ului (rândul din aplicație sau consola) | înregistrat și activ | OBL |
+| FT2-E2 | Cache Storage | `outdoor-escape:shell:v7`: shell, module, Leaflet, `brasov-centrul-vechi.json`; fără tile-uri; fără `demo-gps-brasov.json` (nu este în `SHELL_FILES`) | OBL pe Android (consola prin USB / ADB, D-031); N/A pe iPhone (fără Mac) |
+| FT2-E3 | Pe dispozitivul Android pregătit la 28.2, punctul 1, după publicarea versiunii FT2, fără ștergerea datelor și înainte de FT2-A2: redeschiderea aplicației | service worker-ul `v7` activ; cache-ul `v6` șters (secțiunea 18.6); interfața TASK 4 afișată | OBL |
+| FT2-F1 | Datele mobile oprite în timpul jocului, fără reîncărcare | jocul și sosirea GPS continuă; harta afișează bannerul pentru tile-uri, markerii rămân (H11, H14) | OBL |
+| FT2-F2 | Offline: reîncărcarea aventurii implicite `src/` (în cache) | aplicația și progresul pornesc din cache (secțiunea 13.3) | OBL |
+| FT2-F3 | Offline: reîncărcarea `?adventure=demo-gps-brasov` | limită cunoscută: aventura nu este în cache și nu se încarcă; se notează mesajul; progresul rămâne (D-056, neimplementat) | OPȚ (observație) |
+| FT2-F4 | Harta offline cu fundal | — | EXCLUS (D-063) |
+| FT2-G1 | Ecran blocat 1 min, apoi 10 min, pe traseu | conform secțiunii 24.4: starea neschimbată; la revenire, urmărirea continuă sau se reactivează manual | OPȚ (observație) |
+| FT2-G2 | Altă aplicație, apoi înapoi | idem | OPȚ (observație) |
+| FT2-G3 | Trecerea prin rază cu ecranul blocat | nicio sosire în fundal; confirmare la revenire sau cu „Am ajuns” | OPȚ (observație) |
+| FT2-G4 | Criterii pentru fundal / ecran stins, Wake Lock; cronometrul | — | EXCLUS (D-028, D-025) |
+| FT2-H1 | iPhone / Safari: pașii A, B1–B7, C1–C7, E1, F1, F2 | ca pe Android; erorile se descriu manual (fără Mac) | OBL |
+| FT2-H2 | iPhone / Safari, `src/?adventure=demo-vertical-slice`: pașii VS1–VS14 (secțiunea 27.2), inclusiv Back prin gestul swipe (VS11–VS13) | ca în secțiunea 27.2 | OBL |
+| FT2-H3 | iPhone: „Add to Home Screen” (stocare separată) | persistența testată separat în ambele moduri (secțiunea 14) | OPȚ |
+| FT2-H4 | iPhone: ecran blocat / fundal | observație (pe iOS, GPS-ul este oprit — secțiunea 24.4) | OPȚ (observație) |
+
+### 28.4 Gol de acoperire acceptat
+
+Limitare cunoscută, nu defect al TASK 5. Combinația „sosire GPS reală → overlay puzzle” nu poate fi verificată end-to-end cu `demo-gps-brasov`: demo-ul are doar misiuni `location`. Verificarea ar cere modificarea demo-ului sau un alt demo cu coordonate reale (neautorizat de D-068), ceea ce este în afara TASK 5. Motorul tratează identic sosirea GPS și cea manuală (D-045), iar overlay-ul după sosirea manuală a fost validat în Field Test 1.

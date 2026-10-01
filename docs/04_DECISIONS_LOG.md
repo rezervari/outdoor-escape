@@ -379,11 +379,20 @@ Relația cu motorul:
 ---
 
 ## D-031 — Metoda standard de testare pe telefon (HTTPS)
-Status: PROPOSED
+Status: CONFIRMED (2026-10-01) (anterior: PROPOSED)
 
 Opțiuni: vezi `10_LOCAL_DEVELOPMENT.md`, secțiunea 6 (GitHub Pages, redirecționare USB pentru Android, tunel HTTPS, certificat local, flag Chrome).
 
-Recomandare Claude: redirecționare USB pentru testele rapide pe Android; GitHub Pages pentru iPhone și pentru testele de acceptanță.
+Recomandare Claude (la propunere): redirecționare USB pentru testele rapide pe Android; GitHub Pages pentru iPhone și pentru testele de acceptanță.
+
+Decizie (proprietar, 2026-10-01; odată cu D-069 — TASK 5):
+- **Metoda standard** pentru testele pe telefon (inclusiv Field Test 2) este versiunea publicată pe GitHub Pages (HTTPS, `https://rezervari.github.io/outdoor-escape/src/`, D-035).
+- **Android:** se testează versiunea publicată. USB / ADB se folosește doar pentru depanare și consolă (`chrome://inspect`); nu este metoda standard de acces pentru testele pe teren.
+- **iPhone / Safari:** testarea se face exclusiv prin URL-ul HTTPS publicat pe GitHub Pages.
+- **Tunelul HTTPS către serverul local (varianta C) nu se folosește:** serverul local servește rădăcina repository-ului (`10_LOCAL_DEVELOPMENT.md`, secțiunea 4) și ar expune fișiere care nu trebuie publicate (inclusiv `Claude outputs/` — D-034, D-044).
+- Testele pe teren (Field Test 2) testează versiunea publicată, nu serverul local. Publicarea înseamnă push pe `main` și se tratează ca release (D-020, `06_GIT_WORKFLOW.md`).
+
+Notă: Field Test 1 (`07_TESTING.md` §27.3) a fost făcut înainte de această decizie, prin redirecționare USB (varianta B); rezultatul lui rămâne valabil așa cum a fost consemnat.
 
 ---
 
@@ -1043,3 +1052,45 @@ Relația cu D-034:
 Aceasta este o excepție explicită pentru demo-ul public și **nu** modifică regula generală D-034: conținutul real al aventurilor nepublicate, inclusiv al aventurilor care urmează să fie publicate comercial, rămâne în afara repository-ului public.
 
 Nu se schimbă: motorul, schema V2, aplicația, conținutul fișierului `demo-gps-brasov.json` și testele.
+
+---
+
+## D-069 — TASK 5: Field Test 2 — Real-Coordinate GPS & Cross-Device Validation
+Status: CONFIRMED (2026-10-01) — TASK 5: DECIS, neînceput
+
+Context:
+TASK 4 (vertical slice UI, `37f4450`) este înghețat, iar Field Test 1 pe Android a trecut (22/22 PASS, `07_TESTING.md` §27.3). Field Test 1 a folosit coordonate fictive, deci nu a validat sosirea declanșată de poziția GPS reală. Nu au fost validate nici service worker-ul și cache-ul pe telefon, modul offline, ecranul blocat / fundalul și iPhone-ul. Testul hărții pe telefon cu locații reale a fost amânat explicit prin D-049-M.
+
+Decizie (proprietar, 2026-10-01):
+- Următorul task oficial este **TASK 5 — Field Test 2: Real-Coordinate GPS & Cross-Device Validation**.
+- Scope (fără cod nou; codul testat este cel de la TASK 4 sau ulterior, publicat):
+  - sosirea determinată de GPS-ul real (nu de „Am ajuns”) pe `demo-gps-brasov` (`src/?adventure=demo-gps-brasov`);
+  - harta și markerii la locații reale;
+  - Android pe teren;
+  - service worker / cache pe telefon;
+  - modul offline, în limitele implementării actuale;
+  - ecranul blocat / aplicația în fundal **doar ca observație** a comportamentului documentat (`07_TESTING.md` §24.4, D-045), fără criterii noi;
+  - iPhone / Safari.
+- Metoda de acces: D-031 (versiunea publicată pe GitHub Pages, pe Android și iPhone).
+- Checklist-ul și raportul: `07_TESTING.md` §28.
+
+Relații:
+- **D-049-M:** TASK 5 face testul pe telefon cu locații reale, amânat în M-003.2.
+- **D-068:** singurele coordonate reale folosite sunt cele din `demo-gps-brasov` (demo public). Fișierul nu se modifică, iar excepția nu se extinde la alte aventuri sau la conținut real (D-034).
+- **D-020:** TASK 5 cere publicarea pe GitHub Pages a codului de la TASK 4 (push pe `main` = release, `06_GIT_WORKFLOW.md`). Publicarea este o precondiție a testului, nu un rezultat al Field Test 2. Push-ul este un pas separat, făcut numai la cererea explicită a proprietarului.
+- **D-031:** metoda de testare pe telefon pentru TASK 5.
+
+În afara TASK 5:
+- cod nou;
+- modificări la Engine V2, la schemă, la contracte, la `src/sw.js` sau la interfață;
+- modificarea `demo-gps-brasov.json`, alte coordonate reale sau conținut real;
+- harta offline (D-063, PROPOSED);
+- criterii sau implementare pentru fundal / ecran stins (D-028, PROPOSED);
+- cronometrul (D-025, PROPOSED);
+- Adventure Package (D-056), GPS adaptiv (D-058);
+- Platform V1.1 (Session, Team, Rejoin, sincronizare, `multi_device`, bypass, flux graf);
+- backend, plăți, coduri de acces, analytics.
+
+Un `FAIL` care arată un defect devine un task de corectare separat. Un rezultat care confirmă o limită documentată nu este un defect.
+
+Nu se schimbă: D-025, D-028, D-063, motorul, schema V2, aplicația, conținutul și testele.
