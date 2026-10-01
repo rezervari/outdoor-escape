@@ -33,11 +33,19 @@ Necesită Node.js 20 sau mai nou. `package.json` din rădăcină există doar pe
 | `map.test.js` | `src/js/map.js` | harta cu un Leaflet fals (`helpers/fake-leaflet.js`, fără browser și fără rețea): creare, erori de inițializare (`MapError`), jucător (valid / uncertain / weak / none, cerc de acuratețe, limita de 1000 m), locații (doar vizibile, stări, aria-label, obiectiv curent, escapare HTML), cercul obiectivului, viewport (prima afișare, primul fix, pan manual, schimbarea obiectivului, „Centrează pe mine”, „Vezi obiectivele”), banner tile-uri, `destroy`, idempotență (zero apeluri la același model), verificare în sursă, versiunea și SHA-256 Leaflet |
 | `location-radius.test.js` | `src/js/geo.js`, `src/js/game.js` | raza efectivă — o singură sursă (D-049-D / R2): `effectiveRadius`, folosită de `evaluateProximity` și expusă de `game.getLocation().radiusMeters` |
 | `progress-v2.test.js` | `src/js/game.js` | progresul V2 pe fixture-ul fictiv: GPS prin motor, confirmare manuală, evenimente, trasee main/bonus/secret, final, salvare/restaurare, migrarea progresului V1, lipsa logicii specifice unei aventuri |
+| `view-model.test.js` | `src/js/view-model.js` (+ `content/adventures/demo-vertical-slice.json`) | demo-ul vertical slice (valid, fictiv, parcurgere completă); modelul interfeței: înainte / după sosire, puzzle, indicii (D-030), rezolvare, locația următoare, final, V1, fără răspunsuri, puritate |
+| `app-view-model-integration.test.js` | `src/js/app.js`, `src/sw.js`, `src/js/view-model.js` | toate modulele încărcate de `app.js` sunt în `SHELL_FILES`; condițiile de afișare citite din model sunt echivalente cu regulile anterioare (4 aventuri) |
+| `play-layout.test.js` | `src/index.html`, `src/css/app.css`, `src/js/app.js` (verificări în sursă) | harta înaintea misiunii, cardul peste hartă (nu în containerul Leaflet), overlay-ul puzzle-ului, indiciile și confirmarea în panou, `inert`, răspunsurile absente din HTML, handler-ele care apelează motorul |
+| `play-ui.test.js` | `src/js/play-ui.js` | panoul puzzle-ului (overlay / în pagină), închidere și redeschidere, acțiunea cardului, indicii și confirmare (consum doar la confirmare, epuizare, reîncărcare), V1, puritate |
+| `result-screen.test.js` | `src/js/view-model.js`, `src/js/play-ui.js`, `src/js/app.js` | finalizarea (`completed`) și ecranul de rezultat derivat din motor, scorul fără penalizări, reîncărcare după final, restart cu `game.reset()`, V1 |
+| `back-u2.test.js` | `src/js/play-ui.js`, `src/js/app.js` | Back (U2) pe un istoric simulat: confirmare → overlay → navigarea normală, URL neschimbat, starea jocului neschimbată, redeschidere, reîncărcare, butoane / Escape, final, Forward, V1 |
 
 ## Fixture-uri
 
 `fixtures/adventure-v2-demo.json` — aventură V2 **fictivă** (coordonate inventate lângă 0°, 0°), folosită doar de teste (D-042). Nu este publicată pe GitHub Pages și nu apare în aplicație.
 
-Interfața (DOM) nu este testată automat aici. Procedura manuală din browser: [`../docs/07_TESTING.md`](../docs/07_TESTING.md), secțiunea 22; harta (verificare Chromium): secțiunea 25.
+Testele interfeței vertical slice (TASK 4) folosesc și `content/adventures/demo-vertical-slice.json` (DEMO fictiv, publicat).
+
+DOM-ul nu este randat aici: logica interfeței este testată prin modulele pure (`view-model.js`, `play-ui.js`) cu motorul real și prin verificări în sursa `index.html` / `app.css` / `app.js`. Procedura manuală din browser: [`../docs/07_TESTING.md`](../docs/07_TESTING.md), secțiunea 22; harta (verificare Chromium): secțiunea 25; vertical slice și Back: secțiunea 27.
 
 Directorul `tests/` nu este publicat pe GitHub Pages: workflow-ul publică doar `index.html`, `src/` și `content/` (D-020, D-042).

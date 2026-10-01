@@ -289,9 +289,16 @@ Harta există doar pe `screen-play` și doar dacă aventura are **cel puțin o l
 
 ## 8. Responsive / mobile
 
-- Poziție: în `screen-play`, **imediat după cardul `#objective`** (cu „Am ajuns”), înaintea formularului de răspuns *(D-049-F)*.
-- Lățime 100% din `.container` (max. 40rem); înălțime `clamp(200px, 40vh, 360px)`; minimum 200 px. Contur `#1f3a2e` 2 px, colțuri rotunjite.
-- „Centrează pe mine” și „Vezi obiectivele” sunt **în afara hărții**, pe un rând sub ea (≥ 48 px). Nu acoperă harta, atribuirea sau alte controale.
+Revizuit la 2026-10-01 (D-049-F revizuită — TASK 4 / U1, map-first):
+
+- Poziție: în `screen-play`, harta este **suprafața principală**: imediat după antetul de progres, **înaintea** conținutului misiunii *(D-049-F)*. Formularul de răspuns este în overlay-ul puzzle-ului, nu sub hartă.
+- Cardul obiectivului `#objective` (cu „Am ajuns”) este **suprapus peste hartă**, jos. Cardul și containerul hărții (`#map-container`) sunt elemente surori în `#map-stage`; cardul **nu** este copilul containerului Leaflet. Fără hartă (necreată sau eșuată), cardul revine în fluxul normal al paginii.
+- Înălțimea hărții este **responsive**, legată de viewport (valorile curente sunt în `src/css/app.css`; valorile pe breakpoint-uri nu sunt fixate în această specificație). Minimum 200 px și criteriul 27 rămân valabile. Pe telefon (< 600 px), harta ocupă toată lățimea ecranului; altfel, lățimea `.container`.
+- În timpul overlay-ului puzzle-ului, harta rămâne montată (nu este ascunsă sau distrusă), vizibilă sub overlay și inactivă (nu primește atingeri sau focus).
+- Atribuirea OpenStreetMap rămâne permanent vizibilă și **neacoperită de card** (D-046, criteriul 25).
+- **Deschis (U1b):** cardul poate acoperi parțial harta, inclusiv obiectivul, pe ecrane mici; încadrarea care ține cont de card nu este decisă (o soluție care ar schimba contractul D-047 cere o decizie separată).
+- *Formularea anterioară (înlocuită la 2026-10-01):* „Poziție: în `screen-play`, imediat după cardul `#objective` (cu «Am ajuns»), înaintea formularului de răspuns. Lățime 100% din `.container` (max. 40rem); înălțime `clamp(200px, 40vh, 360px)`; minimum 200 px.” Conturul `#1f3a2e` 2 px și colțurile rotunjite rămân (pe telefon, fără contur lateral).
+- „Centrează pe mine” și „Vezi obiectivele” sunt **în afara hărții**, pe un rând sub ea (≥ 48 px), împreună cu textele despre poziție / GPS. Nu acoperă harta, atribuirea sau alte controale.
 - Pe hartă stau doar: zoom +/- (sus-stânga), atribuirea (jos-dreapta, permanentă), eticheta obiectivului curent și, la erori, bannerul de tile-uri (sus).
 - Harta este ascunsă pe start / încărcare / eroare / final *(D-049-K)*. Se creează la prima nevoie și se distruge la ieșirea din joc.
 
@@ -380,7 +387,7 @@ export const DEFAULT_MAP_VIEW = Object.freeze({
 | **D-049-C2** | Ultima poziție reținută de `location.js` cu `quality: none` se afișează ca punct gri „ultima poziție”, fără cerc. Comportament de afișare, nu stare GPS | APROBAT |
 | **D-049-D** | Raza efectivă vine din motor (`game.getLocation().radiusMeters`, obținută din `geo.js`). `map-model.js` / `map.js` nu aplică valori implicite | **APROBAT — R2** (`effectiveRadius` aditiv în `geo.js`, expus de `game.js` ca `radiusMeters`; §4.1) |
 | **D-049-E** | La schimbarea obiectivului: o singură recentrare, chiar dacă utilizatorul făcuse pan. Fix-urile ulterioare actualizează doar markerul (§5.1) | APROBAT |
-| **D-049-F** | Harta stă după cardul obiectivului, înălțime `clamp(200px, 40vh, 360px)`, butoanele sub hartă | APROBAT |
+| **D-049-F** | *Revizuită 2026-10-01 (TASK 4 / U1):* harta este suprafața principală, înaintea conținutului misiunii; cardul obiectivului este suprapus peste hartă (element soră, nu în containerul Leaflet); harta rămâne montată și inactivă sub overlay-ul puzzle-ului; atribuirea OSM neacoperită; înălțime responsive; butoanele sub hartă. U1b (card vs. obiectiv) rămâne deschis. *Anterior:* harta după cardul obiectivului, înălțime `clamp(200px, 40vh, 360px)` | APROBAT (revizuit) |
 | **D-049-G** | „Centrează pe mine” = o singură centrare, fără mod de urmărire continuă în V1 | APROBAT |
 | **D-049-H** | Locațiile `visible: false` (`locked`, inclusiv cele ascunse) nu se desenează niciodată | APROBAT |
 | **D-049-I** | Cercul de acuratețe nu se desenează peste 1000 m. Limită doar de desen, fără efect asupra jocului | APROBAT |

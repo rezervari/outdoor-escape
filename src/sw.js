@@ -26,7 +26,7 @@
  */
 
 const CACHE_PREFIX = "outdoor-escape:shell:";
-const CACHE_VERSION = "v6";
+const CACHE_VERSION = "v7";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 // Relative la sw.js, adică la src/.
@@ -45,8 +45,10 @@ const SHELL_FILES = [
   "js/location.js",
   "js/map.js",
   "js/map-model.js",
+  "js/play-ui.js",
   "js/schema.js",
   "js/storage.js",
+  "js/view-model.js",
   // Leaflet 1.9.4, inclus local (M-003.2). Tile-urile hărții (alt domeniu) NU sunt puse în cache.
   "vendor/leaflet/leaflet.js",
   "vendor/leaflet/leaflet.css",

@@ -85,7 +85,7 @@ Principii care se aplică tuturor cazurilor:
 
 ### B3. Reload
 - **Comportament așteptat:** restaurare identică; mesajele tranzitorii (ex. „Răspuns incorect”) nu se reafișează; coada locală reia sincronizarea.
-- **Azi:** IMPLEMENTAT pentru progresul local (mesajul „Răspuns incorect” nu este salvat, „Corect!” se reconstruiește — `03_ARCHITECTURE.md` §3c).
+- **Azi:** IMPLEMENTAT pentru progresul local (mesajul „Răspuns incorect” nu este salvat, „Corect!” se reconstruiește — `03_ARCHITECTURE.md` §3c). Interfața (TASK 4) se reconstruiește din progresul salvat: un puzzle activ își redeschide overlay-ul, iar indiciile deschise reapar din `hintsUsed`; confirmarea unui indiciu (stare de interfață efemeră, D-030) nu este salvată și nu reapare după reîncărcare, deci nu se consumă nimic. O aventură încheiată rămâne pe ecranul de rezultat.
 
 ### B4. Telefon blocat
 - **Stare inițială:** `ACTIVE`, GPS activ.
@@ -259,7 +259,7 @@ Team este structura de membri și roluri a sesiunii, fără state machine propri
 
 ### G3. Indiciu folosit
 - **Comportament așteptat:** indiciul se dezvăluie; dacă indiciile sunt `shared`, toată echipa îl vede după sincronizare și contorul este comun; dacă sunt `per_participant`, rămâne local. Două cereri simultane pentru „următorul indiciu” nu dezvăluie două indicii (se dezvăluie indiciul cu indexul cerut, idempotent pe index).
-- **Azi:** IMPLEMENTAT local (`hintsUsed`, `hint_requested` cu `hintIndex`, fără penalizări — D-025).
+- **Azi:** IMPLEMENTAT local (`hintsUsed`, `hint_requested` cu `hintIndex`, fără penalizări — D-025). În interfață, indiciul se deschide numai după confirmare; „Renunță”, Escape și Back anulează fără consum (D-030, extinderea din 2026-10-01).
 
 ### G4. Provocare sărită
 - **Comportament așteptat:** „Sari peste” închide provocarea ca `skipped`, 0 puncte, jocul continuă. Nu se confundă cu bypass (F1, F4).

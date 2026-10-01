@@ -106,7 +106,7 @@ Critical bugs block release.
 
 ## 10. Proceduri concrete de testare
 
-Secțiunile 1–9 de mai sus definesc *ce* se testează. Secțiunile 10–17 descriu *cum* se testează. Procedurile pentru aplicație se aplică aplicației existente (scheletul PWA — secțiunea 21 — și motorul — secțiunile 22–25); pentru modificările care ating doar documentația se aplică secțiunea 17.
+Secțiunile 1–9 de mai sus definesc *ce* se testează. Secțiunile 10–17 descriu *cum* se testează. Procedurile pentru aplicație se aplică aplicației existente (scheletul PWA — secțiunea 21 — și motorul — secțiunile 22–25 —, plus interfața vertical slice — secțiunea 27); pentru modificările care ating doar documentația se aplică secțiunea 17.
 
 Reguli:
 
@@ -305,17 +305,17 @@ Se execută la `http://localhost:8000/src/` și, după publicare, la `https://re
 | G3 | „Începe aventura” | „Provocarea 1 din 3”, scor 0, câmp de răspuns, „Verifică răspunsul”, „Arată indiciul” |
 | G4 | „Verifică răspunsul” cu câmpul gol | Mesaj „Scrie un răspuns…”; nu se trece mai departe |
 | G5 | Răspuns greșit (ex. `Cluj`) | „Răspuns incorect…”; scorul nu se schimbă; nu apare „Continuă” |
-| G6 | „Arată indiciul” | Apare textul indiciului; butonul dispare; scorul nu se schimbă |
+| G6 | „Arată indiciul”, apoi „Renunță”; din nou „Arată indiciul”, apoi confirmarea „Arată indiciul” | Primul clic afișează doar confirmarea (deschiderea este ireversibilă); „Renunță” o închide fără să deschidă indiciul (Local Storage: `hintsUsed` neschimbat). După confirmare apare textul indiciului; butonul dispare (era ultimul indiciu); scorul nu se schimbă (D-030) |
 | G7 | Răspuns corect cu variații (`  BRAȘOV `, `brasov`, `Braşov` cu sedilă) | „Corect! +100 puncte”; scorul crește; apare „Continuă” |
 | G8 | F5 după G7, înainte de „Continuă” | Aceeași provocare, marcată corectă, cu „Continuă” |
 | G9 | „Continuă”, răspuns trimis cu Enter | Provocarea 2; Enter trimite răspunsul |
 | G10 | F5 la provocarea 3 | Progresul și scorul sunt păstrate. Application → Local Storage: cheia `outdoor-escape:game:brasov-centrul-vechi` |
 | G11 | „Începe de la capăt” → „Nu”, apoi → „Da, șterge progresul” | „Nu” păstrează jocul; „Da” duce la ecranul de start și șterge cheia din Local Storage |
 | G12 | „Sari peste (0 puncte)” la o provocare, apoi F5 înainte și după „Continuă” | Mesaj „Ai sărit…”; scorul nu crește; apare „Continuă”. După F5, provocarea rămâne sărită (Local Storage: `"status":"skipped"`); provocarea nu se numără la „rezolvate” la final |
-| G13 | Termină aventura | Ecran final: „Felicitări…”, scorul „X din 350 puncte”, „Provocări rezolvate: N din 3”, „Joacă din nou” |
+| G13 | Termină aventura | Ecran final: „Felicitări…”, titlul aventurii, scorul „X din 350 puncte”, „Provocări rezolvate: N din 3”, „Indicii folosite: N”, „Joacă din nou” |
 | G14 | F5 pe ecranul final, apoi „Joacă din nou” | Rezultatul rămâne după F5; „Joacă din nou” duce la start și șterge progresul |
 | G15 | `src/?adventure=inexistenta` | Ecran „Aventura nu a putut fi încărcată” + „Încearcă din nou”; fără excepții în consolă |
-| G16 | Application → Cache storage | Un singur cache shell al proiectului, `outdoor-escape:shell:<CACHE_VERSION>` (valoarea din `src/sw.js`), care conține exact intrările din `SHELL_FILES` din `src/sw.js` — nici mai multe, nici mai puține; niciun cache `outdoor-escape:shell:` cu altă versiune (la momentul actual: `v6`, 19 intrări: 18 din `src/` + `content/adventures/brasov-centrul-vechi.json`) |
+| G16 | Application → Cache storage | Un singur cache shell al proiectului, `outdoor-escape:shell:<CACHE_VERSION>` (valoarea din `src/sw.js`), care conține exact intrările din `SHELL_FILES` din `src/sw.js` — nici mai multe, nici mai puține; niciun cache `outdoor-escape:shell:` cu altă versiune (la momentul actual: `v7`, 21 de intrări: 20 din `src/` + `content/adventures/brasov-centrul-vechi.json`) |
 | G17 | După o primă încărcare online: Network → „Offline”, F5 (pe ecranul de start și în timpul jocului) | Aplicația și aventura demo se încarcă din cache; progresul este păstrat; răspunsurile se verifică și offline |
 | G19 | `src/?adventure=inexistenta` cu Network → „Offline” | Ecranul de eroare („Verifică conexiunea…”) + „Încearcă din nou” — doar aventura demo este în cache |
 | G18 | Simulare mobil 360 px (secțiunea 12.3) | Fără derulare orizontală; butoanele principale pe toată lățimea, cel puțin 48 px înălțime |
@@ -327,7 +327,7 @@ Note:
 
 ## 23. Fundația V2 (schema, locații, evenimente, progres)
 
-Fundația V2 nu are încă interfață pentru noile mecanici (GPS din browser, hartă, audio, misiuni de locație/bonus/secret/partener). Se testează:
+Interfața pentru noile mecanici V2 este parțială. Au interfață: GPS-ul din browser (M-003.1, secțiunea 24), harta (M-003.2, secțiunea 25), misiunile de locație cu „Am ajuns” și interfața vertical slice-ului (TASK 4, secțiunea 27). Nu au încă interfață: audio, naratorul și misiunile bonus / secret / partener / cu timp. Se testează:
 
 ### 23.1 Automat — `npm test`
 
@@ -430,12 +430,12 @@ Ca la 24.2: copie locală servită prin HTTP (`localhost`), cu fixture-ul copiat
 | H6 | „Centrează pe mine” = exact o mișcare; fix-urile următoare → 0 mișcări (fără follow) |
 | H7 | Sosire GPS decisă de motor (`arrivalSource: "gps"`, regulile `ev-aproape-piata`, `ev-sosire-piata`); cercul obiectivului dispare; misiune nouă cu același obiectiv → 0 mișcări; schimbarea obiectivului → exact o recentrare; apoi 20 de fix-uri → 0 mișcări; „Am ajuns” funcționează; nicio coordonată în `localStorage` |
 | H8 | Reset → harta distrusă; reintrare → o singură hartă |
-| H9 | Mobil 360×640: „Am ajuns” deasupra hărții; hartă ≥ 200 px, fără scroll orizontal; butoane ≥ 48 px, sub hartă; atribuire neacoperită; zoom +/- ≥ 44 px |
+| H9 | Mobil 360×640: „Am ajuns” vizibil fără derulare (în cardul obiectivului suprapus peste hartă — D-049-F revizuită la 2026-10-01; anterior: deasupra hărții); hartă ≥ 200 px, fără scroll orizontal; butoane ≥ 48 px, sub hartă; atribuire neacoperită; zoom +/- ≥ 44 px |
 | H10 | `prefers-reduced-motion`: animațiile Leaflet dezactivate |
 | H11 | Tile-uri indisponibile: banner, markerii rămân, GPS-ul nu raportează eroare; bannerul dispare când tile-urile revin |
 | H12 | `leaflet.js` blocat: „Harta nu este disponibilă acum”, fără erori necapturate, sosirea GPS funcționează; progresul și regulile rulate sunt identice cu rularea cu hartă |
 | H13 | Permisiune refuzată: mesajul M-003.1, harta arată obiectivele fără jucător, „Am ajuns” rezolvă misiunea |
-| H14 | Service worker `v6`: cache-ul conține `map.js`, `map-model.js`, Leaflet; niciun tile în cache; offline după o vizită: aplicația și Leaflet pornesc din cache; offline în timpul jocului: banner, jocul continuă |
+| H14 | Service worker (`CACHE_VERSION` curent din `src/sw.js` — `v7` la 2026-10-01; la M-003.2: `v6`): cache-ul conține `map.js`, `map-model.js`, Leaflet; niciun tile în cache; offline după o vizită: aplicația și Leaflet pornesc din cache; offline în timpul jocului: banner, jocul continuă |
 
 ### 25.3 Manual pe telefon
 
@@ -445,4 +445,40 @@ Nu se poate face încă cu obiective: aventura publică nu are locații (D-049-M
 
 Nu există încă funcționalități V1.1 de testat. Scenariile limită care vor deveni teste la implementare (acces, continuitate, echipă, conectivitate, GPS, conținut, joc) sunt în [`14_EDGE_CASES.md`](14_EDGE_CASES.md); cele de sincronizare în [`15_SESSION_SYNC.md`](15_SESSION_SYNC.md) §13. Pentru fiecare funcționalitate se testează calea normală și calea de eșec / recuperare.
 
-Regresia existentă rămâne `npm test` (132 de teste verzi la 2026-09-30, înainte de orice implementare V1.1).
+Regresia existentă rămâne `npm test` (132 de teste verzi la 2026-09-30, înainte de orice implementare V1.1; 221 la 2026-10-01, după vertical slice-ul TASK 4 — secțiunea 27).
+
+## 27. TASK 4 — Vertical slice UI (hartă, puzzle, indicii, rezultat, Back)
+
+Aventura fictivă `content/adventures/demo-vertical-slice.json` (`src/?adventure=demo-vertical-slice`): 2 locații lângă 0°, 0°, 4 misiuni (sosire → puzzle cu 2 indicii → sosire → puzzle cu 1 indiciu), scor maxim 350. Coordonatele nu pot fi atinse fizic: sosirea se confirmă cu „Am ajuns” (sau cu geolocație emulată, secțiunea 12.4). Deciziile: D-030 (extinderea din 2026-10-01), D-035 (precizarea U2), D-049-F (revizuită).
+
+### 27.1 Automat — `npm test`
+
+| Fișier | Acoperă |
+| --- | --- |
+| `tests/view-model.test.js` | demo-ul (valid, fictiv, parcurgere completă); modelul interfeței: înainte / după sosire, puzzle, indicii (D-030), rezolvare, locația 2, final, V1, fără răspunsuri, puritate |
+| `tests/app-view-model-integration.test.js` | modulele încărcate de `app.js` sunt toate în `SHELL_FILES`; echivalența condițiilor de afișare cu regulile anterioare pe 4 aventuri |
+| `tests/play-layout.test.js` | structura ecranului: hartă înaintea misiunii, card peste hartă (nu în containerul Leaflet), overlay-ul puzzle-ului, indiciile și confirmarea în panou, `inert`, răspunsuri absente din HTML, handler-ele care apelează motorul |
+| `tests/play-ui.test.js` | panoul puzzle-ului (overlay / în pagină), închidere și redeschidere, indicii și confirmare (consum doar la confirmare, epuizare, reîncărcare), V1 |
+| `tests/result-screen.test.js` | finalizarea (`completed`) și rezultatul derivat din motor, 350/350 și cu indicii, reîncărcare după final, restart cu `game.reset()`, V1 |
+| `tests/back-u2.test.js` | Back (U2) pe un istoric simulat: confirmare → overlay → navigarea normală, URL neschimbat, starea jocului neschimbată, redeschidere, reîncărcare (inclusiv cu confirmarea deschisă), butoane / Escape, „Continuă” și final, Forward, V1 |
+
+### 27.2 Manual în browser
+
+Verificat la 2026-10-01 într-un browser Chromium pe desktop (server local `127.0.0.1`), la 360×640 și 1280×800, cu butonul Back al browserului. **Netestat încă:** telefon real (Back hardware Android, gest swipe-back iOS, tastatura virtuală peste overlay) și instalarea service worker-ului `v7` (browserul folosit nu permite service workers) — de făcut după D-031.
+
+| ID | Pași | Rezultat așteptat |
+| --- | --- | --- |
+| VS1 | „Începe aventura” pe demo | Harta ocupă ecranul sub antet; cardul „[DEMO] Punctul A” peste hartă, cu „Am ajuns” vizibil fără derulare; atribuirea OSM vizibilă |
+| VS2 | „Am ajuns” | Cardul arată sosirea; scorul crește; apare „Deschide provocarea”; harta rămâne |
+| VS3 | „Deschide provocarea” | Overlay peste hartă: locația, titlul, întrebarea, formularul, „Închide”; harta dedesubt nu reacționează la atingeri |
+| VS4 | Răspuns greșit | Feedback „incorect”; puzzle-ul rămâne activ, overlay-ul deschis |
+| VS5 | „Arată indiciul” → „Renunță”; apoi Escape pe confirmare | Confirmarea se închide de fiecare dată fără consum (`hintsUsed` neschimbat); puzzle-ul rămâne deschis |
+| VS6 | „Arată indiciul” → confirmare, de două ori (puzzle 1) | Indiciile 1 și 2 apar pe rând și rămân vizibile; după al doilea, butonul dispare; formularul rămâne |
+| VS7 | Răspuns corect | „Corect!”, fără penalizare pentru indicii; „Continuă” în overlay |
+| VS8 | „Continuă” → „Am ajuns” → puzzle 2 → răspuns corect → „Vezi rezultatul” | Ecranul de rezultat: titlul aventurii, 350 din 350, 4 din 4, indiciile folosite; niciun overlay, card sau formular rămas; pagina se derulează normal |
+| VS9 | F5 cu puzzle-ul activ (și un indiciu deschis); F5 pe rezultat | Overlay-ul revine cu indiciul deschis și același număr disponibil; rezultatul rămâne identic |
+| VS10 | „Joacă din nou” | Ecranul de start; progresul șters; după start, din nou Punctul A |
+| VS11 | Back cu confirmarea indiciului deschisă | Se închide doar confirmarea; puzzle-ul rămâne; `hintsUsed` neschimbat; URL neschimbat |
+| VS12 | Back cu overlay-ul deschis | Overlay-ul se închide; harta activă; puzzle-ul rămâne activ (se poate redeschide); scor și misiune neschimbate; URL neschimbat |
+| VS13 | Back fără overlay / confirmare deschisă | Navigarea normală a browserului (pagina anterioară), dintr-un singur Back |
+| VS14 | V1 (`src/`): „Arată indiciul”, apoi Back | Confirmarea (în pagină) se închide fără consum; fluxul V1 continuă normal (secțiunea 22.2) |

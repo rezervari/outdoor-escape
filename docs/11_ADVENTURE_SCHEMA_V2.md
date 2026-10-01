@@ -29,8 +29,9 @@ Principiul: **motorul este stabil, conținutul este extensibil.** Motorul nu șt
 | Starea GPS în interfață (neactivată / caut / activ + precizie / semnal slab / eroare / refuzat / indisponibil) | `src/index.html`, `src/js/app.js`, `src/css/app.css`; calitatea fix-ului: `geo.assessFix` | `tests/location.test.js`, `tests/geo.test.js` |
 | Explicația înainte de permisiune + butonul „Activează locația” | `src/index.html`, `src/js/app.js` | manual / Chromium |
 | Misiuni de locație în UI: cardul obiectivului, rezolvare la sosire, „Am ajuns” (`confirmArrival` — același mecanism ca GPS-ul) | `src/js/app.js` | `tests/location-integration.test.js` + Chromium |
+| Vertical slice UI (TASK 4): modelul interfeței derivat din motor; harta ca suprafață principală cu cardul obiectivului peste ea (D-049-F revizuită); puzzle-ul ca overlay; indicii cu confirmare (D-030); ecranul de rezultat și restartul; Back pentru straturile de interfață (U2, D-035) | `src/js/view-model.js`, `src/js/play-ui.js`, `src/js/app.js`, `src/index.html`, `src/css/app.css`; demo `content/adventures/demo-vertical-slice.json` | `tests/view-model.test.js`, `app-view-model-integration.test.js`, `play-layout.test.js`, `play-ui.test.js`, `result-screen.test.js`, `back-u2.test.js` + verificare în browser (`07_TESTING.md`, secțiunea 27) |
 
-Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii, sărire, scor și — pentru aventurile V2 care au locații — obiectivul misiunii curente cu GPS și „Am ajuns”. Aventura publică `brasov-centrul-vechi` este V1, fără locații: pe ea se vede doar starea GPS (informativ).
+Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii (deschise numai după confirmare — D-030), sărire, scor, ecranul de rezultat și — pentru aventurile V2 care au locații — harta ca suprafață principală, cardul obiectivului cu GPS și „Am ajuns”, apoi puzzle-ul într-un overlay peste hartă. Aventura publică `brasov-centrul-vechi` este V1, fără locații: puzzle-ul și indiciile rămân în pagină, iar starea GPS este doar informativă. Fluxul complet se poate încerca pe `src/?adventure=demo-vertical-slice` (fictiv).
 
 **PREGĂTIT, DAR NEIMPLEMENTAT ÎN UI** (există în schemă și/sau în motor, testat doar automat; jucătorul nu îl vede încă):
 
@@ -226,10 +227,10 @@ Comportamentul actual (documentat, nu modificat):
 | `riddle`, `observation`, `code` | răspuns (`answer`) | implementat |
 | `partner` | răspuns = codul/indiciul primit la partener; cere `partnerId` | implementat ca model; fără partener real |
 | `secret` | răspuns; `track: "secret"` | implementat |
-| `location` | sosirea la `locationId` (GPS sau manual); fără `answer` | implementat în motor; fără interfață |
+| `location` | sosirea la `locationId` (GPS sau manual); fără `answer` | implementat în motor; interfață: cardul obiectivului cu stare GPS și „Am ajuns” (M-003.1), harta și cardul peste hartă (M-003.2, TASK 4); verificat automat și în browser, nevalidat încă pe dispozitive reale cu locații reale |
 | `timed` | răspuns + `timeLimitSeconds` | doar schemă și `startedAt`; limita de timp **nu** este aplicată încă (D-025, D-028) |
 
-- `hints`: se dezvăluie pe rând (`hintsUsed`); fiecare dezvăluire emite `hint_requested`. Fără penalizări (D-025).
+- `hints`: se dezvăluie pe rând (`hintsUsed`); fiecare dezvăluire emite `hint_requested`. Fără penalizări (D-025). În interfață, un indiciu se deschide numai după confirmarea jucătorului; anularea confirmării nu atinge motorul (D-030, extinderea din 2026-10-01).
 - `answer`: verificat doar prin `answers.js` (D-021, D-024). Motorul primește aventura fără răspunsuri.
 
 ## 7. Parteneri

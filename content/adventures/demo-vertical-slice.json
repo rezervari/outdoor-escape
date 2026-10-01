@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 2,
+  "id": "demo-vertical-slice",
+  "contentVersion": "0.1.0",
+  "language": "ro",
+  "demo": true,
+  "meta": {
+    "city": "Orașul Demo",
+    "title": "[DEMO] Vertical slice: hartă, sosire, puzzle",
+    "description": "Aventură FICTIVĂ pentru testarea fluxului de joc: mergi la o locație, confirmă sosirea, rezolvă puzzle-ul, apoi mergi la următoarea locație. Coordonatele sunt inventate (lângă 0°, 0°) și nu corespund unor locuri reale; pe telefon, sosirea se confirmă cu „Am ajuns”.",
+    "estimatedTime": 10,
+    "difficulty": "easy",
+    "tags": ["demo"]
+  },
+  "settings": {
+    "progression": "linear",
+    "gps": {
+      "defaultRadius": 40,
+      "nearDistance": 150,
+      "maxAccuracy": 60,
+      "exitMargin": 20,
+      "allowManualConfirmation": true
+    }
+  },
+  "locations": [
+    {
+      "id": "loc-demo-1",
+      "name": "[DEMO] Punctul A",
+      "type": "start",
+      "coordinates": { "lat": 0.001, "lng": 0.001 },
+      "radius": 40,
+      "initialStatus": "unlocked",
+      "fallback": {
+        "instructions": "Locație fictivă. Apasă „Am ajuns” pentru a simula sosirea.",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "loc-demo-2",
+      "name": "[DEMO] Punctul B",
+      "type": "finale",
+      "coordinates": { "lat": 0.002, "lng": 0.0015 },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "Locație fictivă. Apasă „Am ajuns” pentru a simula sosirea.",
+        "allowManualConfirmation": true
+      }
+    }
+  ],
+  "missions": [
+    {
+      "id": "m-demo-sosire-1",
+      "type": "location",
+      "track": "main",
+      "title": "[DEMO] Mergi la Punctul A",
+      "briefing": "Mergi la Punctul A. Sosirea se confirmă automat prin GPS sau manual, cu „Am ajuns”.",
+      "locationId": "loc-demo-1",
+      "initialStatus": "pending",
+      "points": 50
+    },
+    {
+      "id": "m-demo-puzzle-1",
+      "type": "riddle",
+      "track": "main",
+      "title": "[DEMO] Cuvântul întors",
+      "briefing": "Puzzle de test: scrie cuvântul DEMO citit de la coadă la cap.",
+      "locationId": "loc-demo-1",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        { "text": "Citește literele de la dreapta la stânga." },
+        { "text": "Răspunsul începe cu litera O." }
+      ],
+      "answer": "omed"
+    },
+    {
+      "id": "m-demo-sosire-2",
+      "type": "location",
+      "track": "main",
+      "title": "[DEMO] Mergi la Punctul B",
+      "briefing": "Mergi la Punctul B. Sosirea se confirmă automat prin GPS sau manual, cu „Am ajuns”.",
+      "locationId": "loc-demo-2",
+      "initialStatus": "locked",
+      "points": 50
+    },
+    {
+      "id": "m-demo-puzzle-2",
+      "type": "code",
+      "track": "main",
+      "title": "[DEMO] Codul final",
+      "briefing": "Puzzle de test: câte locații are această aventură demo? Codul final este acest număr urmat de cuvântul DEMO, fără spațiu (ex. 5DEMO).",
+      "locationId": "loc-demo-2",
+      "initialStatus": "locked",
+      "points": 150,
+      "hints": [
+        { "text": "Aventura are două locații: Punctul A și Punctul B." }
+      ],
+      "answer": "2DEMO"
+    }
+  ],
+  "events": []
+}

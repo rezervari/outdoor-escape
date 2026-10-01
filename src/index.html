@@ -61,22 +61,29 @@
         <p id="challenge-progress" class="progress"></p>
         <p class="score">Scor: <strong id="current-score">0</strong></p>
       </div>
-      <h2 id="challenge-title"></h2>
-      <p id="challenge-description"></p>
-
-      <!-- Obiectivul misiunii curente (dacă are o locație). Stările vin din motor. -->
-      <div id="objective" class="objective" hidden aria-live="polite">
-        <p class="objective-title">📍 Obiectiv: <strong id="objective-name"></strong></p>
-        <p id="objective-status" class="objective-status"></p>
-        <p id="objective-instructions" class="objective-instructions" hidden></p>
-        <p id="objective-gps-note" class="objective-note"></p>
-        <button type="button" class="button button-primary" id="btn-arrived">Am ajuns</button>
-      </div>
-
-      <!-- Harta (M-003.2): doar orientare. Apare numai pentru aventurile cu locații. -->
+      <!-- Harta (M-003.2): suprafața principală a ecranului de joc (TASK 4, U1).
+           Apare numai pentru aventurile cu locații. Cardul obiectivului stă PESTE hartă,
+           ca frate al containerului (Leaflet controlează conținutul containerului). -->
       <section id="map-panel" class="map-panel" hidden aria-label="Hartă">
-        <div id="map-container" class="map-container" role="region" aria-label="Harta aventurii"
-             aria-describedby="map-caption" hidden></div>
+        <div id="map-stage" class="map-stage" data-map="off">
+          <div id="map-container" class="map-container" role="region" aria-label="Harta aventurii"
+               aria-describedby="map-caption" hidden></div>
+
+          <!-- Obiectivul misiunii curente (viewModel.objective). Stările vin din motor. -->
+          <div id="objective" class="objective" hidden aria-live="polite" tabindex="-1">
+            <p class="objective-title"><strong id="objective-name"></strong></p>
+            <div class="objective-head">
+              <p class="objective-kicker">📍 Locație</p>
+              <p id="objective-status" class="objective-status"></p>
+            </div>
+            <p id="objective-instructions" class="objective-instructions" hidden></p>
+            <button type="button" class="button button-primary" id="btn-arrived">Am ajuns</button>
+            <!-- După sosire: deschide provocarea / continuă (din viewModel, prin play-ui.js). -->
+            <button type="button" class="button button-primary" id="btn-objective-action" hidden></button>
+          </div>
+        </div>
+        <!-- Nota despre GPS stă sub hartă, nu în card: cardul rămâne scund, ca să nu acopere obiectivul. -->
+        <p id="objective-gps-note" class="objective-note" hidden></p>
         <p id="map-placeholder" class="map-placeholder" hidden>
           Harta apare când ai un obiectiv sau când locația este activă.
         </p>
@@ -91,22 +98,52 @@
         </div>
       </section>
 
-      <form id="answer-form" novalidate>
-        <label for="answer-input">Răspunsul tău</label>
-        <input id="answer-input" name="answer" type="text"
-               autocomplete="off" autocapitalize="off" autocorrect="off"
-               spellcheck="false" enterkeyhint="done">
-        <button type="submit" class="button button-primary" id="btn-check">Verifică răspunsul</button>
-      </form>
+      <h2 id="challenge-title"></h2>
+      <p id="challenge-description"></p>
 
-      <p id="feedback" class="feedback" role="status" aria-live="polite" hidden></p>
+      <!-- Panoul puzzle-ului (TASK 4, pasul 4). Pentru o misiune cu obiectiv pe hartă este un
+           overlay peste scenă (harta rămâne în DOM, dedesubt); altfel (ex. V1) stă în pagină.
+           Conține doar ce vine din viewModel: niciodată răspunsul corect. -->
+      <section id="puzzle-panel" class="puzzle-panel" data-mode="inline" hidden>
+        <div class="puzzle-sheet">
+          <div class="puzzle-head">
+            <p id="puzzle-location" class="puzzle-location"></p>
+            <button type="button" class="button button-secondary puzzle-close" id="btn-puzzle-close">Închide</button>
+          </div>
+          <h2 id="puzzle-title" class="puzzle-title" tabindex="-1"></h2>
+          <p id="puzzle-question" class="puzzle-question"></p>
 
-      <button type="button" class="button button-primary" id="btn-next" hidden>Continuă</button>
+          <form id="answer-form" novalidate>
+            <label for="answer-input">Răspunsul tău</label>
+            <input id="answer-input" name="answer" type="text"
+                   autocomplete="off" autocapitalize="off" autocorrect="off"
+                   spellcheck="false" enterkeyhint="done">
+            <button type="submit" class="button button-primary" id="btn-check">Verifică răspunsul</button>
+          </form>
 
-      <div id="hint-area">
-        <button type="button" class="button button-secondary" id="btn-hint">Arată indiciul</button>
-        <p id="hint-text" class="hint" hidden></p>
-      </div>
+          <p id="feedback" class="feedback" role="status" aria-live="polite" hidden></p>
+
+          <!-- Indiciile (D-030), în același panou pentru overlay și pentru V1. Ce este deschis vine
+               din motor (hintsUsed); confirmarea este doar interfață și nu consumă nimic. -->
+          <div id="hint-area" class="hint-area" hidden>
+            <p id="hint-status" class="hint-status"></p>
+            <ol id="hint-list" class="hint-list" hidden></ol>
+            <button type="button" class="button button-secondary" id="btn-hint">Arată indiciul</button>
+            <div id="hint-confirm" class="hint-confirm" role="alertdialog"
+                 aria-labelledby="hint-confirm-title" aria-describedby="hint-confirm-text" hidden>
+              <p id="hint-confirm-title" class="hint-confirm-title"></p>
+              <p id="hint-confirm-text">Deschiderea indiciului este ireversibilă: odată deschis, rămâne deschis
+                pentru această provocare. Poți renunța acum fără să îl folosești.</p>
+              <div class="hint-confirm-actions">
+                <button type="button" class="button button-secondary" id="btn-hint-cancel">Renunță</button>
+                <button type="button" class="button button-primary" id="btn-hint-confirm">Arată indiciul</button>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="button button-primary" id="btn-next" hidden>Continuă</button>
+        </div>
+      </section>
 
       <div class="secondary-actions">
         <button type="button" class="button button-secondary" id="btn-skip">Sari peste (0 puncte)</button>
@@ -119,13 +156,17 @@
       </p>
     </section>
 
+    <!-- Rezultatul (TASK 4, pasul 6): apare numai când motorul este „completed”; valorile vin din viewModel.summary. -->
     <section id="screen-end" class="screen" hidden aria-labelledby="end-title">
-      <h2 id="end-title">Felicitări! Ai terminat aventura.</h2>
+      <h2 id="end-title" tabindex="-1">Felicitări! Ai terminat aventura.</h2>
+      <p id="end-adventure" class="end-adventure"></p>
       <dl class="facts">
         <dt>Scor</dt>
         <dd id="end-score"></dd>
         <dt>Provocări rezolvate</dt>
         <dd id="end-solved"></dd>
+        <dt>Indicii folosite</dt>
+        <dd id="end-hints"></dd>
       </dl>
       <button type="button" class="button button-primary" id="btn-replay">Joacă din nou</button>
     </section>

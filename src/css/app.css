@@ -166,6 +166,17 @@ button:disabled {
   margin: 0;
 }
 
+/* Rezultatul: titlul aventurii sub mesajul de finalizare. */
+.end-adventure {
+  margin: 0;
+  font-weight: 700;
+}
+
+#end-title:focus-visible {
+  outline: 3px solid #d98e04;
+  outline-offset: 3px;
+}
+
 .play-header {
   display: flex;
   flex-wrap: wrap;
@@ -226,18 +237,136 @@ button:focus-visible {
   background: #fbeaea;
 }
 
-.hint {
-  white-space: pre-line; /* un indiciu pe rând */
-  margin: 1rem 0 0;
+/* ---------- Panoul puzzle-ului (TASK 4, pasul 4) ---------- */
+
+/* În pagină (ex. V1): titlul și întrebarea sunt deja în ecran; panoul aduce doar formularul. */
+.puzzle-panel[data-mode="inline"] .puzzle-head,
+.puzzle-panel[data-mode="inline"] .puzzle-title,
+.puzzle-panel[data-mode="inline"] .puzzle-question {
+  display: none;
+}
+
+/* Overlay: acoperă toată scena. Fundalul lasă harta să se vadă, dar preia orice atingere. */
+.puzzle-panel[data-mode="overlay"] {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+  background: rgba(22, 32, 27, 0.6);
+}
+
+.puzzle-panel[data-mode="overlay"] .puzzle-sheet {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem;
+  border: 2px solid #1f3a2e;
+  border-radius: 0.75rem;
+  background: #f7f5ef;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.puzzle-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.puzzle-location {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #3f4a44;
+}
+
+.puzzle-close {
+  flex: none;
+  font-size: 1rem;
+}
+
+.puzzle-panel .puzzle-title {
+  margin: 0.75rem 0 0.5rem;
+  font-size: 1.375rem;
+}
+
+.puzzle-panel .puzzle-title:focus-visible {
+  outline: 3px solid #d98e04;
+  outline-offset: 3px;
+}
+
+.puzzle-question {
+  margin: 0 0 0.5rem;
+}
+
+/* Cât timp overlay-ul este deschis, pagina din spate nu se derulează. */
+html[data-overlay="open"] {
+  overflow: hidden;
+}
+
+/* Indiciile (D-030): cele deschise rămân vizibile; confirmarea apare în locul butonului. */
+.hint-area {
+  margin-top: 1rem;
+}
+
+.hint-status {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #3f4a44;
+}
+
+.hint-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hint-list li {
+  margin: 0.5rem 0 0;
   padding: 0.75rem;
   border: 2px dashed #d98e04;
   border-radius: 0.25rem;
   background: #fff8e6;
 }
 
-#hint-area .button-secondary {
+.hint-list li:focus-visible {
+  outline: 3px solid #d98e04;
+  outline-offset: 2px;
+}
+
+#hint-area #btn-hint {
   width: 100%;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
+}
+
+.hint-confirm {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 2px solid #8a5a00;
+  border-radius: 0.5rem;
+  background: #fff3d1;
+}
+
+.hint-confirm p {
+  margin: 0 0 0.5rem;
+}
+
+.hint-confirm-title {
+  font-weight: 700;
+}
+
+.hint-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hint-confirm-actions .button {
+  flex: 1 1 8rem;
+  width: auto;
+  margin: 0;
 }
 
 .secondary-actions {
@@ -306,7 +435,7 @@ a:focus-visible,
   padding: 0.75rem;
   border: 2px solid #1f3a2e;
   border-left-width: 0.5rem;
-  border-radius: 0.25rem;
+  border-radius: 0.5rem;
   background: #fff;
 }
 
@@ -314,8 +443,41 @@ a:focus-visible,
   margin: 0 0 0.5rem;
 }
 
+.objective .objective-title {
+  margin-bottom: 0.25rem;
+  font-size: 1.25rem;
+  line-height: 1.25;
+}
+
+/* Tipul („Locație”) și starea sosirii pe același rând: cardul rămâne scund. */
+.objective-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.75rem;
+}
+
+.objective .objective-kicker {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #3f4a44;
+}
+
 .objective-status {
   font-weight: 700;
+}
+
+.objective .objective-instructions {
+  font-size: 1rem;
+}
+
+.objective .button-primary {
+  margin-top: 0.25rem;
+}
+
+.objective:focus-visible {
+  outline: 3px solid #d98e04;
+  outline-offset: 2px;
 }
 
 .objective[data-presence="inside"] {
@@ -324,6 +486,7 @@ a:focus-visible,
 }
 
 .objective-note {
+  margin: 0.5rem 0 0;
   font-size: 1rem;
   color: #333;
 }
@@ -344,6 +507,64 @@ a:focus-visible,
   overflow: hidden;
   background: #e8e6df; /* fundal vizibil și când tile-urile lipsesc */
   font-size: 1rem;
+  isolation: isolate; /* straturile Leaflet (z-index până la 1000) rămân sub cardul obiectivului */
+}
+
+/* ---------- Ecranul de joc: harta ca suprafață principală, cardul peste ea (TASK 4, U1) ---------- */
+
+.map-stage {
+  position: relative;
+}
+
+/* Harta umple ecranul vizibil de sub antet: la 360×640 px, „Am ajuns” rămâne vizibil fără derulare. */
+.map-stage[data-map="on"] {
+  height: clamp(340px, calc(100vh - 11rem), 720px);
+  height: clamp(340px, calc(100dvh - 11rem), 720px);
+}
+
+.map-stage[data-map="on"] .map-container {
+  height: 100%;
+  min-height: 0;
+}
+
+/* Cardul stă peste hartă, jos, deasupra rândului de atribuire OpenStreetMap (care rămâne vizibil). */
+.map-stage[data-map="on"] .objective {
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: 1.5rem;
+  z-index: 1;
+  max-height: calc(100% - 3.5rem);
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Peste hartă, cardul rămâne scund: centrul hărții (unde stă obiectivul) trebuie să rămână vizibil. */
+.map-stage[data-map="on"] .objective p {
+  margin-bottom: 0.25rem;
+}
+
+.map-stage[data-map="on"] .objective .objective-title {
+  font-size: 1.125rem;
+}
+
+.map-stage[data-map="on"] .objective .button-primary {
+  padding-block: 0.5rem;
+}
+
+/* Telefon: harta pe toată lățimea ecranului. */
+@media (max-width: 599px) {
+  .map-stage[data-map="on"] {
+    margin-inline: -1rem;
+  }
+
+  .map-stage[data-map="on"] .map-container {
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
 }
 
 .map-caption,

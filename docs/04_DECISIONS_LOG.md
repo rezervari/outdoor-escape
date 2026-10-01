@@ -357,6 +357,25 @@ Decizie (proprietar, 2026-09-30):
 
 Notă (2026-09-29; actualizată 2026-09-30): motorul aplică deja această decizie: `hintsUsed` este păstrat în progresul misiunii (V2; progresul V1 cu `hintUsed` este migrat automat la `hintsUsed`), iar fiecare dezvăluire emite `hint_requested`; indiciul nu este o stare separată. Nu există penalizare (D-025).
 
+Extindere (proprietar, 2026-10-01) — confirmarea indiciului (TASK 4, vertical slice):
+
+Regula de produs:
+- Deschiderea unui indiciu este **ireversibilă**: un indiciu deschis rămâne deschis pentru acea misiune (`hintsUsed` doar crește).
+- Un indiciu se deschide **numai după o confirmare explicită** a jucătorului. Nicio acțiune nu consumă un indiciu fără confirmare.
+- Indiciile se deschid pe rând, în ordinea din conținut, până la numărul de indicii definit de aventură (`mission.hints`); peste această limită nu se mai deschide nimic.
+- Indiciile se pot cere doar cât timp misiunea este `pending`. Indiciile deja deschise rămân vizibile cât timp misiunea este activă.
+
+Comportamentul interfeței:
+- „Arată indiciul” nu deschide indiciul: afișează confirmarea, care spune că deschiderea este ireversibilă și că jucătorul poate renunța.
+- Confirmarea se închide fără consum prin „Renunță”, prin tasta Escape și prin butonul Back al telefonului / browserului (D-035, precizarea U2).
+- Butonul „Arată indiciul” apare doar dacă mai există un indiciu de deschis; după ultimul, indiciile deschise rămân afișate, fără buton.
+- Confirmarea este stare de interfață, efemeră: nu se salvează și nu revine după reîncărcare.
+
+Relația cu motorul:
+- Numai confirmarea finală apelează `game.requestHint(missionId)` (→ `hintsUsed + 1`, `hint_requested`). Afișarea confirmării și anularea ei (Renunță / Escape / Back) **nu** modifică starea motorului.
+- Ce indicii sunt deschise se derivă exclusiv din `hintsUsed`, inclusiv după reîncărcare; interfața nu păstrează o copie proprie.
+- Penalizarea rămâne în afara D-030 (D-025, PROPOSED).
+
 ---
 
 ## D-031 — Metoda standard de testare pe telefon (HTTPS)
@@ -439,6 +458,19 @@ Reguli tehnice asociate (CONFIRMED):
 4. Manifestul PWA și service worker-ul stau lângă `index.html`, în `src/`.
 5. Nu se introduce build system doar pentru publicare (confirmă D-018 și D-020).
 6. Workflow-ul GitHub Actions publică structura necesară fără transformări de căi.
+
+Precizare (proprietar, 2026-10-01) — butonul Back (U2, TASK 4):
+
+Comportament (pentru jucător):
+- Back închide stratul de interfață deschis cel mai de sus, în ordinea: (1) confirmarea indiciului, (2) overlay-ul puzzle-ului. Un Back închide un singur strat.
+- Închiderea unui strat prin Back are același efect ca butonul lui de închidere („Renunță”, „Închide”): **nu** modifică starea jocului (misiune, scor, indicii, progres salvat). Puzzle-ul închis rămâne activ și poate fi redeschis.
+- Dacă nu este deschis niciun strat, Back are comportamentul normal al browserului.
+- URL-ul nu se schimbă.
+
+Mecanism:
+- Se folosește History API al browserului: fiecare strat deschis are o intrare internă în istoric, fără URL nou și fără rută nouă. Aceasta **nu** este routing bazat pe URL: regula 2 rămâne valabilă.
+- Starea de navigare a straturilor nu este stare de joc: nu ajunge în motor și nu se salvează în `localStorage`.
+- Detaliile tehnice: `03_ARCHITECTURE.md`, secțiunea 3c.
 
 Motivare pe scurt:
 - Cu aceeași structură local și online, căile relative (de exemplu `../content/...` din `src/`) funcționează identic în ambele medii, fără cod care verifică mediul și fără transformări la publicare.
@@ -723,7 +755,16 @@ Decizii:
 - **C2 — Ultima poziție reținută:** `player.fix` este exact ultima observație pe care `location.js` o reține deja. Dacă `quality` este `none`, dar există un fix (ex. `gps-error` după o poziție primită), harta îl arată ca punct gri „ultima poziție”, fără cerc de acuratețe. Este **doar comportament vizual**, nu o stare GPS: nu schimbă `quality`, progresul sau evenimentele. Harta nu folosește `timestamp` pentru nicio decizie.
 - **D — Raza:** raza efectivă desenată **provine din motor**, nu din `map-model.js` sau `map.js` (care nu aplică valori implicite). Varianta aleasă: **R2** — la implementare, `geo.js` primește un export **aditiv** `effectiveRadius(location, gps)`, folosit intern de `evaluateProximity` (comportament identic, ca precedentul `assessFix` din D-045). `game.js` îl expune aditiv ca `getLocation(id).radiusMeters`. Algoritmul GPS nu se schimbă. Copia preexistentă din validarea din `schema.js` rămâne în afara M-003.2.
 - **E — Schimbarea obiectivului:** o singură recentrare (încadrare pe noul obiectiv + jucător, dacă există poziție), chiar dacă utilizatorul făcuse pan. Fix-urile GPS ulterioare actualizează doar markerul.
-- **F — Poziția în ecran:** după cardul obiectivului, înălțime `clamp(200px, 40vh, 360px)`. Butoanele „Centrează pe mine” și „Vezi obiectivele” stau sub hartă, în afara ei.
+- **F — Poziția în ecran (revizuită 2026-10-01, TASK 4 / U1 — map-first):**
+  - Pe ecranul de joc, harta este **suprafața principală**: stă imediat după antetul de progres, înaintea conținutului misiunii, și ocupă cea mai mare parte a ecranului vizibil. Pe telefon ocupă toată lățimea.
+  - Cardul obiectivului (nume, stare, instrucțiuni, „Am ajuns” și acțiunea de după sosire) este **suprapus peste hartă**. Cardul și containerul hărții sunt elemente surori; cardul **nu** este introdus în containerul Leaflet (Leaflet controlează exclusiv conținutul containerului), iar contractul `map.js` (D-047) nu se schimbă.
+  - Dacă harta nu există sau nu poate fi creată, cardul revine în fluxul normal al paginii (jocul funcționează fără hartă).
+  - În timpul overlay-ului puzzle-ului, harta rămâne montată (nu este ascunsă sau distrusă), vizibilă sub overlay și inactivă (nu primește atingeri sau focus).
+  - Atribuirea OpenStreetMap rămâne permanent vizibilă și neacoperită de card (D-046).
+  - „Centrează pe mine”, „Vezi obiectivele” și textele despre poziție / GPS rămân sub hartă, în afara ei.
+  - Înălțimea hărții este responsive, legată de viewport; valorile exacte pe breakpoint-uri sunt o specificație tehnică ulterioară și nu fac parte din această decizie. Rămâne valabil criteriul 27 din `12_MAP_SPECIFICATION_M-003.2.md` (la 360×640 px, „Am ajuns” vizibil fără derulare; harta ≥ 200 px; butoane ≥ 48 px).
+  - **Deschis (U1b):** cardul poate acoperi parțial harta, inclusiv obiectivul, pe ecrane mici. Încadrarea hărții care ține cont de card nu este decisă; o soluție care ar cere modificarea contractului `map.js` (D-047) necesită o decizie separată.
+  - *Formularea anterioară (2026-09-29, înlocuită la 2026-10-01):* „după cardul obiectivului, înălțime `clamp(200px, 40vh, 360px)`. Butoanele «Centrează pe mine» și «Vezi obiectivele» stau sub hartă, în afara ei.”
 - **G — „Centrează pe mine”:** o singură centrare, **fără urmărire continuă**. Harta nu se mișcă niciodată la un fix GPS obișnuit.
 - **H — Locațiile `locked`** (inclusiv `hiddenUntilDiscovered`) nu sunt afișate niciodată.
 - **I — Precizie > 1000 m:** cercul de acuratețe nu se desenează. Este o limită doar de desen, fără efect asupra jocului. Cercul de acuratețe nu influențează niciodată zoom-ul.
@@ -830,7 +871,7 @@ Decizie:
 - Cache-ul este limitat la zona și resursele aventurii.
 - Fără internet în timpul jocului: GPS → motor local → stare locală → coadă locală; la revenire: sincronizare.
 
-Stare în cod: service worker network-first pentru shell, Leaflet local și aventura demo (`CACHE_VERSION` `v6`). Network-first pentru conținut este incompatibil cu D-057 și se schimbă în milestone-ul care implementează pachetul.
+Stare în cod: service worker network-first pentru shell, Leaflet local și aventura demo (`CACHE_VERSION` `v7` — actualizat 2026-10-01, TASK 4; anterior `v6`). Network-first pentru conținut este incompatibil cu D-057 și se schimbă în milestone-ul care implementează pachetul.
 
 Deschis: harta offline cu alt provider — D-063.
 

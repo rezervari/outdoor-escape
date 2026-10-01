@@ -337,7 +337,7 @@ La revenirea conexiunii: `LOCAL EVENTS → SYNC → SERVER` (`15_SESSION_SYNC.md
 
 | | Status |
 | --- | --- |
-| Service worker network-first pentru shell + Leaflet local + aventura demo `brasov-centrul-vechi` (`CACHE_VERSION` `v6`) | IMPLEMENTAT |
+| Service worker network-first pentru shell + Leaflet local + aventura demo `brasov-centrul-vechi` (`CACHE_VERSION` `v7`) | IMPLEMENTAT |
 | Cache per aventură / per versiune, descărcare înainte de START, validarea pachetului | DECIS; neimplementat |
 | Media, audio în cache | neimplementat (nu există încă media) |
 
