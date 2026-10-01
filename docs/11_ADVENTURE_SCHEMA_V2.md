@@ -395,6 +395,42 @@ Descoperiri separate de traseul principal (acțiunea `discover_secret`, evenimen
 - Fișierele media se încarcă din rețea, la afișarea misiunii (imagini `loading="lazy"`, sunet `preload="none"`). Service worker-ul **nu** le pune în cache; pre-descărcarea pentru joc offline aparține pachetului aventurii (D-056). `listMediaPaths(content)` (`media.js`) dă deja lista completă și deterministă a fișierelor unei aventuri.
 - URL-ul unui asset se obține printr-un singur punct: `resolveMediaUrl(path, adventureUrl(id))`, apelat de modelul interfeței (`buildViewModel({ …, mediaBaseUrl })`).
 
+### 10.4 Replici vocale generate (TTS) — D-074 – D-078
+
+Vocile personajelor se generează **offline**, cu o unealtă de producție din afara aplicației (registrul vocilor + generatorul, în prezent în `Claude outputs/voci/`, ignorat de Git). Aplicația nu cunoaște procesul TTS, vocile sau personajele: primește fișiere audio obișnuite.
+
+- **Voce ≠ dialog (D-074):** o voce aprobată fixează identitatea vocală a personajului (vocea de bază, setările, contextele de interpretare); nu aprobă texte. Același personaj poate vorbi în mai multe aventuri, cu replici diferite. Pronunția numelor proprii se rezolvă în textul trimis generatorului, nu în profilul vocii.
+- **Replici per aventură (D-075):** un fișier de replici per aventură (ex. `replici-joc-x.json`) și un folder de ieșire per aventură, `--out <folder>`. Id-urile replicilor sunt locale aventurii și devin numele fișierelor:
+
+  ```text
+  out/demo-gps-brasov/          out/alt-joc/
+    manifest.json                 manifest.json
+    intro.mp3                     intro.mp3
+    mission-01.mp3                mission-01.mp3
+  ```
+
+- **De la manifest la aventură:** fiecare intrare din `manifest.json` are `file`, `voice`, `context`, `text` (cu marcajele de pauză), `transcript` (curat), setările, amprenta lor și data generării. În aventură, fișierul devine un asset normal (§10.1), cu `transcript` copiat din manifest:
+
+  ```json
+  "media": {
+    "basePath": "media/<id-aventura>/",
+    "assets": { "voce-intro": { "type": "audio", "src": "intro.mp3", "kind": "voice", "transcript": "…" } }
+  }
+  ```
+
+  Asset-ul se folosește într-un bloc `audio` al unei misiuni (§10.3), ca `narrator.messages.<id>.audio` sau oriunde se acceptă un asset `audio`. Schema și validatorul nu se schimbă.
+- **Conținut real (D-076, D-034):** replicile, manifestele și fișierele audio ale jocurilor reale stau numai în locații ignorate de Git. `Claude outputs/voci/` este pentru demo-uri, lucru intermediar și tooling; ieșirea finală a unei aventuri reale merge direct în `content/adventures/media/private-<id>/` (atunci `basePath` este `media/private-<id>/`), fără o etapă de copiere.
+- **Azure și edge-tts (D-077):** fișierele finale se generează cu Azure AI Speech; edge-tts servește doar preselecției. Un folder de ieșire are un singur motor; aprobarea unei voci se face numai pe un demo Azure.
+- **Stabilitate în timp (D-078):** replicile unei aventuri se generează și se arhivează ca batch; o regenerare parțială este semnalată, iar fișierele înlocuite se mută în `<out>/_arhiva/`, nu se șterg.
+
+**Starea runtime (2026-10-01), separată de model:**
+
+| Folosire a unui asset `kind: "voice"` | Stare |
+| --- | --- |
+| Bloc `audio` într-o misiune | implementat: player pornit de jucător, transcript pliabil, rezervă la eroare |
+| `narrator.messages.<id>.audio` | referința este validată și rezolvată în registrul unificat; **redarea nu pornește încă automat** — limitare de implementare a interfeței, nu a modelului de asset-uri |
+| Efectul `play_audio` | produs de motor; redarea automată neimplementată (vezi tabelul de stare de la început) |
+
 ## 11. Progresul salvat (D-043)
 
 Cheia rămâne `outdoor-escape:game:<id>`. Forma V2:

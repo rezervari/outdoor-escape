@@ -1154,3 +1154,85 @@ Decizie (proprietar, 2026-10-01; `TASK_CHALLENGE_SYSTEM_V1.md` §3.1, D4):
 - `media_viewer` este un strat generic de interfață, pe tot ecranul, care poate afișa orice media compatibilă cu viewer-ul: fotografie, fotografie istorică, hartă, document și, ulterior, alte tipuri compatibile.
 - Nu există viewer dedicat unei aventuri.
 - Viewer-ul este un strat închis prin Back (extinde precizarea U2 din D-035): ordinea de închidere este viewer-ul, apoi confirmarea indiciului, apoi overlay-ul puzzle-ului — un Back închide un singur strat. Închiderea nu modifică starea jocului, iar starea viewer-ului nu se salvează.
+
+---
+
+## D-074 — Identitatea vocală a personajului este separată de dialogul aventurii
+Status: CONFIRMED (2026-10-01) — arhitectural; fără modificări runtime
+
+Context:
+Aventurile folosesc replici vocale ale unor personaje recurente. Vocile se generează offline, cu un serviciu TTS, într-o unealtă care nu face parte din aplicație. Trebuia stabilit ce înseamnă „o voce aprobată” și ce cunoaște aplicația despre ea.
+
+Decizie (proprietar, 2026-10-01):
+- O **voce aprobată** definește identitatea vocală a unui personaj: vocea de bază a furnizorului, setările (ton, viteză, volum), contextele de interpretare (ex. normal, urgent, confidențial, solemn) și configurația TTS. Aprobarea blochează aceste setări.
+- Aprobarea unei voci **nu** aprobă texte sau replici. Același personaj poate apărea în mai multe aventuri, cu texte complet diferite, păstrând aceeași identitate vocală.
+- **Pronunția numelor proprii se rezolvă prin text**: textul trimis generatorului poate folosi o formă fonetică / ortografică potrivită pentru TTS. Profilul unei voci aprobate nu se modifică pentru pronunție.
+- Aplicația runtime **nu cunoaște** procesul TTS, vocile sau personajele și nu se modifică pentru fiecare joc. Ea consumă asset-uri audio deja generate, prin modelul existent (D-072).
+
+Consecințe:
+- Registrul vocilor și generatorul sunt unelte de producție, în afara aplicației publicate (în prezent în `Claude outputs/voci/`, ignorat de Git — D-044). Mutarea lor în repository este o decizie separată.
+- O voce aprobată nu se editează; o variantă nouă primește un id de voce nou.
+- Nu contrazice D-059: acolo text-to-speech înseamnă semnale de siguranță în aplicație; aici TTS este o etapă offline de producție a conținutului.
+
+---
+
+## D-075 — Replicile sunt specifice aventurii; asset-ul audio `kind: "voice"` rămâne modelul
+Status: CONFIRMED (2026-10-01) — implementat în generator; modelul de asset-uri neschimbat
+
+Decizie (proprietar, 2026-10-01):
+- Fiecare aventură are propriul fișier de replici (ex. `replici-joc-x.json`): pentru fiecare replică — id, voce, context (opțional) și text.
+- Generatorul produce, pentru fiecare replică, fișierul audio și **transcriptul curat** (fără marcajele interne de pauză). Transcriptul curat se scrie în `manifest.json` și este textul alternativ obligatoriu al asset-ului.
+- **Ieșire separată per aventură:** `--out <folder>` (ex. `out/demo-gps-brasov/`, cu `manifest.json`, `intro.mp3`, `mission-01.mp3`). Id-urile replicilor sunt **locale aventurii** și devin numele fișierelor; nu se prefixează artificial cu numele jocului. Două aventuri pot folosi aceleași id-uri fără coliziuni.
+- În aventură, fișierul generat este un asset normal din `media.assets` (D-072): `type: "audio"`, `kind: "voice"`, `transcript` (din manifest). Poate fi folosit în blocul `audio` al unei misiuni, ca `narrator.messages.<id>.audio` sau în orice alt context care acceptă un asset `audio`. Schema, validatorul și runtime-ul nu se modifică.
+
+Starea runtime (separată de model):
+- Player-ul audio din blocurile `audio` ale misiunilor este implementat și este pornit de jucător (Challenge System V1).
+- Audio-ul asociat mesajelor de narator (`narrator.messages[].audio`) **nu pornește încă automat**. Este o limitare de implementare a interfeței (`11_ADVENTURE_SCHEMA_V2.md`, tabelul de stare), nu o schimbare necesară a modelului de asset-uri: referința este deja validată și rezolvată în registrul unificat.
+
+---
+
+## D-076 — Textele și vocile generate pentru jocurile reale sunt private
+Status: CONFIRMED (2026-10-01) — aplică D-034
+
+Decizie (proprietar, 2026-10-01):
+- Fișierele de replici ale jocurilor reale, manifestele și fișierele audio generate pentru ele **nu intră** în repository, în commit-uri, în PR-uri sau pe GitHub Pages.
+- Locuri permise (ignorate de Git): `Claude outputs/` (D-044) și `content/adventures/media/private-<id>/`.
+- **Convenție:** `Claude outputs/voci/` conține demo-uri, lucru intermediar și tooling privat. Pentru o aventură reală, ieșirea finală a generatorului merge **direct** în `content/adventures/media/private-<id>/` (`--out`), lângă media aventurii; nu există o etapă obligatorie de copiere între cele două.
+- Claude nu folosește, nu procesează, nu modifică și nu generează textele reale ale unei aventuri fără acordul explicit al proprietarului în conversația respectivă.
+- Demo-urile și fixture-urile tehnice pot sta în repository dacă sunt clar marcate ca demo / test (`demo: true`) și nu conțin conținut real.
+
+Consecințe:
+- Generatorul avertizează când folderul de ieșire nu este ignorat de Git.
+
+---
+
+## D-077 — Aprobarea finală a vocilor se face pe demo-uri Azure; edge-tts doar pentru preselecție
+Status: CONFIRMED (2026-10-01) — implementat în generator; Azure neconfigurat încă
+
+Decizie (proprietar, 2026-10-01):
+- Fișierele finale se generează cu **Azure AI Speech**.
+- **edge-tts** poate genera demo-uri pentru preselecție. Folosește aceleași voci de bază, dar parametrii au altă reprezentare (ex. tonul în Hz, nu în procente), deci rezultatul poate suna ușor diferit. Demo-urile edge-tts **nu** constituie aprobarea definitivă a unei voci.
+- După configurarea Azure, aceleași exemple de test se regenerează cu Azure, iar vocile se aprobă pe baza lor.
+
+Consecințe:
+- Generatorul aprobă o voce numai dintr-un demo Azure (`--approve <voce> --from <folder>`) și numai pentru contextele prezente în demo cu setările actuale; aprobarea blochează setările Azure.
+- Un folder de ieșire conține un singur motor: replicile edge-tts nu se amestecă într-un batch Azure.
+
+---
+
+## D-078 — Stabilitatea vocilor în timp: batch per aventură și arhivare
+Status: CONFIRMED (2026-10-01) — implementat în generator
+
+Context:
+Furnizorul TTS își poate actualiza modelele, astfel încât aceeași voce, cu aceleași setări, să sune altfel după câteva luni.
+
+Decizie (proprietar, 2026-10-01):
+- Arhitectura nu presupune că o voce externă sună identic pentru totdeauna.
+- Toate replicile unei aventuri se generează și se arhivează **ca batch**. Se evită regenerarea izolată a unor replici ale aceleiași aventuri la distanță de luni, dacă nu este necesar.
+- Fișierele audio deja aprobate se păstrează.
+- Nu se introduce acum o infrastructură de versionare a modelelor TTS.
+
+Consecințe:
+- Manifestul înregistrează pentru fiecare replică data generării și amprenta setărilor, iar pentru fiecare rulare un batch (dată, motor, replicile generate).
+- O regenerare parțială afișează un avertisment cu datele batch-urilor existente; un fișier înlocuit se mută în `<out>/_arhiva/<moment>/` (cu intrarea lui din manifest), nu se șterge.
+- Schimbarea setărilor unei voci după generare oprește generatorul (regenerarea întregului batch cere `--force`); setările unei voci aprobate nu se pot schimba nici cu `--force`.

@@ -31,3 +31,5 @@ Claude outputs/
 # Real adventure content (D-034): local only. Never committed, never published to GitHub Pages.
 # The app loads it from content/adventures/<id>.json, so it lives next to the demos but stays untracked.
 content/adventures/private-*.json
+# Real adventure media (D-034, D-072): same rule, for content/adventures/media/private-<id>/.
+content/adventures/media/private-*/
