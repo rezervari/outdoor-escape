@@ -4,6 +4,7 @@
   "description": "Doar pentru rularea testelor locale (node --test). Fără dependențe; nu este folosit de aplicația publicată.",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "qa": "node scripts/qa-adventures.mjs"
   }
 }
