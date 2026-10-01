@@ -50,7 +50,7 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 
-const read = (dir, fileName) => ({ fileName, text: readFileSync(join(dir, fileName), "utf8") });
+const read = (dir, fileName) => ({ fileName, dir, text: readFileSync(join(dir, fileName), "utf8") });
 let entries = readdirSync(ADVENTURES_DIR).filter((name) => name.toLowerCase().endsWith(".json")).map((name) => read(ADVENTURES_DIR, name));
 let reported = entries.map((entry) => entry.fileName);
 
@@ -74,14 +74,18 @@ const { results, summary } = runQa(entries, { targets });
 
 console.log(`Adventure QA — ${summary.files} ${summary.files === 1 ? "fișier" : "fișiere"}${args.publicOnly ? " (fără aventurile private locale)" : ""}${args.strict ? " · --strict" : ""}\n`);
 const width = Math.max(0, ...results.map((r) => r.label.length));
+const active = (result, level) => result.findings.filter((f) => f.level === level && !f.waived).length;
 for (const result of results) {
-  const counts = `${result.findings.filter((f) => f.level === "error").length} erori, ${result.findings.filter((f) => f.level === "warning").length} avertismente`;
+  const counts = `${active(result, "error")} erori, ${active(result, "warning")} avertismente`;
   console.log(`${result.status.padEnd(8)} ${result.label.padEnd(width)}  [${result.classification}]  ${counts}`);
   for (const f of result.findings) {
-    console.log(`  ${f.level === "error" ? "E" : "W"} ${f.ruleId}${f.path ? `  ${f.path}` : ""}  ${f.message}`);
+    const mark = f.waived ? "~" : f.level === "error" ? "E" : "W";
+    console.log(`  ${mark} ${f.ruleId}${f.path ? `  ${f.path}` : ""}  ${f.message}${f.waived ? `  [excepție declarată: ${f.waived}]` : ""}`);
   }
 }
 
 const failed = summary.errors > 0 || (args.strict && summary.warnings > 0);
-console.log(`\nRezultat: ${failed ? "FAIL" : "PASS"} (${summary.errors} erori, ${summary.warnings} avertismente; ${summary.failedFiles} fișiere cu erori)`);
+const waived = summary.waived > 0 ? `; ${summary.waived} ${summary.waived === 1 ? "excepție declarată" : "excepții declarate"}` : "";
+console.log(`\nRezultat: ${failed ? "FAIL" : "PASS"} (${summary.errors} erori, ${summary.warnings} avertismente${waived}; ${summary.failedFiles} fișiere cu erori)`);
+console.log("Legendă: E = eroare, W = avertisment (blochează doar cu --strict), ~ = excepție declarată (scripts/adventure-qa/exceptions.mjs).");
 process.exit(failed ? 1 : 0);
