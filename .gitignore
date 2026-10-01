@@ -33,3 +33,6 @@ Claude outputs/
 content/adventures/private-*.json
 # Real adventure media (D-034, D-072): same rule, for content/adventures/media/private-<id>/.
 content/adventures/media/private-*/
+# Private field-test build (D-079): generated locally by scripts/build-private-field-test-site.mjs, uploaded manually
+# to a Cloudflare Pages project protected by Cloudflare Access. Never committed, never on GitHub Pages.
+private-field-test/

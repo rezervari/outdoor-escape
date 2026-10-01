@@ -1236,3 +1236,25 @@ Consecințe:
 - Manifestul înregistrează pentru fiecare replică data generării și amprenta setărilor, iar pentru fiecare rulare un batch (dată, motor, replicile generate).
 - O regenerare parțială afișează un avertisment cu datele batch-urilor existente; un fișier înlocuit se mută în `<out>/_arhiva/<moment>/` (cu intrarea lui din manifest), nu se șterge.
 - Schimbarea setărilor unei voci după generare oprește generatorul (regenerarea întregului batch cere `--force`); setările unei voci aprobate nu se pot schimba nici cu `--force`.
+
+---
+
+## D-079 — Field test privat: Cloudflare Pages + Cloudflare Access (excepție temporară)
+Status: CONFIRMED (2026-10-01) — temporar, doar pentru field testing
+
+Context:
+Field test-ul primei aventuri reale (privată, D-034) se face de pe telefon, fără laptop pe teren. D-031 cere ca testele pe telefon să folosească versiunea publicată pe GitHub Pages, dar conținutul real nu poate fi publicat acolo (D-034). Un server local, o rețea LAN sau o rețea privată de tip Tailscale nu rezolvă cerința (laptop sau PC pornit acasă).
+
+Decizie (proprietar, 2026-10-01):
+- **Excepție temporară pentru field testing.** O singură aventură privată se încarcă într-un proiect **Cloudflare Pages** (Direct Upload), protejat integral de **Cloudflare Access**. Proprietarul a aprobat explicit stocarea temporară a JSON-ului și a media aventurii private pe Cloudflare, protejate prin Access.
+- **Acces:** o singură adresă de e-mail autorizată de proprietar (notată în documentul privat de field test, nu în repository), login prin One-time PIN; nicio regulă publică, de ocolire sau token de serviciu. Protecția acoperă adresa de producție `<proiect>.pages.dev` și toate adresele de deployment / preview `*.<proiect>.pages.dev`; JSON-ul și media se verifică separat, fără login, înainte de folosire.
+- **D-034 rămâne regula.** Conținutul privat nu intră în Git, în commit-uri sau pe GitHub Pages. Build-ul privat este generat local de `scripts/build-private-field-test-site.mjs` (allowlist; verifică faptul că JSON-ul, media și folderul de ieșire `private-field-test/` sunt ignorate de Git) și încărcat manual. Workflow-ul GitHub Pages public nu se schimbă.
+- **Același motor:** fișierele din `src/` sunt copiate identic; nu există login în aplicație, credențiale în cod sau mecanici noi. Protecția este exclusiv la nivelul Cloudflare Access.
+- **Nu este deployment-ul public al produsului** și nu înlocuiește GitHub Pages (D-020, D-035). Se șterge după field test (proiectul Pages și aplicațiile Access).
+- **Adventure Package / importul offline** (D-056) rămâne o decizie / un milestone separat.
+
+Relații:
+- **D-031:** rămâne metoda standard pentru testele pe telefon ale aplicației publice. D-079 acoperă doar field test-ul unei aventuri private; nu se folosesc tunelul către serverul local, serverul LAN sau Tailscale.
+- **D-034:** neschimbată; D-079 este o excepție limitată în timp, la o singură aventură, cu acces restrâns.
+
+Procedura: [`16_PRIVATE_FIELD_TEST.md`](16_PRIVATE_FIELD_TEST.md).
