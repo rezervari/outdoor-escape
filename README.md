@@ -21,7 +21,7 @@ Milestone-uri curente:
 - M-003.1 — Browser Geolocation: COMPLETED
 - M-003.2 — Map: ACCEPTED — CLOSED (acceptat de proprietar la 30.09.2026; D-046–D-049; implementare `39a6b28`; testul pe telefon cu locații reale a fost amânat explicit prin D-049-M și nu este un criteriu ratat)
 - TASK 4 — Vertical slice UI: FROZEN (`37f4450`; Field Test 1 Android: PASS — `docs/07_TESTING.md` §27.3)
-- TASK 5 — Field Test 2: Real-Coordinate GPS & Cross-Device Validation: DECIS, neînceput (D-069; metoda: D-031; checklist: `docs/07_TESTING.md` §28; fără cod nou; cere publicarea pe GitHub Pages — D-020)
+- TASK 5 — Field Test 2: Real-Coordinate GPS & Cross-Device Validation: ÎN CURS — FT2-E3 Android: PASS (`docs/07_TESTING.md` §28.5); celelalte puncte: netestate (D-069; metoda: D-031; checklist: `docs/07_TESTING.md` §28; fără cod nou; cere publicarea pe GitHub Pages — D-020)
 
 Traseul, locațiile și puzzle-urile jocului real nu sunt finale până nu sunt verificate pe teren.
 

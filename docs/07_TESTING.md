@@ -540,7 +540,7 @@ Neacoperit de Field Test 1: iPhone / Safari (secțiunea 14), starea service work
 
 ## 28. TASK 5 — Field Test 2: Real-Coordinate GPS & Cross-Device Validation
 
-Status: **planificat, neexecutat** (D-069, 2026-10-01). Toate punctele sunt `NETESTAT` până la rulare.
+Status: **în curs** (D-069, 2026-10-01). Executat: FT2-E3 pe Android — PASS (secțiunea 28.5). Celelalte puncte sunt `NETESTAT` până la rulare.
 
 Scope și excluderi: D-069. Fără cod nou. Validează versiunea **publicată** pe GitHub Pages (D-031), cu codul de la TASK 4 (`37f4450`) sau ulterior, pe Android și pe iPhone / Safari. USB / ADB servește doar pentru consolă. Nu se modifică Engine V2, schema, contractele dintre module, `src/sw.js`, interfața sau `demo-gps-brasov.json`. Defectele găsite nu se repară în TASK 5.
 
@@ -606,3 +606,30 @@ Harta ca suprafață principală, cardul peste hartă, atribuirea OSM, „Vezi o
 ### 28.4 Gol de acoperire acceptat
 
 Limitare cunoscută, nu defect al TASK 5. Combinația „sosire GPS reală → overlay puzzle” nu poate fi verificată end-to-end cu `demo-gps-brasov`: demo-ul are doar misiuni `location`. Verificarea ar cere modificarea demo-ului sau un alt demo cu coordonate reale (neautorizat de D-068), ceea ce este în afara TASK 5. Motorul tratează identic sosirea GPS și cea manuală (D-045), iar overlay-ul după sosirea manuală a fost validat în Field Test 1.
+
+### 28.5 Rezultate
+
+Raport în formatul secțiunii 16. Se completează pe măsură ce punctele sunt rulate.
+
+```text
+Data: 2026-10-01
+Tester: proprietarul proiectului
+Commit testat (git log -1 --oneline): 58a78d3 docs: register TASK 5 Field Test 2
+  (publicat prin push pe main; origin/main = 58a78d3)
+Adresă testată: https://rezervari.github.io/outdoor-escape/src/ (GitHub Pages, D-031)
+Dispozitiv + sistem de operare: Google Pixel 9 Pro XL, Android
+Browser + versiune: Chrome 154.0.8037.59
+Mod: tab browser
+Consolă: USB / ADB, doar pentru depanare / DevTools (D-031)
+```
+
+Precondiții (secțiunea 28.2):
+
+- Punctul 1: înainte de push, pagina publică servea `v6`. Pe dispozitiv, în DevTools → Console, `caches.keys()` a returnat `["outdoor-escape:shell:v6"]`.
+- Punctul 2: cele 9 commit-uri locale au fost publicate (`git push origin main`; `origin/main` = `58a78d3`). Versiunea publică servește `v7`.
+
+| ID test | Pași | Rezultat așteptat | Rezultat obținut | PASS / FAIL / NETESTAT | Observații |
+| --- | --- | --- | --- | --- | --- |
+| FT2-E3 | Pe dispozitivul pregătit la 28.2, punctul 1, după publicarea versiunii FT2, fără ștergerea datelor și înainte de FT2-A2: redeschiderea aplicației | service worker-ul `v7` activ; cache-ul `v6` șters; interfața TASK 4 afișată | Service worker nou: sursa `sw.js`, starea `#1221 activated and is running`, primit la 01/10/2026 13:34:05. `caches.keys()` → `["outdoor-escape:shell:v7"]` (`v6` eliminat). Pe `src/?adventure=demo-vertical-slice` (v7) s-a confirmat vizual interfața TASK 4: harta, fluxul „Am ajuns”, puzzle-ul | PASS | Fără Clear Storage, fără ștergerea cache-ului, fără Unregister; codul și `demo-gps-brasov` nemodificate în timpul verificării |
+
+Domeniul FT2-E3: rezultatul confirmă **upgrade-ul service worker-ului și al cache-ului (`v6` → `v7`)** și disponibilitatea interfeței TASK 4 pe versiunea publicată. Nu confirmă **persistența progresului unei sesiuni de joc existente înainte de upgrade**, care nu a fost verificată. Progresul din Field Test 1 era pe `http://localhost:8000` (altă origine, cu stocare separată de GitHub Pages — `10_LOCAL_DEVELOPMENT.md` §7), nu în sesiunea publică `v6`, deci nu a trecut prin acest upgrade.

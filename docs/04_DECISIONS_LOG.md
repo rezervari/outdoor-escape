@@ -1056,7 +1056,7 @@ Nu se schimbă: motorul, schema V2, aplicația, conținutul fișierului `demo-gp
 ---
 
 ## D-069 — TASK 5: Field Test 2 — Real-Coordinate GPS & Cross-Device Validation
-Status: CONFIRMED (2026-10-01) — TASK 5: DECIS, neînceput
+Status: CONFIRMED (2026-10-01) — TASK 5: ÎN CURS (FT2-E3 Android: PASS, `07_TESTING.md` §28.5; restul punctelor: neexecutate)
 
 Context:
 TASK 4 (vertical slice UI, `37f4450`) este înghețat, iar Field Test 1 pe Android a trecut (22/22 PASS, `07_TESTING.md` §27.3). Field Test 1 a folosit coordonate fictive, deci nu a validat sosirea declanșată de poziția GPS reală. Nu au fost validate nici service worker-ul și cache-ul pe telefon, modul offline, ecranul blocat / fundalul și iPhone-ul. Testul hărții pe telefon cu locații reale a fost amânat explicit prin D-049-M.
