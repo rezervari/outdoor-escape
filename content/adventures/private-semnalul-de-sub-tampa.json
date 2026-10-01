@@ -1,0 +1,988 @@
+{
+  "schemaVersion": 2,
+  "id": "private-semnalul-de-sub-tampa",
+  "contentVersion": "0.2.0-local",
+  "language": "ro",
+  "meta": {
+    "city": "Brașov",
+    "title": "Semnalul de sub Tâmpa",
+    "description": "Mara, coordonatoarea Cercului Hărții, nu a venit la întâlnire. Telefonul ei trimite semnale programate: câte un punct pe hartă și câte un mesaj cifrat. Urmați semnalele de sub Tâmpa, de-a lungul zidului, înapoi în oraș, și deschideți Harta Lentă.\n\nPovestea și personajele sunt fictive. Traseu de aproximativ 2,7 km, pentru 2–4 jucători.",
+    "estimatedTime": 110,
+    "difficulty": "medium",
+    "tags": [
+      "brasov",
+      "walk",
+      "local-test"
+    ]
+  },
+  "settings": {
+    "progression": "linear",
+    "gps": {
+      "defaultRadius": 40,
+      "nearDistance": 150,
+      "maxAccuracy": 60,
+      "exitMargin": 20,
+      "allowManualConfirmation": true
+    }
+  },
+  "narrator": {
+    "name": "Mara",
+    "messages": {
+      "intro": {
+        "text": "Bună dimineața, voluntari! Dacă citiți asta, înseamnă că nu am ajuns la întâlnire. Nu vă faceți griji.\nTelefonul meu vă va trimite semnale. Urmați-le, încet.",
+        "audio": "voce-mara-intro"
+      },
+      "signal-l1": {
+        "text": "Semnal recepționat la punctul de întâlnire. Primul mesaj cifrat este gata."
+      },
+      "signal-l2": {
+        "text": "Ați găsit începutul aleii. De aici, eu merg mereu la fel."
+      },
+      "signal-l3": {
+        "text": "Zidul se vede printre copaci. Orașul are paznici de piatră."
+      },
+      "signal-l4": {
+        "text": "Lângă cabine sunt mereu trei prieteni de-ai mei. Nu toți spun adevărul."
+      },
+      "signal-l5": {
+        "text": "Recunosc, e un joc. Dar nu vă opriți acum."
+      },
+      "signal-l6": {
+        "text": "Strada asta e mai liniștită. Oamenii se uită la vitrine; eu mă uit la etajul 1."
+      },
+      "signal-l7": {
+        "text": "Și aici se poate încetini."
+      },
+      "signal-l8": {
+        "text": "Ultimul semnal. Aveți toate cifrele?"
+      },
+      "digit-1": {
+        "text": "🗂️ Prima foiță a Hărții Lente a fost salvată: cifra 3 și un fragment de linie."
+      },
+      "digit-2": {
+        "text": "🗂️ A doua foiță a fost salvată: cifra 2 și încă un fragment de linie."
+      },
+      "digit-3": {
+        "text": "🗂️ A treia foiță a fost salvată: cifra 6."
+      },
+      "digit-4": {
+        "text": "🗂️ A patra foiță a fost salvată: cifra 4. Toate foițele sunt la voi; codul final este aproape."
+      },
+      "epilogue": {
+        "text": "Dacă citiți asta, ați mers încet destul cât să vedeți ce am văzut și eu. Nu m-am pierdut: am stat pe o bancă și v-am urmărit semnalele aprinzându-se unul câte unul.\n\nHarta Lentă nu era un fișier. Era drumul pe care tocmai l-ați făcut. De azi e și a voastră.\n\nMulțumim că ați jucat Semnalul de sub Tâmpa."
+      },
+      "voce-ana": {
+        "text": "Ana: «Nu e la poartă.»"
+      },
+      "voce-radu": {
+        "text": "Radu: «Nu e la bastion.»"
+      },
+      "voce-ioana": {
+        "text": "Ioana: «E la poartă.»"
+      },
+      "carnet": {
+        "text": "📓 Ați primit Carnetul Marei. Ce găsiți pe drum se strânge aici."
+      }
+    }
+  },
+  "locations": [
+    {
+      "id": "l1-intalnire",
+      "name": "Punctul de întâlnire",
+      "type": "start",
+      "coordinates": {
+        "lat": 45.645,
+        "lng": 25.5945
+      },
+      "radius": 40,
+      "initialStatus": "unlocked",
+      "fallback": {
+        "instructions": "Parcul Nicolae Titulescu, un punct ușor de găsit în parc (de stabilit pe teren).",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "l2-semnal-1",
+      "name": "Semnalul 1",
+      "type": "objective",
+      "coordinates": {
+        "lat": 45.6438,
+        "lng": 25.5962
+      },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "Capătul nordic al aleii de sub Tâmpa (Aleea Tiberiu Brediceanu).",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "l3-semnal-2",
+      "name": "Semnalul 2",
+      "type": "objective",
+      "coordinates": {
+        "lat": 45.6415,
+        "lng": 25.5958
+      },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "Pe alee, spre sud, acolo unde zidul cetății se vede printre copaci.",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "l4-semnal-3",
+      "name": "Semnalul 3",
+      "type": "objective",
+      "coordinates": {
+        "lat": 45.6387,
+        "lng": 25.5938
+      },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "Lângă baza telecabinei Tâmpa, în exterior.",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "l5-semnal-4",
+      "name": "Semnalul 4",
+      "type": "objective",
+      "coordinates": {
+        "lat": 45.6375,
+        "lng": 25.5913
+      },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "În fața bastionului din colțul de sud-est al cetății (exterior).",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "l6-semnal-5",
+      "name": "Semnalul 5",
+      "type": "objective",
+      "coordinates": {
+        "lat": 45.6405,
+        "lng": 25.5918
+      },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "O stradă liniștită din interiorul zidurilor, pe latura estică (propunere: Str. Castelului; ruta de stabilit pe teren).",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "l7-semnal-6",
+      "name": "Semnalul 6",
+      "type": "objective",
+      "coordinates": {
+        "lat": 45.644,
+        "lng": 25.5893
+      },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "Strada Republicii, zona pietonală.",
+        "allowManualConfirmation": true
+      }
+    },
+    {
+      "id": "l8-ultimul-semnal",
+      "name": "Ultimul semnal",
+      "type": "finale",
+      "coordinates": {
+        "lat": 45.6424,
+        "lng": 25.5888
+      },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": {
+        "instructions": "Piața Sfatului.",
+        "allowManualConfirmation": true
+      }
+    }
+  ],
+  "missions": [
+    {
+      "id": "s01-sosire-l1",
+      "type": "location",
+      "track": "main",
+      "title": "Punctul de întâlnire",
+      "briefing": "Bun venit în Cercul Hărții! Mara, coordonatoarea voastră, trebuia să vă întâlnească azi, dar nu a venit.\nMergeți la punctul de întâlnire din Parcul Nicolae Titulescu. Nu vă uitați în telefon în timp ce mergeți.",
+      "locationId": "l1-intalnire",
+      "initialStatus": "pending",
+      "points": 0,
+      "media": [
+        {
+          "type": "audio",
+          "asset": "voce-mara-intro",
+          "showTranscript": "collapsed"
+        }
+      ]
+    },
+    {
+      "id": "s02-p1-primul-semnal",
+      "type": "riddle",
+      "track": "main",
+      "title": "Primul semnal",
+      "briefing": "Primul semnal a sosit: UBNQB\n\nMara folosește mereu același truc: fiecare literă e mutată cu o poziție mai departe în alfabetul fără diacritice (A→B, B→C…).\nCe cuvânt a vrut să scrie? Ridicați privirea: răspunsul e în jurul vostru. Un singur cuvânt.",
+      "locationId": "l1-intalnire",
+      "initialStatus": "locked",
+      "points": 50,
+      "hints": [
+        {
+          "text": "Fă drumul invers: B devine A."
+        },
+        {
+          "text": "Prima literă, U, devine T."
+        },
+        {
+          "text": "Soluția: TAMPA."
+        }
+      ],
+      "answer": "tampa"
+    },
+    {
+      "id": "s03-sosire-l2",
+      "type": "location",
+      "track": "main",
+      "title": "Spre poalele muntelui",
+      "briefing": "TÂMPA. Mara v-a trimis spre poalele muntelui.\nSemnalul 1 a apărut pe hartă, la începutul aleii de sub Tâmpa. Mergeți acolo.",
+      "locationId": "l2-semnal-1",
+      "initialStatus": "locked",
+      "points": 0
+    },
+    {
+      "id": "s04-p2-regula-de-mers",
+      "type": "riddle",
+      "track": "main",
+      "title": "Regula de mers",
+      "briefing": "Mesaj de la Mara: «Pe aleea asta merg mereu cu muntele pe mâna stângă.»\n\nÎn ce direcție pornește ea? Deschideți harta: nordul este sus.\nAlegeți NORD sau SUD.",
+      "locationId": "l2-semnal-1",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        {
+          "text": "Stai cu fața de-a lungul aleii, cu muntele pe stânga."
+        },
+        {
+          "text": "Pe hartă, compară direcția spre care privești cu partea de sus a ecranului."
+        },
+        {
+          "text": "Soluția: SUD."
+        }
+      ],
+      "answer": "sud",
+      "choices": [
+        "NORD",
+        "SUD"
+      ],
+      "media": [
+        {
+          "type": "image",
+          "asset": "img-schita-alee",
+          "label": "Schița Marei"
+        }
+      ]
+    },
+    {
+      "id": "s05-sosire-l3",
+      "type": "location",
+      "track": "main",
+      "title": "Pe alee, spre sud",
+      "briefing": "Spre sud, deci. Urmați aleea: Semnalul 2 vă așteaptă acolo unde zidul cetății se vede printre copaci.",
+      "locationId": "l3-semnal-2",
+      "initialStatus": "locked",
+      "points": 0
+    },
+    {
+      "id": "s06-p3-paznicii-de-piatra",
+      "type": "observation",
+      "track": "main",
+      "title": "Paznicii de piatră",
+      "briefing": "«Orașul are paznici de piatră», scrie Mara. Pe una dintre ilustratele ei vechi, a încercuit o porțiune a zidului.\n\nMutați slider-ul între ilustrată și fotografia de azi, apoi găsiți porțiunea în fața voastră. Câte turnuri vedeți azi în porțiunea încercuită?\nRăspundeți cu cifre.",
+      "locationId": "l3-semnal-2",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        {
+          "text": "Mutați slider-ul încet: porțiunea încercuită este aceeași pe ambele imagini. Numărați doar în ea."
+        },
+        {
+          "text": "Un turn este orice [descriere precisă, stabilită pe teren]."
+        },
+        {
+          "text": "Soluția (provizorie, de verificat pe teren): 3."
+        }
+      ],
+      "answer": "3",
+      "media": [
+        {
+          "type": "compare",
+          "before": "img-arhiva-zid",
+          "after": "img-azi-zid",
+          "mode": "slider",
+          "labels": {
+            "before": "Ilustrata Marei",
+            "after": "Azi"
+          }
+        }
+      ],
+      "inputMode": "numeric"
+    },
+    {
+      "id": "s07-sosire-l4",
+      "type": "location",
+      "track": "main",
+      "title": "Unde urcă cabinele",
+      "briefing": "Prima foiță salvată (cifra 3).\nSemnalul 3 este lângă locul de unde cabinele urcă pe munte. Mergeți mai departe pe alee.",
+      "locationId": "l4-semnal-3",
+      "initialStatus": "locked",
+      "points": 0
+    },
+    {
+      "id": "s08-p4-trei-voluntari",
+      "type": "riddle",
+      "track": "main",
+      "title": "Trei voluntari",
+      "briefing": "Trei prieteni ai Marei știu unde e semnalul următor: la POARTĂ, la TURN sau la BASTION. Doar unul spune adevărul.\n\nAscultați mesajele lor (sau deschideți transcripturile). Unde este semnalul? Alegeți locul.",
+      "locationId": "l4-semnal-3",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        {
+          "text": "Încearcă pe rând fiecare loc și numără câte afirmații ar fi adevărate."
+        },
+        {
+          "text": "Dacă semnalul ar fi la poartă, Radu și Ioana ar spune amândoi adevărul."
+        },
+        {
+          "text": "Soluția: BASTION."
+        }
+      ],
+      "answer": "bastion",
+      "choices": [
+        "POARTĂ",
+        "TURN",
+        "BASTION"
+      ],
+      "media": [
+        {
+          "type": "audio",
+          "asset": "voce-ana",
+          "title": "Ana"
+        },
+        {
+          "type": "audio",
+          "asset": "voce-radu",
+          "title": "Radu"
+        },
+        {
+          "type": "audio",
+          "asset": "voce-ioana",
+          "title": "Ioana"
+        }
+      ]
+    },
+    {
+      "id": "s09-sosire-l5",
+      "type": "location",
+      "track": "main",
+      "title": "Bastionul",
+      "briefing": "Bastionul! Semnalul 4 a apărut pe hartă.",
+      "locationId": "l5-semnal-4",
+      "initialStatus": "locked",
+      "points": 0
+    },
+    {
+      "id": "s10-p5-galeriile",
+      "type": "observation",
+      "track": "main",
+      "title": "Detaliul din colț",
+      "briefing": "Mara a fotografiat de aproape trei detalii: A, B și C. Doar unul se află pe latura bastionului din fața voastră; celelalte două sunt din alte locuri.\n\nCăutați detaliile pe zid. Care este aici?",
+      "locationId": "l5-semnal-4",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        {
+          "text": "Priviți colțul din stânga, la înălțimea ochilor [de confirmat pe teren]."
+        },
+        {
+          "text": "[Indiciu despre forma / materialul detaliului corect, stabilit pe teren.]"
+        },
+        {
+          "text": "Soluția (provizorie, depinde de fotografiile de pe teren): A."
+        }
+      ],
+      "answer": "a",
+      "media": [
+        {
+          "type": "image",
+          "asset": "img-detaliu-a",
+          "label": "A"
+        },
+        {
+          "type": "image",
+          "asset": "img-detaliu-b",
+          "label": "B"
+        },
+        {
+          "type": "image",
+          "asset": "img-detaliu-c",
+          "label": "C"
+        }
+      ],
+      "choices": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "id": "s11-sosire-l6",
+      "type": "location",
+      "track": "main",
+      "title": "Înapoi în oraș",
+      "briefing": "Foițe salvate: cifrele 3 · 2.\nSemnalul 5 vă cheamă înapoi în oraș, pe o stradă liniștită din interiorul zidurilor. Mara v-a lăsat o hartă desenată de mână: urmați-o. Pinul de pe hartă este doar rezerva.",
+      "locationId": "l6-semnal-5",
+      "initialStatus": "locked",
+      "points": 0,
+      "media": [
+        {
+          "type": "image",
+          "asset": "img-harta-mara-l6",
+          "label": "Harta desenată de Mara"
+        }
+      ]
+    },
+    {
+      "id": "s12-p6-etajul-1",
+      "type": "observation",
+      "track": "main",
+      "title": "Etajul 1",
+      "briefing": "«Oamenii se uită la vitrine; eu mă uit la etajul 1.»\n\nStați cu spatele la [reper]. Clădirea a doua pe dreapta: câte ferestre are la etajul 1?\nRăspundeți cu cifre.",
+      "locationId": "l6-semnal-5",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        {
+          "text": "Numărați clădirile începând cu cea imediat din dreapta voastră."
+        },
+        {
+          "text": "O fereastră dublă se numără o singură dată [de confirmat pe teren]."
+        },
+        {
+          "text": "Soluția (provizorie, de verificat pe teren): 6."
+        }
+      ],
+      "answer": "6",
+      "inputMode": "numeric"
+    },
+    {
+      "id": "s13-sosire-l7",
+      "type": "location",
+      "track": "main",
+      "title": "În mulțime",
+      "briefing": "Foițe salvate: cifrele 3 · 2 · 6.\nSemnalul 6 e în cea mai aglomerată stradă a traseului.",
+      "locationId": "l7-semnal-6",
+      "initialStatus": "locked",
+      "points": 0
+    },
+    {
+      "id": "s14-p7-incetineste",
+      "type": "observation",
+      "track": "main",
+      "title": "Încetinește în mulțime",
+      "briefing": "«Și aici se poate încetini.» Pe o ilustrată veche a străzii, Mara a marcat trei case: A, B și C.\n\nComutați între ilustrată și fotografia de azi, apoi priviți în sus, la etaje. La care casă arată etajul azi la fel ca pe ilustrată?",
+      "locationId": "l7-semnal-6",
+      "initialStatus": "locked",
+      "points": 100,
+      "hints": [
+        {
+          "text": "Comutați de mai multe ori și priviți doar etajele, nu vitrinele."
+        },
+        {
+          "text": "[Indiciu despre elementul de la etaj care a rămas la fel, stabilit pe teren.]"
+        },
+        {
+          "text": "Soluția (provizorie, depinde de ilustrată și de fotografia de azi): A."
+        }
+      ],
+      "answer": "a",
+      "media": [
+        {
+          "type": "compare",
+          "before": "img-arhiva-republicii",
+          "after": "img-azi-republicii",
+          "mode": "toggle",
+          "labels": {
+            "before": "Ilustrata Marei",
+            "after": "Azi"
+          }
+        }
+      ],
+      "choices": [
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "id": "s15-sosire-l8",
+      "type": "location",
+      "track": "main",
+      "title": "Ultimul semnal",
+      "briefing": "Foițe salvate: cifrele 3 · 2 · 6 · 4.\nUltimul semnal e în Piața Sfatului. Mergeți acolo.",
+      "locationId": "l8-ultimul-semnal",
+      "initialStatus": "locked",
+      "points": 0
+    },
+    {
+      "id": "s16-p8-codul-final",
+      "type": "code",
+      "track": "main",
+      "title": "Harta Lentă",
+      "briefing": "Deschideți «Ce ați găsit»: foițele voastre, în ordinea găsirii, au cifrele 3 · 2 · 6 · 4.\n\nUltimul mesaj al Marei: «Harta Lentă se citește de la capăt spre început.»\nScrieți codul de 4 cifre, fără spații.",
+      "locationId": "l8-ultimul-semnal",
+      "initialStatus": "locked",
+      "points": 150,
+      "hints": [
+        {
+          "text": "«De la capăt» înseamnă de la ultima foiță găsită."
+        },
+        {
+          "text": "Prima cifră a codului este cifra de pe a patra foiță."
+        },
+        {
+          "text": "Soluția: 4623."
+        }
+      ],
+      "answer": "4623",
+      "inputMode": "numeric"
+    }
+  ],
+  "events": [
+    {
+      "id": "ev-intro",
+      "on": "adventure_started",
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "intro"
+        }
+      ]
+    },
+    {
+      "id": "ev-signal-l1",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s01-sosire-l1"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "signal-l1"
+        }
+      ]
+    },
+    {
+      "id": "ev-carnet",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s02-p1-primul-semnal"
+      },
+      "do": [
+        {
+          "action": "collect_item",
+          "itemId": "carnetul-marei"
+        },
+        {
+          "action": "show_message",
+          "messageId": "carnet"
+        }
+      ]
+    },
+    {
+      "id": "ev-signal-l2",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s03-sosire-l2"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "signal-l2"
+        }
+      ]
+    },
+    {
+      "id": "ev-signal-l3",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s05-sosire-l3"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "signal-l3"
+        }
+      ]
+    },
+    {
+      "id": "ev-digit-1",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s06-p3-paznicii-de-piatra"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "digit-1"
+        },
+        {
+          "action": "collect_item",
+          "itemId": "foita-1"
+        }
+      ]
+    },
+    {
+      "id": "ev-signal-l4",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s07-sosire-l4"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "signal-l4"
+        }
+      ]
+    },
+    {
+      "id": "ev-signal-l5",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s09-sosire-l5"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "signal-l5"
+        }
+      ]
+    },
+    {
+      "id": "ev-digit-2",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s10-p5-galeriile"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "digit-2"
+        },
+        {
+          "action": "collect_item",
+          "itemId": "foita-2"
+        }
+      ]
+    },
+    {
+      "id": "ev-signal-l6",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s11-sosire-l6"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "signal-l6"
+        }
+      ]
+    },
+    {
+      "id": "ev-digit-3",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s12-p6-etajul-1"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "digit-3"
+        },
+        {
+          "action": "collect_item",
+          "itemId": "foita-3"
+        }
+      ]
+    },
+    {
+      "id": "ev-signal-l7",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s13-sosire-l7"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "signal-l7"
+        }
+      ]
+    },
+    {
+      "id": "ev-digit-4",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s14-p7-incetineste"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "digit-4"
+        },
+        {
+          "action": "collect_item",
+          "itemId": "foita-4"
+        }
+      ]
+    },
+    {
+      "id": "ev-signal-l8",
+      "on": "mission_completed",
+      "where": {
+        "missionId": "s15-sosire-l8"
+      },
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "signal-l8"
+        }
+      ]
+    },
+    {
+      "id": "ev-foita-1-sarit",
+      "on": "mission_skipped",
+      "where": {
+        "missionId": "s06-p3-paznicii-de-piatra"
+      },
+      "do": [
+        {
+          "action": "collect_item",
+          "itemId": "foita-1"
+        }
+      ]
+    },
+    {
+      "id": "ev-foita-2-sarit",
+      "on": "mission_skipped",
+      "where": {
+        "missionId": "s10-p5-galeriile"
+      },
+      "do": [
+        {
+          "action": "collect_item",
+          "itemId": "foita-2"
+        }
+      ]
+    },
+    {
+      "id": "ev-foita-3-sarit",
+      "on": "mission_skipped",
+      "where": {
+        "missionId": "s12-p6-etajul-1"
+      },
+      "do": [
+        {
+          "action": "collect_item",
+          "itemId": "foita-3"
+        }
+      ]
+    },
+    {
+      "id": "ev-foita-4-sarit",
+      "on": "mission_skipped",
+      "where": {
+        "missionId": "s14-p7-incetineste"
+      },
+      "do": [
+        {
+          "action": "collect_item",
+          "itemId": "foita-4"
+        }
+      ]
+    }
+  ],
+  "finale": {
+    "missionId": "s16-p8-codul-final",
+    "messageId": "epilogue"
+  },
+  "items": [
+    {
+      "id": "carnetul-marei",
+      "name": "Carnetul Marei",
+      "description": "aici se strâng foițele Hărții Lente",
+      "icon": "📓"
+    },
+    {
+      "id": "foita-1",
+      "name": "Foița 1 · cifra 3",
+      "description": "foiță transparentă de calc, cu un fragment de linie (paznicii de piatră)",
+      "icon": "🗂️"
+    },
+    {
+      "id": "foita-2",
+      "name": "Foița 2 · cifra 2",
+      "description": "foiță transparentă de calc, cu un fragment de linie (detaliul din colț)",
+      "icon": "🗂️"
+    },
+    {
+      "id": "foita-3",
+      "name": "Foița 3 · cifra 6",
+      "description": "foiță transparentă de calc, cu un fragment de linie (etajul 1)",
+      "icon": "🗂️"
+    },
+    {
+      "id": "foita-4",
+      "name": "Foița 4 · cifra 4",
+      "description": "foiță transparentă de calc, cu un fragment de linie (încetinește în mulțime)",
+      "icon": "🗂️"
+    }
+  ],
+  "media": {
+    "basePath": "media/private-semnalul-de-sub-tampa/",
+    "assets": {
+      "voce-mara-intro": {
+        "type": "audio",
+        "src": "placeholder-voce-mara-intro.wav",
+        "kind": "voice",
+        "title": "Mesaj vocal de la Mara",
+        "transcriptMessage": "intro",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "voce-ana": {
+        "type": "audio",
+        "src": "placeholder-voce-ana.wav",
+        "kind": "voice",
+        "title": "Ana",
+        "transcriptMessage": "voce-ana",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "voce-radu": {
+        "type": "audio",
+        "src": "placeholder-voce-radu.wav",
+        "kind": "voice",
+        "title": "Radu",
+        "transcriptMessage": "voce-radu",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "voce-ioana": {
+        "type": "audio",
+        "src": "placeholder-voce-ioana.wav",
+        "kind": "voice",
+        "title": "Ioana",
+        "transcriptMessage": "voce-ioana",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "img-schita-alee": {
+        "type": "image",
+        "src": "placeholder-schita-alee.svg",
+        "role": "illustration",
+        "width": 800,
+        "height": 600,
+        "alt": "Schița Marei: un omuleț stă pe o alee, cu muntele în stânga lui. Schița nu are puncte cardinale.",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "img-arhiva-zid": {
+        "type": "image",
+        "src": "placeholder-arhiva-zid.svg",
+        "role": "archival",
+        "width": 960,
+        "height": 600,
+        "provenance": {
+          "credit": "ASSET TO SOURCE",
+          "license": "ASSET TO SOURCE",
+          "sourceUrl": "ASSET TO SOURCE",
+          "factsVerified": false
+        },
+        "alt": "Ilustrata veche a Marei: zidul cetății văzut de pe promenadă, cu o porțiune încercuită între două repere [TEREN].",
+        "caption": "Ilustrata Marei (de procurat; fără date sau afirmații istorice până la verificare)"
+      },
+      "img-azi-zid": {
+        "type": "image",
+        "src": "placeholder-azi-zid.svg",
+        "role": "photo",
+        "width": 960,
+        "height": 600,
+        "alt": "Fotografia de azi din același punct al promenadei, cu aceeași porțiune a zidului încercuită [TEREN].",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "img-detaliu-a": {
+        "type": "image",
+        "src": "placeholder-detaliu-a.svg",
+        "role": "photo",
+        "width": 600,
+        "height": 600,
+        "alt": "Detaliul A: fotografie decupată strâns [descriere: formă, material, poziție — TEREN].",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "img-detaliu-b": {
+        "type": "image",
+        "src": "placeholder-detaliu-b.svg",
+        "role": "photo",
+        "width": 600,
+        "height": 600,
+        "alt": "Detaliul B: fotografie decupată strâns [descriere: formă, material, poziție — TEREN].",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "img-detaliu-c": {
+        "type": "image",
+        "src": "placeholder-detaliu-c.svg",
+        "role": "photo",
+        "width": 600,
+        "height": 600,
+        "alt": "Detaliul C: fotografie decupată strâns [descriere: formă, material, poziție — TEREN].",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "img-harta-mara-l6": {
+        "type": "image",
+        "src": "placeholder-harta-l6.svg",
+        "role": "map",
+        "width": 800,
+        "height": 800,
+        "alt": "Harta desenată de Mara: străzi simplificate de la bastion spre oraș, două repere desenate și un X la Semnalul 5 [ruta — TEREN].",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      },
+      "img-arhiva-republicii": {
+        "type": "image",
+        "src": "placeholder-arhiva-republicii.svg",
+        "role": "archival",
+        "width": 960,
+        "height": 600,
+        "provenance": {
+          "credit": "ASSET TO SOURCE",
+          "license": "ASSET TO SOURCE",
+          "sourceUrl": "ASSET TO SOURCE",
+          "factsVerified": false
+        },
+        "alt": "Ilustrata veche a Marei: strada pietonală, cu trei case marcate A, B și C [TEREN].",
+        "caption": "Ilustrata Marei (de procurat; fără date sau afirmații istorice până la verificare)"
+      },
+      "img-azi-republicii": {
+        "type": "image",
+        "src": "placeholder-azi-republicii.svg",
+        "role": "photo",
+        "width": 960,
+        "height": 600,
+        "alt": "Fotografia de azi a aceleiași porțiuni de stradă, cu casele A, B și C [TEREN].",
+        "credit": "PLACEHOLDER — ASSET TO CREATE"
+      }
+    }
+  }
+}

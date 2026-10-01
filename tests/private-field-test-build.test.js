@@ -1,6 +1,7 @@
 // Build-ul privat de field test (D-079) vs. build-ul public (GitHub Pages, D-020).
 // Teste GENERICE: nu conțin id-uri, texte sau date ale aventurilor private; acestea sunt
 // descoperite la rulare (content/adventures/private-*.json). Fără ele, partea privată este sărită.
+// Excepție explicită: aventurile reale publicate pe GitHub Pages prin D-080 (tests/helpers/published-real-adventures.js).
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
@@ -11,11 +12,14 @@ import { fileURLToPath } from "node:url";
 
 import { toAdventureV2 } from "../src/js/schema.js";
 import { listMediaPaths } from "../src/js/media.js";
+import { PUBLISHED_REAL_ADVENTURES } from "./helpers/published-real-adventures.js";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const SCRIPT = join(ROOT, "scripts", "build-private-field-test-site.mjs");
 const read = (rel) => readFileSync(join(ROOT, rel), "utf8");
 const privateAdventures = readdirSync(join(ROOT, "content/adventures")).filter((name) => /^private-.+\.json$/.test(name)).map((name) => name.slice(0, -5)).sort();
+/** Un fișier al unei aventuri publicate explicit (D-080). */
+const isPublishedRealFile = (file) => PUBLISHED_REAL_ADVENTURES.some((id) => file === `content/adventures/${id}.json` || file.startsWith(`content/adventures/media/${id}/`));
 
 let gitAvailable = true;
 try {
@@ -55,11 +59,13 @@ test("public: workflow-ul GitHub Pages publică doar index.html, src și content
   assert.doesNotMatch(workflow, /private|field-test|cloudflare/i);
 });
 
-test("public: niciun fișier privat sau build privat nu este urmărit de Git (deci nu poate ajunge pe GitHub Pages)", { skip: !gitAvailable && "git indisponibil" }, () => {
+test("public: niciun fișier privat (în afara celor publicate explicit, D-080) sau build privat nu este urmărit de Git", { skip: !gitAvailable && "git indisponibil" }, () => {
   const tracked = git(["ls-files"]).split("\n").filter(Boolean);
   const published = tracked.filter((file) => file === "index.html" || file.startsWith("src/") || file.startsWith("content/"));
   assert.ok(published.length > 0);
-  assert.deepEqual(published.filter((file) => /(^|\/)private-/.test(file)), [], "fișier privat în allowlist-ul public");
+  assert.deepEqual(published.filter((file) => /(^|\/)private-/.test(file) && !isPublishedRealFile(file)), [], "fișier privat (nepublicat) în allowlist-ul public");
+  // Nimic privat în afara folderului content/ (Claude outputs, build-ul privat, configurarea locală).
+  assert.deepEqual(tracked.filter((file) => /^(Claude outputs|private-field-test)\//.test(file) || file === ".claude/launch.json"), []);
   assert.deepEqual(tracked.filter((file) => file.startsWith("private-field-test/")), [], "build-ul privat este urmărit de Git");
 });
 
@@ -139,7 +145,9 @@ for (const id of privateAdventures.length ? privateAdventures : ["(niciuna)"]) {
   const skip = privateAdventures.length === 0 ? "nu există aventuri private locale" : false;
   const label = skip ? id : `aventura privată #${privateAdventures.indexOf(id) + 1}`;
 
-  test(`privat · ${label}: build-ul conține JSON-ul și toate fișierele media, nimic din alte aventuri private`, { skip }, () => {
+  // Scriptul de field test privat (D-079) refuză, intenționat, o aventură ale cărei fișiere sunt urmărite de Git.
+  const publishedSkip = PUBLISHED_REAL_ADVENTURES.includes(id) && "publicată pe GitHub Pages (D-080), nu prin build-ul privat";
+  test(`privat · ${label}: build-ul conține JSON-ul și toate fișierele media, nimic din alte aventuri private`, { skip: skip || publishedSkip }, () => {
     const out = mkdtempSync(join(tmpdir(), "oe-field-"));
     try {
       const result = build(id, out);
@@ -157,7 +165,7 @@ for (const id of privateAdventures.length ? privateAdventures : ["(niciuna)"]) {
     }
   });
 
-  test(`privat · ${label}: JSON-ul și media sunt ignorate de Git, deci absente din build-ul public`, { skip: skip || (!gitAvailable && "git indisponibil") }, () => {
+  test(`privat · ${label}: JSON-ul și media sunt ignorate de Git, deci absente din build-ul public`, { skip: skip || publishedSkip || (!gitAvailable && "git indisponibil") }, () => {
     assert.ok(ignored(`content/adventures/${id}.json`));
     const media = listMediaPaths(toAdventureV2(JSON.parse(read(`content/adventures/${id}.json`))));
     for (const path of media) assert.ok(ignored(`content/adventures/${path}`), path);

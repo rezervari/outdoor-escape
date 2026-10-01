@@ -3,7 +3,8 @@
 // (id, texte, răspunsuri, coordonate). Fără fișiere private (ex. o clonă publică), sunt sărite.
 //   1. structură — schemă, locații, misiuni, media, obiecte, variante, final, referințe;
 //   2. flow — start → final, obiecte, rezolvare, sărire, reîncărcare;
-//   3. confidențialitate — conținutul privat nu apare în fișierele urmărite de Git.
+//   3. confidențialitate — conținutul privat nu apare în fișierele urmărite de Git;
+//      excepție: aventurile publicate explicit (D-080), pentru care se verifică publicarea exactă.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
@@ -15,6 +16,7 @@ import { createGame, GameStatus } from "../src/js/game.js";
 import { createLocalValidator, withoutAnswers, normalizeAnswer } from "../src/js/answers.js";
 import { buildViewModel } from "../src/js/view-model.js";
 import { listMediaPaths, resolveMissionMedia } from "../src/js/media.js";
+import { PUBLISHED_REAL_ADVENTURES } from "./helpers/published-real-adventures.js";
 
 const root = new URL("../", import.meta.url);
 const adventuresDir = new URL("content/adventures/", root);
@@ -70,6 +72,9 @@ for (const name of files.length ? files : ["(niciuna)"]) {
   const source = skip ? null : load(name);
   const content = skip ? null : toAdventureV2(source);
   const label = skip ? name : `aventura privată #${files.indexOf(name) + 1}`;
+  // D-080: publicată explicit pe GitHub Pages (fișierele ei sunt urmărite de Git).
+  const published = !skip && PUBLISHED_REAL_ADVENTURES.includes(source.id);
+  const publishedFile = (file) => PUBLISHED_REAL_ADVENTURES.some((id) => file === `content/adventures/${id}.json` || file.startsWith(`content/adventures/media/${id}/`));
 
   /* ---------- 1. Structură ---------- */
 
@@ -192,7 +197,7 @@ for (const name of files.length ? files : ["(niciuna)"]) {
 
   /* ---------- 3. Confidențialitate ---------- */
 
-  test(`${label} · confidențialitate: fișierul și media privată sunt ignorate de Git`, { skip }, (t) => {
+  test(`${label} · confidențialitate: fișierul și media privată sunt ignorate de Git`, { skip: skip || (published && "publicată explicit (D-080)") }, (t) => {
     let git;
     try {
       git = (args) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
@@ -206,10 +211,10 @@ for (const name of files.length ? files : ["(niciuna)"]) {
       assert.doesNotThrow(() => git(["check-ignore", "-q", `content/adventures/${path}`]), `${path} nu este ignorat de Git`);
     }
     const tracked = git(["ls-files", "content/adventures"]).split("\n");
-    assert.ok(!tracked.some((file) => file.includes("private-")), "un fișier privat este urmărit de Git");
+    assert.ok(!tracked.some((file) => file.includes("private-") && !publishedFile(file)), "un fișier privat (nepublicat) este urmărit de Git");
   });
 
-  test(`${label} · confidențialitate: textele, răspunsurile și id-ul nu apar în fișierele urmărite de Git`, { skip }, (t) => {
+  test(`${label} · confidențialitate: textele, răspunsurile și id-ul nu apar în fișierele urmărite de Git`, { skip: skip || (published && "publicată explicit (D-080)") }, (t) => {
     let tracked;
     try {
       tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
@@ -238,5 +243,20 @@ for (const name of files.length ? files : ["(niciuna)"]) {
         assert.ok(!text.includes(fragment.toLowerCase()), `${file} conține un fragment din aventura privată`);
       }
     }
+  });
+
+  test(`${label} · publicare (D-080): exact JSON-ul și media referite sunt urmărite de Git, nimic altceva din folderul ei`, { skip: skip || (!published && "nu este publicată") }, (t) => {
+    let tracked;
+    try {
+      tracked = execFileSync("git", ["ls-files", "content/adventures"], { cwd: root, encoding: "utf8" }).split("\n").filter(Boolean);
+    } catch {
+      t.skip("git indisponibil");
+      return;
+    }
+    assert.ok(tracked.includes(`content/adventures/${name}`), `${name} nu este urmărit de Git (D-080)`);
+    const expectedMedia = listMediaPaths(content).map((path) => `content/adventures/${path}`).sort();
+    for (const file of expectedMedia) assert.ok(tracked.includes(file), `${file} lipsește din Git (D-080)`);
+    const mediaDir = `content/adventures/media/${source.id}/`;
+    assert.deepEqual(tracked.filter((file) => file.startsWith(mediaDir)).sort(), expectedMedia, "în Git sunt fișiere media nereferite de aventură");
   });
 }

@@ -1258,3 +1258,31 @@ Relații:
 - **D-034:** neschimbată; D-079 este o excepție limitată în timp, la o singură aventură, cu acces restrâns.
 
 Procedura: [`16_PRIVATE_FIELD_TEST.md`](16_PRIVATE_FIELD_TEST.md).
+
+Notă (2026-10-01): pentru prima aventură reală, înlocuită de D-080 (publicare pe GitHub Pages).
+
+---
+
+## D-080 — Publicarea primei aventuri reale pe GitHub Pages (excepție de la D-034)
+Status: CONFIRMED (2026-10-01) — decizia proprietarului; înlocuiește D-079 pentru această aventură
+
+Context:
+Pentru field test, proprietarul tratează GitHub Pages ca deployment-ul real al Outdoor Escape și renunță la Cloudflare (D-079) pentru prima aventură reală. Varianta cu injectarea conținutului din un repository privat la publicare (D-034, varianta B) a fost analizată și nu a fost aleasă.
+
+Decizie (proprietar, 2026-10-01):
+- Aventura `private-semnalul-de-sub-tampa` (JSON-ul și fișierele media referite de ea) **se publică** în repository-ul public și pe GitHub Pages, prin structura obișnuită: `content/adventures/<id>.json` și `content/adventures/media/<id>/`. URL: `https://rezervari.github.io/outdoor-escape/src/?adventure=private-semnalul-de-sub-tampa`.
+- Id-ul rămâne cel existent (nu există un id public documentat; nu se inventează unul).
+- Fișierele se adaugă **explicit** (`git add -f`, fișier cu fișier). Tiparele generale din `.gitignore` (`content/adventures/private-*.json`, `content/adventures/media/private-*/`) **rămân neschimbate**: orice altă aventură privată, orice alt fișier din folderul media al acestei aventuri (ex. voci generate — D-076) și orice fișier nou rămân ignorate.
+- Fără modificări de motor, de rutare, de format sau de workflow: workflow-ul GitHub Pages publică ce este urmărit de Git.
+- Testele de confidențialitate rămân active pentru orice altă aventură privată; aventura publicată este o excepție explicită (`tests/helpers/published-real-adventures.js`), pentru care se verifică publicarea exactă (JSON-ul + doar media referite).
+
+Consecințe acceptate de proprietar:
+- Aventura reală este publicată **intenționat** în repository, pentru field test. Conținutul publicat este cel operațional, necesar motorului: JSON-ul aventurii, **fără câmpul `_local`** (eliminat complet înainte de publicare), și cele 13 fișiere media referite. Notițele interne / private (fostul `_local`, documentele de design și de teren) rămân în afara publicației.
+- Conținutul publicat (poveste, coordonate, răspunsuri, codul final) devine **public** și rămâne **permanent în istoricul Git** al repository-ului public, chiar dacă fișierele sunt șterse ulterior (retragerea completă ar cere rescrierea istoricului și nu este garantată pentru clone / fork-uri / arhive).
+- Răspunsurile pot fi citite de oricine din repository și de pe GitHub Pages (limita deja notată în D-034 și D-021).
+
+Relații:
+- **D-034:** rămâne regula pentru toate celelalte aventuri reale; D-080 este o excepție explicită, pentru această aventură.
+- **D-076:** se aplică în continuare textelor și vocilor generate care nu sunt adăugate explicit; fișierele media publicate aici sunt placeholder-e.
+- **D-079:** nu se mai folosește pentru această aventură; procedura și scriptul rămân disponibile pentru alte aventuri private (scriptul refuză, intenționat, o aventură ale cărei fișiere sunt urmărite de Git).
+- **D-068:** neschimbată (demo-ul GPS public); D-080 este o excepție separată.
