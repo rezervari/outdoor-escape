@@ -5,7 +5,8 @@
  *   QA-S02  id-ul din fișier = numele fișierului (loadAdventure refuză altfel aventura);
  *   QA-S03  același id în mai multe fișiere;
  *   QA-C02 – QA-C05  misiunile cu răspuns (rules-content.mjs);
- *   QA-M01 – QA-M06  media (rules-media.mjs).
+ *   QA-M01 – QA-M06  media (rules-media.mjs);
+ *   QA-G02 – QA-G07  GPS și structură (rules-gps.mjs).
  *
  * Funcțiile întorc findings structurate
  *   { ruleId, level: "error" | "warning", path, message, subject?, waived? }
@@ -24,6 +25,7 @@ import { toAdventureV2, SCHEMA_V2 } from "../../src/js/schema.js";
 import { CLASSES, classifyAdventure, fileStem } from "./classify.mjs";
 import { checkAnswerMissions } from "./rules-content.mjs";
 import { checkMedia } from "./rules-media.mjs";
+import { checkGps } from "./rules-gps.mjs";
 import { findException } from "./exceptions.mjs";
 
 export const LEVELS = Object.freeze({ ERROR: "error", WARNING: "warning" });
@@ -97,11 +99,12 @@ export function redact(message) {
 }
 
 /**
- * Regulile de conținut și media (Pasul 2) pentru un fișier cu JSON citibil.
+ * Regulile de conținut, media (Pasul 2) și GPS (Pasul 3) pentru un fișier cu JSON citibil.
  * Rulează pe forma normalizată folosită de motor (toAdventureV2); dacă structura este atât de
  * greșită încât normalizarea eșuează, QA-S01 raportează deja problema și regulile sunt sărite.
+ * `classification` (classify.mjs) decide regula coordonatelor: QA-G06 sau QA-G07.
  */
-export function checkContent({ fileName, dir }, data) {
+export function checkContent({ fileName, dir }, data, { classification } = {}) {
   if (data === null || typeof data !== "object" || Array.isArray(data)) return [];
   let content;
   try {
@@ -113,6 +116,7 @@ export function checkContent({ fileName, dir }, data) {
   return [
     ...checkAnswerMissions(content, { listKey }),
     ...checkMedia(content, { id: fileStem(fileName), dir }),
+    ...checkGps(content, { classification }),
   ];
 }
 
@@ -153,7 +157,7 @@ export function runQa(entries, { targets } = {}) {
   const results = checked
     .filter((item) => !wanted || wanted.has(item.fileName))
     .map(({ entry, fileName, label, classification, isPrivate, data, findings }) => {
-      const all = applyExceptions(fileName, [...findings, ...(duplicates.get(fileName) ?? []), ...checkContent(entry, data)]);
+      const all = applyExceptions(fileName, [...findings, ...(duplicates.get(fileName) ?? []), ...checkContent(entry, data, { classification })]);
       const safe = isPrivate
         ? all.map(({ subject, ...f }) => ({
           ...f,

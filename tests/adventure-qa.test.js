@@ -1,4 +1,5 @@
-// Adventure QA — Pasul 1 (QA-S01, QA-S02, QA-S03, clasificarea) și Pasul 2 (QA-C02 – C05, QA-M01 – M06).
+// Adventure QA — Pasul 1 (QA-S01, QA-S02, QA-S03, clasificarea), Pasul 2 (QA-C02 – C05, QA-M01 – M06)
+// și Pasul 3 (QA-G02 – G07: GPS și structură).
 // Mutațiile folosesc numai date FICTIVE: fixture-ul tests/fixtures/adventure-v2-demo.json și aventuri
 // sintetice scrise în directoare temporare (cu fișiere media de test).
 // Testele nu conțin id-uri, texte sau date ale aventurilor reale: aventura publicată (D-080)
@@ -15,6 +16,9 @@ import { runQa, checkFile, checkDuplicateIds } from "../scripts/adventure-qa/rul
 import { classifyAdventure, CLASSES } from "../scripts/adventure-qa/classify.mjs";
 import { QA_EXCEPTIONS, findException } from "../scripts/adventure-qa/exceptions.mjs";
 import { MEDIA_EXTENSIONS } from "../scripts/adventure-qa/rules-media.mjs";
+import { checkGps, NEAR_ZERO_DEGREES } from "../scripts/adventure-qa/rules-gps.mjs";
+import { toAdventureV2 } from "../src/js/schema.js";
+import { distanceMeters } from "../src/js/geo.js";
 import { PUBLISHED_REAL_ADVENTURES } from "./helpers/published-real-adventures.js";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
@@ -546,6 +550,282 @@ test("CLI --strict: un avertisment (QA-C05) → exit 0 implicit, exit 1 cu --str
     const strict = runCli(file, "--strict");
     assert.equal(strict.status, 1, strict.stdout);
     assert.match(strict.stdout, /Rezultat: FAIL/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+/* ---------- Pasul 3 · QA-G02 – G07: GPS și structură ---------- */
+
+const BASE = { lat: 0.001, lng: 0.001 }; // coordonate fictive, lângă 0°, 0°
+const LOC = (id, coordinates = BASE, extra = {}) => ({
+  id, name: `Loc ${id}`, type: "objective", coordinates: { ...coordinates }, radius: 20,
+  fallback: { instructions: "Instrucțiuni de rezervă de test." }, ...extra,
+});
+const GO = (id, locationId, extra = {}) => ({ id, type: "location", title: "Mergi", briefing: "Text de test.", points: 0, locationId, ...extra });
+const RIDDLE = (id, extra = {}) => ({ id, type: "riddle", title: "Ghicitoare", briefing: "Text de test.", points: 10, answer: "sud", hints: [{ text: "Indiciu de test." }], ...extra });
+
+/** Aventură GPS sintetică: implicit, câte o misiune „location” pentru fiecare locație. */
+function gpsAdventure(id, locations, { missions = locations.map((l, i) => GO(`m-${i + 1}`, l.id)), ...extra } = {}) {
+  return { schemaVersion: 2, id, demo: true, meta: { title: "Aventură GPS de test QA" }, locations, missions, ...extra };
+}
+const gpsQa = (data, fileName = `${data.id}.json`) => runQa([entry(fileName, data)]).results[0];
+
+/**
+ * Punctul spre nord, la cea mai mică latitudine pentru care geo.distanceMeters(from, punct) ≥ meters
+ * (aceeași formulă ca motorul; ajustat până la limita reprezentabilă). Pentru 40 m dă exact 40 (zone tangente).
+ */
+function north(meters, from = BASE) {
+  let lat = from.lat + ((meters / 6371008.8) * 180) / Math.PI;
+  while (distanceMeters(from, { lat, lng: from.lng }) < meters) lat += Math.abs(lat) * Number.EPSILON;
+  return { lat, lng: from.lng };
+}
+
+/* QA-G02 */
+
+test("QA-G02: confirmarea manuală implicită + instrucțiuni → PASS; settings / location stabilesc valoarea efectivă", () => {
+  const ok = gpsQa(gpsAdventure("test-qa-g02-ok", [LOC("l-a")]));
+  assert.deepEqual(active(ok), []);
+  assert.equal(ok.status, "PASS");
+
+  const settingsOff = gpsQa(gpsAdventure("test-qa-g02-settings", [LOC("l-a")], { settings: { gps: { allowManualConfirmation: false } } }));
+  const [off] = active(settingsOff, "QA-G02");
+  assert.equal(off.level, "error");
+  assert.equal(off.path, "settings.gps.allowManualConfirmation");
+  assert.equal(settingsOff.status, "ERROR");
+
+  const locationOn = gpsAdventure("test-qa-g02-loc-on", [LOC("l-a", BASE, { fallback: { instructions: "Text.", allowManualConfirmation: true } })],
+    { settings: { gps: { allowManualConfirmation: false } } });
+  assert.deepEqual(activeRules(gpsQa(locationOn), "QA-G02"), []);
+
+  const locationOff = gpsAdventure("test-qa-g02-loc-off", [LOC("l-a", BASE, { fallback: { instructions: "Text.", allowManualConfirmation: false } })],
+    { settings: { gps: { allowManualConfirmation: true } } });
+  const [offLocal] = active(gpsQa(locationOff), "QA-G02");
+  assert.equal(offLocal.level, "error");
+  assert.equal(offLocal.path, "locations[0].fallback.allowManualConfirmation");
+});
+
+test("QA-G02: fallback.instructions lipsă, gol sau doar spații → ERROR", () => {
+  for (const [label, fallback] of [
+    ["fără fallback", undefined],
+    ["fără instructions", { allowManualConfirmation: true }],
+    ["gol", { instructions: "" }],
+    ["un spațiu", { instructions: " " }],
+    ["spații albe", { instructions: " \n\t " }],
+  ]) {
+    const location = LOC("l-a");
+    if (fallback === undefined) delete location.fallback;
+    else location.fallback = fallback;
+    const findings = active(gpsQa(gpsAdventure("test-qa-g02-instr", [location])), "QA-G02");
+    assert.deepEqual(findings.map((f) => [f.level, f.path]), [["error", "locations[0].fallback.instructions"]], label);
+  }
+});
+
+test("QA-G02: excluse — locația ascunsă, locația folosită doar de o misiune cu răspuns, aventura V1 fără locații", () => {
+  const hidden = LOC("l-ascuns", BASE, { hiddenUntilDiscovered: true, fallback: { allowManualConfirmation: false } });
+  assert.deepEqual(activeRules(gpsQa(gpsAdventure("test-qa-g02-ascuns", [hidden])), "QA-G02"), []);
+
+  const answerOnly = LOC("l-raspuns");
+  delete answerOnly.fallback;
+  const viaRiddle = gpsAdventure("test-qa-g02-raspuns", [answerOnly], { missions: [RIDDLE("m-1", { locationId: "l-raspuns" })] });
+  assert.deepEqual(active(gpsQa(viaRiddle)), []);
+
+  const v1 = {
+    schemaVersion: 1, id: "test-qa-g02-v1", demo: true, title: "Aventură V1 de test",
+    challenges: [{ id: "c-unu", title: "Unu", description: "Text de test.", answer: "sud", hint: "Indiciu de test.", points: 10 }],
+  };
+  const v1Result = gpsQa(v1);
+  assert.deepEqual(active(v1Result), []);
+  assert.equal(v1Result.status, "PASS");
+});
+
+test("QA-G02 / QA-G07: demo-gps-brasov — excepția D-068, vizibilă (waived) și fără să blocheze", () => {
+  const { results } = repoQa();
+  const brasov = results.find((r) => r.fileName === "demo-gps-brasov.json");
+  assert.notEqual(brasov.status, "ERROR");
+  for (const ruleId of ["QA-G02", "QA-G07"]) {
+    const findings = brasov.findings.filter((f) => f.ruleId === ruleId);
+    assert.equal(findings.length, 3, ruleId);
+    assert.ok(findings.every((f) => f.level === "error" && /^D-068/.test(f.waived)), ruleId);
+  }
+  assert.deepEqual(active(brasov, "QA-G"), []);
+});
+
+/* QA-G03 */
+
+test("QA-G03: misiune principală fără locationId într-o aventură cu locații → WARNING (inclusiv track implicit)", () => {
+  for (const extra of [{}, { track: "main" }]) {
+    const data = gpsAdventure("test-qa-g03", [LOC("l-a")], { missions: [GO("m-1", "l-a"), RIDDLE("m-2", extra)] });
+    const result = gpsQa(data);
+    assert.deepEqual(active(result, "QA-G03").map((f) => [f.level, f.path]), [["warning", "missions[1].locationId"]]);
+    assert.equal(result.status, "WARNING");
+  }
+});
+
+test("QA-G03: nu se aplică misiunilor bonus / secrete, aventurilor fără locații și misiunii „location” fără locationId (QA-S01)", () => {
+  const sideTracks = gpsAdventure("test-qa-g03-side", [LOC("l-a")], {
+    missions: [
+      GO("m-1", "l-a"),
+      RIDDLE("m-bonus", { track: "bonus" }),
+      RIDDLE("m-secret", { type: "secret", track: "secret", initialStatus: "locked" }),
+    ],
+  });
+  const sideResult = gpsQa(sideTracks);
+  assert.deepEqual(active(sideResult, "QA-S01"), []);
+  assert.deepEqual(activeRules(sideResult, "QA-G03"), []);
+
+  assert.deepEqual(activeRules(gpsQa(synthetic("test-qa-g03-fara-locatii")), "QA-G"), []);
+
+  const noTarget = gpsAdventure("test-qa-g03-s01", [LOC("l-a")], { missions: [GO("m-1", "l-a"), GO("m-2")] });
+  delete noTarget.missions[1].locationId;
+  const s01 = gpsQa(noTarget);
+  assert.ok(active(s01, "QA-S01").some((f) => /missions\[1\].*locationId/.test(f.message)));
+  assert.deepEqual(activeRules(s01, "QA-G03"), []);
+});
+
+/* QA-G04 */
+
+const g04 = (b) => activeRules(gpsQa(gpsAdventure("test-qa-g04", [LOC("l-a"), LOC("l-b", b)])), "QA-G04");
+
+test("QA-G04: locații la < 1 m (geo.distanceMeters) → WARNING, cu recomandarea de a reutiliza locationId", () => {
+  const [finding] = active(gpsQa(gpsAdventure("test-qa-g04-identic", [LOC("l-a"), LOC("l-b")])), "QA-G04");
+  assert.equal(finding.level, "warning");
+  assert.equal(finding.path, "locations[1].coordinates");
+  assert.match(finding.message, /„l-a” și „l-b”/);
+  assert.match(finding.message, /reutilizează același locationId/);
+  assert.deepEqual(g04({ lat: BASE.lat + 1e-7, lng: BASE.lng }), ["QA-G04"], "diferență foarte mică (~1 cm)");
+});
+
+test("QA-G04: exact 1 m, 5 m, 50 m sau o singură locație → fără QA-G04", () => {
+  // Exact 1 m după geo.distanceMeters (căutat numeric; de la latitudinea 0 diferența nu pierde precizie).
+  const a = { lat: 0, lng: 0.001 };
+  const b = { lat: 0.00000899320363724538, lng: 0.001 };
+  assert.equal(distanceMeters(a, b), 1);
+  assert.deepEqual(activeRules(gpsQa(gpsAdventure("test-qa-g04-prag", [LOC("l-a", a), LOC("l-b", b)])), "QA-G04"), [], "exact pragul");
+  assert.deepEqual(activeRules(gpsQa(gpsAdventure("test-qa-g04-sub", [LOC("l-a", a), LOC("l-b", { lat: 0.0000089932, lng: 0.001 })])), "QA-G04"), ["QA-G04"], "sub prag");
+  assert.deepEqual(g04(north(5)), []);
+  assert.deepEqual(g04(north(50)), []);
+  assert.deepEqual(activeRules(gpsQa(gpsAdventure("test-qa-g04-una", [LOC("l-a")])), "QA-G04"), []);
+});
+
+/* QA-G05 */
+
+const g05 = (a, b, extra) => active(gpsQa(gpsAdventure("test-qa-g05", [a, b], extra)), "QA-G05");
+
+test("QA-G05: zone disjuncte sau exact tangente → fără avertisment; suprapunere de 1 m → WARNING", () => {
+  assert.deepEqual(g05(LOC("l-a"), LOC("l-b", north(100))), [], "disjuncte (20 + 20 < 100)");
+  const tangent = north(40);
+  assert.equal(distanceMeters(BASE, tangent), 40);
+  assert.deepEqual(g05(LOC("l-a"), LOC("l-b", tangent)), [], "tangente: distanța = suma razelor");
+  const [finding] = g05(LOC("l-a"), LOC("l-b", north(39)));
+  assert.equal(finding.level, "warning");
+  assert.equal(finding.path, "locations[1].coordinates");
+  assert.match(finding.message, /„l-a” și „l-b”/);
+});
+
+test("QA-G05: raza efectivă = radius propriu, altfel settings.gps.defaultRadius (implicit 40 m)", () => {
+  const noRadius = (id, coordinates) => {
+    const location = LOC(id, coordinates);
+    delete location.radius;
+    return location;
+  };
+  // Implicit: 40 + 40.
+  assert.equal(g05(noRadius("l-a"), noRadius("l-b", north(79))).length, 1);
+  assert.deepEqual(g05(noRadius("l-a"), noRadius("l-b", north(81))), []);
+  // defaultRadius personalizat: 25 + 25.
+  const custom = { settings: { gps: { defaultRadius: 25 } } };
+  assert.equal(g05(noRadius("l-a"), noRadius("l-b", north(49)), custom).length, 1);
+  assert.deepEqual(g05(noRadius("l-a"), noRadius("l-b", north(51)), custom), []);
+  // Raze diferite: 10 + 60; radius propriu are prioritate față de defaultRadius.
+  const small = LOC("l-a", BASE, { radius: 10 });
+  assert.equal(g05(small, LOC("l-b", north(69), { radius: 60 })).length, 1);
+  assert.deepEqual(g05(small, LOC("l-b", north(71), { radius: 60 })), []);
+  assert.deepEqual(g05(small, LOC("l-b", north(31)), custom), [], "10 + 20 < 31");
+});
+
+test("QA-G05: toate perechile, fără perechea unei locații cu ea însăși", () => {
+  assert.deepEqual(activeRules(gpsQa(gpsAdventure("test-qa-g05-una", [LOC("l-a")])), "QA-G05"), []);
+  const three = gpsAdventure("test-qa-g05-trei", [LOC("l-a"), LOC("l-b", north(30)), LOC("l-c", north(60))]);
+  const messages = active(gpsQa(three), "QA-G05").map((f) => f.message);
+  // a–b și b–c (30 m < 20 + 20); a–c (60 m) nu.
+  assert.equal(messages.length, 2, messages.join(" | "));
+  assert.ok(messages.some((m) => /„l-a” și „l-b”/.test(m)) && messages.some((m) => /„l-b” și „l-c”/.test(m)));
+});
+
+/* QA-G06 / QA-G07 */
+
+/** Regulile coordonatelor pentru o locație în (lat, lng), cu clasificarea dată (direct pe checkGps). */
+const coordinateRules = (lat, lng, classification) =>
+  rules(checkGps(toAdventureV2(gpsAdventure("test-qa-coord", [LOC("l-a", { lat, lng })])), { classification }).filter((f) => /^QA-G0[67]$/.test(f.ruleId)));
+
+test("QA-G06: aventură care nu este public-demo, lângă 0°, 0° (< 0,01°) → ERROR; exact 0,01° și 0,02° → PASS", () => {
+  assert.equal(NEAR_ZERO_DEGREES, 0.01);
+  for (const classification of [CLASSES.PUBLISHED_REAL, CLASSES.PRIVATE_LOCAL, CLASSES.ANOMALY]) {
+    for (const value of [0, 0.001, 0.0099, -0.0099]) assert.deepEqual(coordinateRules(value, value, classification), ["QA-G06"], `${classification} ${value}`);
+    for (const value of [0.01, 0.02, 45.6]) assert.deepEqual(coordinateRules(value, value, classification), [], `${classification} ${value}`);
+    assert.deepEqual(coordinateRules(0.001, 0.02, classification), [], `${classification}: doar una dintre coordonate lângă 0`);
+  }
+});
+
+test("QA-G06: anomaly și private-local prin runQa → ERROR; pentru private, mesajul este mascat; fără locații → PASS", () => {
+  const anomaly = gpsAdventure("test-qa-g06-anomalie", [LOC("l-a")]);
+  delete anomaly.demo;
+  const anomalyResult = gpsQa(anomaly);
+  assert.equal(anomalyResult.classification, CLASSES.ANOMALY);
+  const [finding] = active(anomalyResult, "QA-G06");
+  assert.equal(finding.level, "error");
+  assert.equal(finding.path, "locations[0].coordinates");
+  assert.equal(anomalyResult.status, "ERROR");
+
+  const secret = gpsAdventure("private-test-qa-g06", [LOC("l-ascunsa-g06")]);
+  secret.demo = false;
+  const privateResult = gpsQa(secret);
+  assert.equal(privateResult.label, "aventura privată #1");
+  assert.deepEqual(activeRules(privateResult, "QA-G"), ["QA-G06"]);
+  assert.doesNotMatch(JSON.stringify(privateResult.findings), /l-ascunsa-g06|private-test-qa-g06/);
+  assert.ok(privateResult.findings.every((f) => f.subject === undefined));
+
+  const noLocations = synthetic("private-test-qa-g06-gol");
+  noLocations.demo = false;
+  assert.deepEqual(activeRules(gpsQa(noLocations), "QA-G"), []);
+});
+
+test("QA-G07: public-demo — lângă 0°, 0° → PASS; exact 0,01° sau coordonate reale → ERROR; fără locații → PASS", () => {
+  for (const value of [0.001, 0.0099, -0.0099]) assert.deepEqual(coordinateRules(value, value, CLASSES.PUBLIC_DEMO), [], String(value));
+  assert.deepEqual(coordinateRules(0.01, 0.01, CLASSES.PUBLIC_DEMO), ["QA-G07"]);
+  assert.deepEqual(coordinateRules(45.6, 25.6, CLASSES.PUBLIC_DEMO), ["QA-G07"]);
+  assert.deepEqual(coordinateRules(0.001, 25.6, CLASSES.PUBLIC_DEMO), ["QA-G07"]);
+
+  const real = gpsQa(gpsAdventure("test-qa-g07", [LOC("l-a", { lat: 45.6, lng: 25.6 })]));
+  assert.equal(real.classification, CLASSES.PUBLIC_DEMO);
+  const [finding] = active(real, "QA-G07");
+  assert.equal(finding.level, "error");
+  assert.equal(finding.path, "locations[0].coordinates");
+  assert.equal(real.status, "ERROR");
+
+  assert.deepEqual(activeRules(gpsQa(synthetic("test-qa-g07-fara-locatii")), "QA-G"), []);
+});
+
+test("QA-G07: o copie a demo-gps-brasov sub alt nume nu moștenește excepția D-068 (CLI → exit 1)", () => {
+  const copy = JSON.parse(readFileSync(join(ADVENTURES_DIR, "demo-gps-brasov.json"), "utf8"));
+  copy.id = "test-qa-copie-gps";
+  const result = gpsQa(copy);
+  assert.equal(active(result, "QA-G07").length, 3);
+  assert.equal(active(result, "QA-G02").length, 3);
+  assert.ok(result.findings.every((f) => !f.waived));
+
+  const dir = mkdtempSync(join(tmpdir(), "oe-qa-"));
+  try {
+    const file = join(dir, "test-qa-copie-gps.json");
+    writeFileSync(file, JSON.stringify(copy));
+    const run = runCli(file);
+    assert.equal(run.status, 1, run.stdout);
+    assert.match(run.stdout, /E QA-G07/);
+    // Originalul: excepțiile declarate sunt afișate, nu ascunse.
+    const original = runCli(join(ADVENTURES_DIR, "demo-gps-brasov.json"));
+    assert.equal(original.status, 0, original.stdout);
+    assert.match(original.stdout, /~ QA-G07 .*excepție declarată: D-068/);
+    assert.match(original.stdout, /~ QA-G02 .*excepție declarată: D-068/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
