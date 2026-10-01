@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400" role="img">
+  <title>Cer fictiv cu stele, prima imagine</title>
+  <rect width="640" height="400" fill="#1d2b4a"/>
+  <polygon points="140.0,90.0 153.2,121.8 187.6,124.5 161.4,147.0 169.4,180.5 140.0,162.5 110.6,180.5 118.6,147.0 92.4,124.5 126.8,121.8" fill="#ffd54a" stroke="#1f3a2e" stroke-width="3"/>
+  <polygon points="320.0,180.0 333.2,211.8 367.6,214.5 341.4,237.0 349.4,270.5 320.0,252.5 290.6,270.5 298.6,237.0 272.4,214.5 306.8,211.8" fill="#ffd54a" stroke="#1f3a2e" stroke-width="3"/>
+  <polygon points="500.0,80.0 513.2,111.8 547.6,114.5 521.4,137.0 529.4,170.5 500.0,152.5 470.6,170.5 478.6,137.0 452.4,114.5 486.8,111.8" fill="#ffd54a" stroke="#1f3a2e" stroke-width="3"/>
+</svg>

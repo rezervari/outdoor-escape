@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="420" viewBox="0 0 640 420" role="img">
+  <title>Panou fictiv cu o formă geometrică în centru</title>
+  <rect width="640" height="420" fill="#cfe3d6"/>
+  <rect x="120" y="60" width="400" height="300" rx="16" fill="#fff" stroke="#1f3a2e" stroke-width="8"/>
+  <polygon points="320,120 410,290 230,290" fill="#d98e04" stroke="#1f3a2e" stroke-width="6"/>
+  <rect x="300" y="360" width="40" height="60" fill="#5b4a2a"/>
+</svg>

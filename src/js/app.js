@@ -10,7 +10,8 @@
  * - location.js — adaptorul Geolocation API (poziția reală → game.reportPosition);
  * - map-model.js / map.js — harta (M-003.2): doar afișare, construită din starea existentă;
  * - view-model.js — ce ecran și ce acțiuni se afișează, derivat din starea motorului (TASK 4);
- * - play-ui.js — panoul puzzle-ului (overlay / în pagină) și acțiunea cardului, derivate din model.
+ * - play-ui.js — panoul puzzle-ului (overlay / în pagină) și acțiunea cardului, derivate din model;
+ * - media.js / media-ui.js — media misiunilor (image / compare / audio) și viewer-ul generic (D-072, D-073).
  *
  * Nu conține logică de joc și nici conținut de joc. Nu calculează distanțe,
  * praguri de precizie sau tranziții GPS: le primește interpretate de la
@@ -18,7 +19,7 @@
  * Toate căile sunt relative (D-035).
  */
 
-import { loadAdventure, isValidId } from "./content.js";
+import { loadAdventure, isValidId, adventureUrl } from "./content.js";
 import { toAdventureV2 } from "./schema.js";
 import { createLocalValidator, withoutAnswers } from "./answers.js";
 import { createGame, GameStatus, ChallengeStatus } from "./game.js";
@@ -30,6 +31,7 @@ import { createMap } from "./map.js";
 import { buildViewModel, View, NextKind } from "./view-model.js";
 import { describePlayUi, CardAction, Layer, openLayers, planHistorySync, planBack } from "./play-ui.js";
 import { DEFAULT_MAP_TILES, DEFAULT_MAP_VIEW } from "./defaults.js";
+import { renderMediaList, renderViewerContent, viewerTitle, pauseMedia } from "./media-ui.js";
 
 const APP_NAME = "outdoor-escape";
 const DEFAULT_ADVENTURE_ID = "brasov-centrul-vechi";
@@ -100,8 +102,10 @@ function setupGameUi(game, storage) {
 
   const isPlaying = () => game.getState().status === GameStatus.PLAYING;
 
+  // Căile media sunt relative la fișierul aventurii (același punct de rezolvare ca încărcarea ei — D-035).
+  const mediaBaseUrl = adventureUrl(adventure.id);
   // Modelul interfeței: recalculat din motor la fiecare desenare, niciodată păstrat (motorul e sursa de adevăr).
-  const currentViewModel = () => buildViewModel({ content: game.content, state: game.getState() });
+  const currentViewModel = () => buildViewModel({ content: game.content, state: game.getState(), mediaBaseUrl });
 
   // Singura stare de interfață pentru puzzle, EFEMERĂ (nu se salvează, nu spune nimic despre joc):
   // misiunea al cărei overlay a fost închis cu „Închide”. Overlay-ul este deschis când misiunea
@@ -111,7 +115,12 @@ function setupGameUi(game, storage) {
   // Nu consumă nimic și nu decide nimic: ce indicii sunt deschise vine numai din motor (hintsUsed).
   let hintConfirmMissionId = null;
   let overlayOpen = false; // doar pentru a muta focusul la deschidere / închidere
-  const currentPlayUi = (viewModel) => describePlayUi(viewModel, { dismissedMissionId, hintConfirmMissionId });
+  // A treia stare efemeră (D-073): blocul media deschis în viewer și butonul care l-a deschis
+  // (focusul revine acolo). Nu spune nimic despre joc și nu se salvează.
+  let viewerKey = null;
+  let viewerOpener = null;
+  let viewerShownKey = null; // blocul desenat acum în viewer (ca să nu fie redesenat la fiecare render)
+  const currentPlayUi = (viewModel) => describePlayUi(viewModel, { dismissedMissionId, hintConfirmMissionId, viewerKey });
 
   // Fiecare observație merge nemodificată în motor; tranzițiile le decide geo.js.
   function reportFix(fix) {
@@ -459,7 +468,69 @@ function setupGameUi(game, storage) {
     $("puzzle-location").textContent = puzzle.locationName ? `📍 ${puzzle.locationName}` : "";
     renderHints(viewModel);
     renderChoices(viewModel);
+    renderMedia(viewModel);
     setOverlayOpen(puzzle.open);
+  }
+
+  /**
+   * Media misiunii curente (viewModel.mission.media, prin play-ui.js): în panoul puzzle-ului pentru
+   * misiunile cu răspuns, în pagină pentru celelalte. Desenarea este generică (media-ui.js).
+   */
+  function renderMedia(viewModel) {
+    const { media } = currentPlayUi(viewModel);
+    const scope = viewModel.mission?.id ?? "";
+    const inPuzzle = media.placement === "puzzle";
+    renderMediaList($("puzzle-media"), inPuzzle ? media.blocks : [], { scope, onOpen: openViewer });
+    renderMediaList($("mission-media"), inPuzzle ? [] : media.blocks, { scope, onOpen: openViewer });
+    // Un sunet dintr-un panou ascuns (ex. overlay închis) se oprește.
+    for (const audio of document.querySelectorAll("audio")) if (audio.closest("[hidden]")) audio.pause();
+  }
+
+  /* --- Viewer-ul media (D-073): strat generic pe tot ecranul, închis de „Închide”, Escape și Back. --- */
+
+  function openViewer(key, opener) {
+    viewerKey = key;
+    viewerOpener = opener || null;
+    render();
+    $("btn-viewer-close").focus();
+  }
+
+  // Închiderea nu atinge motorul; focusul revine pe butonul care a deschis viewer-ul.
+  function closeViewer() {
+    if (viewerKey === null) return;
+    viewerKey = null;
+    render();
+    if (viewerOpener && viewerOpener.isConnected && !viewerOpener.closest("[hidden]")) viewerOpener.focus();
+    viewerOpener = null;
+  }
+
+  // Cât timp viewer-ul este deschis, <main> (tot jocul, inclusiv overlay-ul) este inert.
+  function renderViewer(viewModel) {
+    const { viewer } = currentPlayUi(viewModel);
+    const box = $("media-viewer");
+    const main = document.querySelector("main");
+    if (!viewer.open) {
+      if (viewerKey !== null) viewerKey = null; // blocul nu mai există (altă misiune, final)
+      box.hidden = true;
+      main.inert = false;
+      if (viewerShownKey !== null) {
+        pauseMedia($("media-viewer-body"));
+        renderViewerContent($("media-viewer-body"), null);
+        viewerShownKey = null;
+      }
+      document.documentElement.dataset.viewer = "closed";
+      return;
+    }
+    const shownKey = `${viewModel.mission?.id ?? ""}:${viewer.block.key}`;
+    if (viewerShownKey !== shownKey) {
+      $("media-viewer-title").textContent = viewerTitle(viewer.block);
+      renderViewerContent($("media-viewer-body"), viewer.block);
+      viewerShownKey = shownKey;
+    }
+    box.hidden = false;
+    box.inert = false; // setOverlayOpen marchează frații lui <main> ca inerți
+    main.inert = true;
+    document.documentElement.dataset.viewer = "open";
   }
 
   /**
@@ -471,6 +542,8 @@ function setupGameUi(game, storage) {
     const list = $("choice-list");
     list.hidden = !choices;
     $("typed-answer").hidden = Boolean(choices);
+    // Tastatura răspunsului tastat (D-072): numerică doar ca indiciu; verificarea rămâne aceeași (answers.js).
+    $("answer-input").inputMode = viewModel.puzzle?.inputMode === "numeric" ? "numeric" : "text";
     list.replaceChildren(...(choices || []).map((choice) => {
       const button = document.createElement("button");
       button.type = "button";
@@ -582,9 +655,15 @@ function setupGameUi(game, storage) {
     if (viewModel.view === View.INTRO) renderStart();
     else if (viewModel.view === View.COMPLETED) renderEnd(viewModel);
     else renderPlay(viewModel);
+    // În afara jocului nu rămâne nicio media (un sunet pornit nu continuă pe ecranul final).
+    if (viewModel.view === View.INTRO || viewModel.view === View.COMPLETED) {
+      renderMediaList($("puzzle-media"), []);
+      renderMediaList($("mission-media"), []);
+    }
     $("location-panel").hidden = viewModel.view === View.COMPLETED;
     renderLocation();
     renderMap();
+    renderViewer(viewModel);
     syncHistory(viewModel);
   }
 
@@ -627,7 +706,8 @@ function setupGameUi(game, storage) {
       return;
     }
     for (const layer of plan.close) {
-      if (layer === Layer.HINT_CONFIRM) cancelHintConfirm();
+      if (layer === Layer.VIEWER) closeViewer();
+      else if (layer === Layer.HINT_CONFIRM) cancelHintConfirm();
       else if (layer === Layer.PUZZLE) closePuzzleOverlay();
     }
   });
@@ -645,6 +725,7 @@ function setupGameUi(game, storage) {
   function resetEverything() {
     storage.resetGame(adventure.id);
     feedback = null;
+    viewerKey = null;
     dismissedMissionId = null;
     hintConfirmMissionId = null;
     $("answer-input").value = "";
@@ -661,6 +742,7 @@ function setupGameUi(game, storage) {
 
   $("btn-start").addEventListener("click", () => {
     feedback = null;
+    viewerKey = null;
     dismissedMissionId = null;
     hintConfirmMissionId = null;
     game.start();
@@ -743,6 +825,7 @@ function setupGameUi(game, storage) {
   // „Continuă” (din panoul puzzle-ului sau din card): game.next(); totul se redesenează din motor.
   function advance() {
     feedback = null;
+    viewerKey = null;
     dismissedMissionId = null; // misiunea următoare pornește cu panoul ei deschis
     hintConfirmMissionId = null;
     $("answer-input").value = "";
@@ -773,11 +856,13 @@ function setupGameUi(game, storage) {
   }
 
   $("btn-puzzle-close").addEventListener("click", closePuzzleOverlay);
-  // Tastatură: Escape închide întâi confirmarea indiciului, apoi overlay-ul
-  // (aceeași ordine ca Back — U2, mai sus).
+  $("btn-viewer-close").addEventListener("click", closeViewer);
+  // Tastatură: Escape închide întâi viewer-ul, apoi confirmarea indiciului, apoi overlay-ul
+  // (aceeași ordine ca Back — U2, D-073, mai sus).
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    if (hintConfirmMissionId !== null) cancelHintConfirm();
+    if (viewerKey !== null) closeViewer();
+    else if (hintConfirmMissionId !== null) cancelHintConfirm();
     else if (overlayOpen) closePuzzleOverlay();
   });
 

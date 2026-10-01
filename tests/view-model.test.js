@@ -332,7 +332,7 @@ test("view-model.js nu atinge DOM-ul, stocarea, GPS-ul sau navigarea (verificare
     "innerHTML", "fetch(", "reportPosition", "confirmArrival(", "submitAnswer(", "useHint(", "requestHint(", ".next(", "setTimeout"]) {
     assert.ok(!code.includes(token), `codul view-model.js nu trebuie să conțină „${token}”`);
   }
-  // Importă doar definiții pure ale motorului și schemei.
+  // Importă doar definiții pure ale motorului, schemei și registrului media.
   const imports = [...code.matchAll(/from\s+"([^"]+)"/g)].map((m) => m[1]).sort();
-  assert.deepEqual(imports, ["./game.js", "./schema.js"]);
+  assert.deepEqual(imports, ["./game.js", "./media.js", "./schema.js"]); // media.js: modul pur (Challenge System V1)
 });

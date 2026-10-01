@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000" role="img">
+  <title>Document fictiv cu rânduri ilizibile și un cod mic în colț</title>
+  <rect width="800" height="1000" fill="#fbf7ec"/>
+  <rect x="80" y="120" width="640" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="175" width="550" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="230" width="460" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="285" width="640" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="340" width="550" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="395" width="460" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="450" width="640" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="505" width="550" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="560" width="460" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="615" width="640" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="670" width="550" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="725" width="460" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="780" width="640" height="14" rx="7" fill="#c9bfa5"/>
+  <rect x="80" y="835" width="550" height="14" rx="7" fill="#c9bfa5"/>
+  <text x="80" y="80" font-family="serif" font-size="40" fill="#3f4a44">Document fictiv</text>
+  <text x="690" y="975" font-family="sans-serif" font-size="16" fill="#3f4a44">cod 7</text>
+</svg>

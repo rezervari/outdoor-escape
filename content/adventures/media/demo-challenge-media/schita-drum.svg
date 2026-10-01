@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400" role="img">
+  <title>Schiță fictivă: drum punctat de la Start până la un X</title>
+  <rect width="640" height="400" fill="#f4efe1"/>
+  <path d="M40 330 C 200 300, 260 160, 420 150 S 600 90, 610 60" fill="none" stroke="#8a6d1f" stroke-width="18" stroke-linecap="round" stroke-dasharray="2 26"/>
+  <circle cx="70" cy="325" r="16" fill="#1f3a2e"/>
+  <text x="95" y="360" font-family="sans-serif" font-size="26" fill="#1f3a2e">Start</text>
+  <path d="M560 40 l40 40 M600 40 l-40 40" stroke="#b3261e" stroke-width="10" stroke-linecap="round"/>
+  <text x="470" y="125" font-family="sans-serif" font-size="26" fill="#b3261e">Poarta demo</text>
+</svg>

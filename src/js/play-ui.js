@@ -7,6 +7,9 @@
  * spune ce trebuie arătat: panoul puzzle-ului (overlay sau în pagină), indiciile și
  * acțiunea din cardul obiectivului.
  *
+ * A treia informație efemeră (Challenge System V1, D-073): blocul media deschis în viewer
+ * (viewerKey). Viewer-ul este generic: arată orice bloc vizual al misiunii curente.
+ *
  * Nu apelează motorul, nu atinge DOM-ul și nu păstrează stare. Starea jocului (inclusiv
  * indiciile deschise) vine exclusiv din viewModel; cele două informații efemere nu spun
  * nimic despre joc și nu se salvează. Textele sunt în app.js.
@@ -48,6 +51,7 @@ function describeHints(viewModel, hintConfirmMissionId) {
 export const Layer = Object.freeze({
   PUZZLE: "puzzle", // overlay-ul puzzle-ului (doar pentru misiunile cu obiectiv pe hartă)
   HINT_CONFIRM: "hint_confirm", // confirmarea indiciului (D-030), în overlay sau în pagină (V1)
+  VIEWER: "viewer", // media_viewer (D-073): imaginea / comparația pe tot ecranul, deasupra tuturor
 });
 
 /** Straturile deschise acum, de jos în sus (din describePlayUi). */
@@ -55,6 +59,7 @@ export function openLayers(playUi) {
   const layers = [];
   if (playUi.puzzle.open) layers.push(Layer.PUZZLE);
   if (playUi.hints.confirming) layers.push(Layer.HINT_CONFIRM);
+  if (playUi.viewer?.open) layers.push(Layer.VIEWER);
   return layers;
 }
 
@@ -83,10 +88,12 @@ export function planBack(layers, entries) {
  *   viewModel             — buildViewModel(...)
  *   dismissedMissionId    — misiunea al cărei overlay a fost închis (sau null)
  *   hintConfirmMissionId  — misiunea pentru care este afișată confirmarea indiciului (sau null)
+ *   viewerKey             — cheia blocului media deschis în viewer (sau null)
  * Puzzle-ul se arată ca overlay când misiunea are un obiectiv pe hartă; altfel
  * (ex. aventuri V1 fără locații) rămâne în pagină, ca înainte.
+ * Media misiunii stă în panoul puzzle-ului (misiuni cu răspuns) sau în pagină (misiuni „location”).
  */
-export function describePlayUi(viewModel, { dismissedMissionId = null, hintConfirmMissionId = null } = {}) {
+export function describePlayUi(viewModel, { dismissedMissionId = null, hintConfirmMissionId = null, viewerKey = null } = {}) {
   const { view, puzzle, actions, next, objective, mission } = viewModel;
   const overlay = Boolean(puzzle && objective);
   const dismissed = Boolean(overlay && mission && dismissedMissionId === mission.id);
@@ -97,7 +104,15 @@ export function describePlayUi(viewModel, { dismissedMissionId = null, hintConfi
   else if (dismissed && actions.submitAnswer) cardAction = CardAction.OPEN_PUZZLE;
   else if (dismissed && actions.continue) cardAction = CardAction.CONTINUE;
 
+  const blocks = mission?.media || [];
+  const placement = puzzle ? "puzzle" : "page";
+  const mediaVisible = blocks.length > 0 && (placement === "page" || visible);
+  // Viewer-ul se deschide doar pentru un bloc vizual al misiunii curente, vizibil acum.
+  const viewerBlock = mediaVisible && viewerKey ? blocks.find((block) => block.key === viewerKey && block.viewable) || null : null;
+
   return {
+    media: { placement, visible: mediaVisible, blocks },
+    viewer: { open: Boolean(viewerBlock), block: viewerBlock },
     puzzle: {
       visible,
       mode: overlay ? "overlay" : "inline",
@@ -108,6 +123,7 @@ export function describePlayUi(viewModel, { dismissedMissionId = null, hintConfi
       status: puzzle ? puzzle.status : null,
       solved: Boolean(puzzle && puzzle.solved),
       showForm: actions.submitAnswer,
+      inputMode: puzzle ? puzzle.inputMode : "text",
       showContinue: actions.continue,
     },
     hints: describeHints(viewModel, hintConfirmMissionId),

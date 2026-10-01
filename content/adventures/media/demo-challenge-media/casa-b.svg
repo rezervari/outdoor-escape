@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400" role="img">
+  <title>Casă fictivă, a doua vizită</title>
+  <rect width="640" height="400" fill="#e9f1f7"/>
+  <polygon points="320,60 520,180 120,180" fill="#8a3b2a"/>
+  <rect x="150" y="180" width="340" height="190" fill="#f4efe1" stroke="#1f3a2e" stroke-width="6"/>
+  <rect x="290" y="250" width="60" height="120" fill="#2e7d32" stroke="#1f3a2e" stroke-width="5"/>
+  <rect x="185" y="215" width="70" height="60" fill="#9cc3e4" stroke="#1f3a2e" stroke-width="4"/>
+  <rect x="385" y="215" width="70" height="60" fill="#9cc3e4" stroke="#1f3a2e" stroke-width="4"/>
+</svg>

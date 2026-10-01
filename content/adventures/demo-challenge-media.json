@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 2,
+  "id": "demo-challenge-media",
+  "contentVersion": "0.1.0",
+  "language": "ro",
+  "demo": true,
+  "meta": {
+    "city": "Orașul Demo",
+    "title": "[DEMO] Challenge System V1: imagine, comparație, sunet",
+    "description": "Aventură FICTIVĂ pentru testarea capabilităților media: imagine cu viewer pe tot ecranul, comparație cu slider și cu comutare, sunet cu transcript, sunet indisponibil (rezervă) și răspuns numeric. Coordonatele sunt inventate (lângă 0°, 0°); pe telefon, sosirea se confirmă cu „Am ajuns”. Imaginile și sunetul sunt asset-uri de test, fără conținut real.",
+    "estimatedTime": 10,
+    "difficulty": "easy",
+    "tags": ["demo", "media"]
+  },
+  "settings": {
+    "progression": "linear",
+    "gps": { "allowManualConfirmation": true }
+  },
+  "narrator": {
+    "name": "Ghidul demo",
+    "messages": {
+      "intro": { "text": "Bun venit în demo-ul media. Fiecare provocare încearcă o capabilitate." },
+      "fragment-a": { "text": "Ai găsit fragmentul A." },
+      "fragment-b": { "text": "Ai găsit fragmentul B." },
+      "mesaj-far": { "text": "Mesaj de test (transcript): cuvântul de verificat este FAR." },
+      "final": { "text": "Demo-ul media s-a încheiat. Toate capabilitățile NOW au fost încercate." }
+    }
+  },
+  "media": {
+    "basePath": "media/demo-challenge-media/",
+    "assets": {
+      "img-schita-drum": {
+        "type": "image",
+        "src": "schita-drum.svg",
+        "alt": "Schiță fictivă: un drum punctat pornește de la Start și se termină la un X roșu, lângă textul „Poarta demo”.",
+        "role": "map",
+        "width": 640,
+        "height": 400,
+        "credit": "Ilustrație de test"
+      },
+      "img-panou": {
+        "type": "image",
+        "src": "panou.svg",
+        "alt": "Panou fictiv alb, cu o formă geometrică portocalie în centru.",
+        "caption": "Panoul de la poartă",
+        "role": "illustration",
+        "width": 640,
+        "height": 420
+      },
+      "img-stele-a": {
+        "type": "image",
+        "src": "stele-a.svg",
+        "alt": "Cer fictiv cu trei stele galbene.",
+        "role": "illustration",
+        "width": 640,
+        "height": 400
+      },
+      "img-stele-b": {
+        "type": "image",
+        "src": "stele-b.svg",
+        "alt": "Același cer fictiv, cu cinci stele galbene.",
+        "role": "illustration",
+        "width": 640,
+        "height": 400
+      },
+      "img-casa-a": {
+        "type": "image",
+        "src": "casa-a.svg",
+        "alt": "Casă fictivă cu două ferestre albastre și o ușă roșie.",
+        "role": "illustration",
+        "width": 640,
+        "height": 400
+      },
+      "img-casa-b": {
+        "type": "image",
+        "src": "casa-b.svg",
+        "alt": "Aceeași casă fictivă, cu ușa vopsită în altă culoare.",
+        "role": "illustration",
+        "width": 640,
+        "height": 400
+      },
+      "img-document": {
+        "type": "image",
+        "src": "document.svg",
+        "alt": "Document fictiv cu rânduri ilizibile; în colțul din dreapta jos este scris mic un cod de o cifră.",
+        "caption": "Document de test",
+        "role": "document",
+        "width": 800,
+        "height": 1000
+      },
+      "ton-test": {
+        "type": "audio",
+        "src": "ton-test.wav",
+        "kind": "voice",
+        "title": "Mesaj de test",
+        "transcript": "Mesaj de test (transcript): cuvântul de verificat este ECOU."
+      }
+    }
+  },
+  "audio": {
+    "basePath": "media/demo-challenge-media/",
+    "tracks": {
+      "voce-lipsa": { "src": "lipsa-intentionat.wav", "kind": "voice", "transcriptMessage": "mesaj-far" }
+    }
+  },
+  "locations": [
+    {
+      "id": "loc-poarta",
+      "name": "[DEMO] Poarta",
+      "type": "start",
+      "coordinates": { "lat": 0.0015, "lng": 0.0015 },
+      "radius": 40,
+      "initialStatus": "unlocked",
+      "fallback": { "instructions": "Locație fictivă. Apasă „Am ajuns” pentru a simula sosirea.", "allowManualConfirmation": true }
+    },
+    {
+      "id": "loc-curte",
+      "name": "[DEMO] Curtea",
+      "type": "objective",
+      "coordinates": { "lat": 0.0021, "lng": 0.0019 },
+      "radius": 40,
+      "initialStatus": "locked",
+      "fallback": { "instructions": "Locație fictivă. Apasă „Am ajuns” pentru a simula sosirea.", "allowManualConfirmation": true }
+    }
+  ],
+  "missions": [
+    {
+      "id": "m-sosire-poarta",
+      "type": "location",
+      "track": "main",
+      "title": "Spre poartă (imagine pe o misiune de sosire)",
+      "briefing": "Urmează schița de mai jos până la poartă. Atinge schița ca să o vezi pe tot ecranul.",
+      "locationId": "loc-poarta",
+      "points": 0,
+      "media": [ { "type": "image", "asset": "img-schita-drum", "label": "Schița drumului" } ]
+    },
+    {
+      "id": "m-a-panou",
+      "type": "riddle",
+      "track": "main",
+      "title": "A · Imagine + răspuns text",
+      "briefing": "Ce formă geometrică este desenată în centrul panoului? Un singur cuvânt.",
+      "locationId": "loc-poarta",
+      "points": 10,
+      "media": [ { "type": "image", "asset": "img-panou" } ],
+      "hints": [ { "text": "Are trei laturi." } ],
+      "answer": "triunghi"
+    },
+    {
+      "id": "m-b-stele",
+      "type": "observation",
+      "track": "main",
+      "title": "B · Comparație slider + răspuns numeric",
+      "briefing": "Mută slider-ul între cele două imagini. Câte stele în plus are imaginea B?",
+      "locationId": "loc-poarta",
+      "points": 10,
+      "media": [ { "type": "compare", "before": "img-stele-a", "after": "img-stele-b", "mode": "slider", "labels": { "before": "A", "after": "B" } } ],
+      "inputMode": "numeric",
+      "hints": [ { "text": "Numără stelele din fiecare imagine." } ],
+      "answer": "2"
+    },
+    {
+      "id": "m-c-usa",
+      "type": "riddle",
+      "track": "main",
+      "title": "C · Comparație cu comutare + variante",
+      "briefing": "Comută între cele două vizite. Ce culoare are ușa la a doua vizită?",
+      "locationId": "loc-poarta",
+      "points": 10,
+      "media": [ { "type": "compare", "before": "img-casa-a", "after": "img-casa-b", "mode": "toggle", "labels": { "before": "Prima vizită", "after": "A doua vizită" } } ],
+      "choices": ["ROȘU", "VERDE", "ALBASTRU"],
+      "answer": "verde"
+    },
+    {
+      "id": "m-sosire-curte",
+      "type": "location",
+      "track": "main",
+      "title": "Spre curte",
+      "briefing": "Mergi în curte.",
+      "locationId": "loc-curte",
+      "points": 0
+    },
+    {
+      "id": "m-d-ecou",
+      "type": "riddle",
+      "track": "main",
+      "title": "D · Sunet + transcript + răspuns text",
+      "briefing": "Ascultă mesajul (sau deschide transcriptul). Ce cuvânt trebuie verificat?",
+      "locationId": "loc-curte",
+      "points": 10,
+      "media": [ { "type": "audio", "asset": "ton-test", "showTranscript": "collapsed" } ],
+      "answer": "ecou"
+    },
+    {
+      "id": "m-e-document",
+      "type": "code",
+      "track": "main",
+      "title": "E · Viewer pe tot ecranul + Back",
+      "briefing": "Deschide documentul pe tot ecranul și mărește-l. Ce cifră este scrisă în colțul din dreapta jos? Apoi închide viewer-ul cu Back.",
+      "locationId": "loc-curte",
+      "points": 10,
+      "media": [ { "type": "image", "asset": "img-document" } ],
+      "inputMode": "numeric",
+      "answer": "7"
+    },
+    {
+      "id": "m-f-far",
+      "type": "riddle",
+      "track": "main",
+      "title": "F · Sunet indisponibil: rezervă și „Reîncearcă”",
+      "briefing": "Sunetul acestei provocări lipsește intenționat (format vechi audio.tracks). Folosește transcriptul afișat ca rezervă.",
+      "locationId": "loc-curte",
+      "points": 10,
+      "media": [ { "type": "audio", "asset": "voce-lipsa" } ],
+      "answer": "far"
+    }
+  ],
+  "items": [
+    { "id": "fragment-a", "name": "Fragmentul A", "description": "obținut la comparația cu slider", "icon": "🧩" },
+    { "id": "fragment-b", "name": "Fragmentul B", "description": "obținut la comparația cu comutare", "icon": "🧩" }
+  ],
+  "events": [
+    { "id": "ev-intro", "on": "adventure_started", "do": [ { "action": "show_message", "messageId": "intro" } ] },
+    { "id": "ev-fragment-a", "on": "mission_completed", "where": { "missionId": "m-b-stele" },
+      "do": [ { "action": "collect_item", "itemId": "fragment-a" }, { "action": "show_message", "messageId": "fragment-a" } ] },
+    { "id": "ev-fragment-a-sarit", "on": "mission_skipped", "where": { "missionId": "m-b-stele" },
+      "do": [ { "action": "collect_item", "itemId": "fragment-a" } ] },
+    { "id": "ev-fragment-b", "on": "mission_completed", "where": { "missionId": "m-c-usa" },
+      "do": [ { "action": "collect_item", "itemId": "fragment-b" }, { "action": "show_message", "messageId": "fragment-b" } ] },
+    { "id": "ev-fragment-b-sarit", "on": "mission_skipped", "where": { "missionId": "m-c-usa" },
+      "do": [ { "action": "collect_item", "itemId": "fragment-b" } ] }
+  ],
+  "finale": { "missionId": "m-f-far", "messageId": "final" }
+}

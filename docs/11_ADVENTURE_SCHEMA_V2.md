@@ -31,6 +31,14 @@ Principiul: **motorul este stabil, conținutul este extensibil.** Motorul nu șt
 | Misiuni de locație în UI: cardul obiectivului, rezolvare la sosire, „Am ajuns” (`confirmArrival` — același mecanism ca GPS-ul) | `src/js/app.js` | `tests/location-integration.test.js` + Chromium |
 | Vertical slice UI (TASK 4): modelul interfeței derivat din motor; harta ca suprafață principală cu cardul obiectivului peste ea (D-049-F revizuită); puzzle-ul ca overlay; indicii cu confirmare (D-030); ecranul de rezultat și restartul; Back pentru straturile de interfață (U2, D-035) | `src/js/view-model.js`, `src/js/play-ui.js`, `src/js/app.js`, `src/index.html`, `src/css/app.css`; demo `content/adventures/demo-vertical-slice.json` | `tests/view-model.test.js`, `app-view-model-integration.test.js`, `play-layout.test.js`, `play-ui.test.js`, `result-screen.test.js`, `back-u2.test.js` + verificare în browser (`07_TESTING.md`, secțiunea 27) |
 
+**IMPLEMENTAT în Challenge System V1 — NOW** (2026-10-01; D-070 – D-073; specificația: [`TASK_CHALLENGE_SYSTEM_V1.md`](TASK_CHALLENGE_SYSTEM_V1.md)):
+
+| Componentă | Unde | Teste |
+| --- | --- | --- |
+| Registrul media unificat `media.assets` (`image`, `audio`; `video` / `model3d` / `ar` rezervate și respinse) + normalizarea `audio.tracks` (format vechi) în același registru | `src/js/media.js`, `src/js/schema.js` | `tests/challenge-media.test.js` |
+| Blocurile media ale misiunilor (`mission.media[]`: `image`, `compare` cu `slider` / `toggle`, `audio` cu transcript), rezolvate în modelul interfeței; răspunsul numeric (`inputMode: "numeric"`) | `src/js/media.js`, `src/js/view-model.js`, `src/js/play-ui.js` | idem |
+| UI: imagine, comparație, player audio (Ascultă / Pauză, încărcare, progres, transcript, rezervă + „Reîncearcă”), viewer generic pe tot ecranul (strat închis de Back — D-073) | `src/js/media-ui.js`, `src/js/app.js`, `src/index.html`, `src/css/app.css`; demo fictiv `content/adventures/demo-challenge-media.json` | idem + verificare în browser |
+
 Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii (deschise numai după confirmare — D-030), sărire, scor, ecranul de rezultat și — pentru aventurile V2 care au locații — harta ca suprafață principală, cardul obiectivului cu GPS și „Am ajuns”, apoi puzzle-ul într-un overlay peste hartă. Aventura publică `brasov-centrul-vechi` este V1, fără locații: puzzle-ul și indiciile rămân în pagină, iar starea GPS este doar informativă. Fluxul complet se poate încerca pe `src/?adventure=demo-vertical-slice` (fictiv).
 
 **PREGĂTIT, DAR NEIMPLEMENTAT ÎN UI** (există în schemă și/sau în motor, testat doar automat; jucătorul nu îl vede încă):
@@ -42,7 +50,7 @@ Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii (de
 | Misiuni secrete (`secret`, traseul `secret`) | schemă; descoperire prin trecere pe lângă o locație ascunsă; deblocare prin evenimente | interfață pentru misiunile din afara traseului principal |
 | Misiuni cu timp (`timed`) | schemă (`timeLimitSeconds`); `startedAt` salvat | aplicarea limitei de timp (D-025, D-028); interfață |
 | Game Master / narator (UI) | `narrator.messages`; efecte `message` produse de motor (`takeEffects()`); **jurnalul în interfață** (2026-10-01): mesajele `show_message` ale regulilor rulate, derivate din `firedEvents` (`viewModel.story`), și epilogul `finale.messageId` pe ecranul de rezultat | redarea audio a mesajelor |
-| Audio | schemă (`audio.tracks`, text alternativ obligatoriu); efecte `audio` | player, activarea sunetului, cache offline pentru fișiere |
+| Audio | schemă (`media.assets` de tip `audio`; `audio.tracks` ca format vechi, normalizat); **player în blocurile `audio` ale misiunilor** (Challenge System V1), pornit numai de jucător; efecte `audio` | redarea automată a efectului `play_audio` și a `narrator.messages[].audio`; cache offline / pachet pentru fișierele media (D-056) |
 | GPS în fundal / ecran blocat, geofencing | — (M-003.1 acoperă doar pagina activă) | nu este garantat de browser/PWA; D-028 rămâne deschisă |
 | Notificări | — | tot |
 | Hartă | **implementată în M-003.2 (comisă — `39a6b28`; acceptată de proprietar la 30.09.2026, milestone închis)** — `map-model.js` + `map.js` + Leaflet 1.9.4 local, OSM configurabil; doar afișare (`12_MAP_SPECIFICATION_M-003.2.md`) | test pe telefon cu o aventură reală cu locații (D-049-M) |
@@ -62,6 +70,8 @@ Interfața folosește acum: misiuni-ghicitoare pe traseul principal, indicii (de
 | `src/js/location.js` | Adaptorul Browser Geolocation API (M-003.1): pornire/oprire, erori, normalizarea fix-ului. Nu interpretează poziția | `defaults.js` |
 | `src/js/map-model.js` | Modelul vizual al hărții (M-003.2, D-048): traducere 1:1 a stărilor existente, fără calcule GPS | — |
 | `src/js/map.js` | Harta Leaflet (M-003.2, D-047): strat exclusiv vizual; Leaflet se injectează (testat în Node cu un Leaflet fals) | `defaults.js` |
+| `src/js/media.js` | Registrul media (D-072): vocabularul închis, normalizarea `media.assets` + `audio.tracks`, rezolvarea blocurilor unei misiuni pentru interfață, lista fișierelor media. Pur | — |
+| `src/js/media-ui.js` | Desenarea generică a blocurilor `image` / `compare` / `audio` și a conținutului viewer-ului (D-073). Atinge DOM-ul; nu atinge motorul | — |
 | `src/js/app.js` | Interfața (orchestrare, ecrane; construiește modelul hărții) | toate |
 
 Toate modulele, cu excepția `app.js`, `location.js` și `map.js`, sunt pure (fără DOM, fără API-uri de browser) și sunt testate cu `node --test`. `location.js` este singurul modul care atinge `navigator.geolocation`; API-ul i se injectează, deci este testat în Node cu un mock. `map.js` este singurul modul care folosește Leaflet (injectat, deci testat în Node cu un Leaflet fals).
@@ -94,7 +104,8 @@ Conversia V1 → V2:
 | `meta` | da | `title` (obligatoriu), `city`, `description`, `estimatedTime` (minute), `difficulty`, `tags` |
 | `settings` | nu | `progression`, `gps`, `events` (secțiunea 4) |
 | `narrator` | nu | `name`, `messages: { <id>: { "text", "audio"? } }` — vocea Game Master-ului |
-| `audio` | nu | `basePath`, `tracks: { <id>: { "src", "kind", "transcriptMessage"? } }` |
+| `media` | nu | registrul media unificat: `basePath`, `assets: { <id>: { "type": "image" \| "audio", "src", … } }` — secțiunea 10 |
+| `audio` | nu | format vechi, păstrat compatibil: `basePath`, `tracks: { <id>: { "src", "kind", "transcriptMessage"? } }`; normalizat în `media.assets` (secțiunea 10) |
 | `locations` | nu | secțiunea 5 |
 | `missions` | da | secțiunea 6; cel puțin o misiune pe traseul `main` |
 | `partners` | nu | secțiunea 7 |
@@ -213,6 +224,8 @@ Comportamentul actual (documentat, nu modificat):
   "points": 100,
   "hints": [ { "text": "…" }, { "text": "…" } ],
   "answer": "…",
+  "inputMode": "text | numeric",
+  "media": [ { "type": "image", "asset": "img-…" } ],
   "timeLimitSeconds": 180
 }
 ```
@@ -234,6 +247,8 @@ Comportamentul actual (documentat, nu modificat):
 - `hints`: se dezvăluie pe rând (`hintsUsed`); fiecare dezvăluire emite `hint_requested`. Fără penalizări (D-025). În interfață, un indiciu se deschide numai după confirmarea jucătorului; anularea confirmării nu atinge motorul (D-030, extinderea din 2026-10-01).
 - `answer`: verificat doar prin `answers.js` (D-021, D-024). Motorul primește aventura fără răspunsuri.
 - `choices` (opțional, doar pentru misiunile cu răspuns): 2–6 texte nevide, diferite. Interfața le afișează ca butoane în locul câmpului de text; varianta aleasă este trimisă ca răspuns prin aceeași verificare (`answers.js`, cu normalizarea D-024), deci `answer` trebuie să corespundă uneia dintre variante după normalizare. Schema nu face această verificare (doar `answers.js` citește răspunsurile — D-021).
+- `inputMode` (opțional, doar pentru misiunile cu răspuns; D-072): `"text"` (implicit) sau `"numeric"` — tastatura numerică pe telefon. Este doar indiciu de interfață: verificarea rămâne în `answers.js`, neschimbată. Nu se combină cu `choices`.
+- `media` (opțional, orice tip de misiune, inclusiv `location`): lista blocurilor media afișate de misiune (secțiunea 10). Blocurile nu rezolvă misiunea: sunt stimulul; rezolvarea rămâne sosirea sau răspunsul.
 - Rândurile noi din `briefing`, din indicii, din `fallback.instructions` și din mesajele naratorului sunt păstrate la afișare.
 
 ## 7. Parteneri
@@ -317,7 +332,34 @@ Descoperiri separate de traseul principal (acțiunea `discover_secret`, evenimen
 
 **Efecte:** motorul nu afișează și nu redă nimic. `show_message`, `play_audio` și `award_points` produc efecte (`game.takeEffects()` → `[{ type: "message", messageId, text, audio }, { type: "audio", trackId }, { type: "points", points, reason }]`) pe care interfața le prezintă. Redarea audio (după activarea explicită a sunetului) este o etapă ulterioară.
 
-## 10. Audio
+## 10. Media (D-072) și audio
+
+### 10.1 Registrul `media.assets`
+
+```json
+"media": {
+  "basePath": "media/<id-aventura>/",
+  "assets": {
+    "img-exemplu": { "type": "image", "src": "exemplu.webp", "alt": "…", "caption": "…", "credit": "…", "role": "photo", "width": 1280, "height": 960 },
+    "img-arhiva":  { "type": "image", "src": "arhiva.webp", "alt": "…", "role": "archival",
+                     "provenance": { "credit": "…", "license": "…", "sourceUrl": "…", "factsVerified": false } },
+    "snd-exemplu": { "type": "audio", "src": "exemplu.m4a", "kind": "voice", "title": "…", "transcript": "…" }
+  }
+}
+```
+
+| `type` | Obligatoriu | Opțional |
+| --- | --- | --- |
+| `image` | `src`, `alt` | `caption`, `credit`, `role` (`photo` \| `archival` \| `map` \| `document` \| `illustration`), `width`, `height`, `provenance` (obligatoriu cu `credit` + `license` pentru `role: "archival"`) |
+| `audio` | `src`; pentru `kind: "voice"`: `transcript` **sau** `transcriptMessage` (text alternativ obligatoriu) | `kind` (`voice` \| `sfx` \| `music`), `title`, `caption`, `credit` |
+| `video`, `model3d`, `ar` | **rezervate** — respinse de validator până la implementare | — |
+
+- `src` și `basePath`: căi relative la fișierul aventurii (`content/adventures/`), fără „/” la început, fără „..”, fără adrese externe. Calea efectivă este `basePath + src` (`path` în forma normalizată). Media unei aventuri stă deci sub `content/adventures/` (demo-ul: `content/adventures/media/demo-challenge-media/`).
+- `role` este descriptiv: decide ce metadate afișează viewer-ul, nu comportamentul jocului. Motorul nu știe dacă o imagine este istorică.
+- Id-urile sunt unice în tot registrul (inclusiv față de `audio.tracks`).
+- Media aventurilor comerciale este conținut real (D-034) și nu intră în repository-ul public.
+
+### 10.2 Formatul vechi `audio.tracks` (compatibil)
 
 ```json
 "audio": {
@@ -326,9 +368,32 @@ Descoperiri separate de traseul principal (acțiunea `discover_secret`, evenimen
 }
 ```
 
-- Căi relative, fără „/” la început, fără „..”, fără adrese externe.
-- Sunetele cu voce (`kind: "voice"`) trebuie să aibă `transcriptMessage` — text alternativ obligatoriu.
-- Nu există încă player audio, activare a sunetului sau cache pentru fișiere audio (etapă ulterioară: autoplay blocat de browsere, strategie offline).
+- Rămâne valid, cu aceleași reguli (căi relative; `kind` obligatoriu; `transcriptMessage` obligatoriu pentru voce).
+- La normalizare (`toAdventureV2` → `normalizeMediaRegistry`), fiecare pistă devine `media.assets.<id>` cu `type: "audio"` și `path = audio.basePath + src`. Motorul și interfața citesc **numai** `media.assets`; nu există o a doua cale pentru audio.
+- Referințele audio existente — `narrator.messages.<id>.audio` și acțiunea `play_audio { trackId }` — acceptă orice asset `audio` din registrul unificat (vechi sau nou), nu și imagini.
+
+### 10.3 Blocurile media ale unei misiuni (`mission.media[]`)
+
+```json
+"media": [
+  { "type": "image", "asset": "img-exemplu", "caption": "…", "label": "A" },
+  { "type": "compare", "before": "img-a", "after": "img-b", "mode": "slider | toggle", "labels": { "before": "…", "after": "…" } },
+  { "type": "audio", "asset": "snd-exemplu", "showTranscript": "collapsed | expanded" }
+]
+```
+
+| Bloc | Cerințe | Interfața |
+| --- | --- | --- |
+| `image` | `asset` de tip `image`; `alt` / `caption` / `credit` / `label` opționale (suprascriu valorile asset-ului) | imaginea; atingerea o deschide în viewer; dacă nu se încarcă: textul alternativ + „Reîncearcă” |
+| `compare` | `before` și `after`: două imagini **diferite**; `mode` implicit `slider`; `labels` opționale (implicit neutre: „Imaginea A” / „Imaginea B”) | `slider`: prima imagine peste a doua, decupată de un control range; `toggle`: două butoane; „Mărește” deschide comparația în viewer |
+| `audio` | `asset` de tip `audio`; `showTranscript` implicit `collapsed` | player propriu: Ascultă / Pauză, „Se încarcă…”, progres, durată; transcript pliabil; dacă sunetul nu se încarcă: mesaj + „Reîncearcă”, transcriptul se deschide automat |
+| `video`, `model3d`, `ar` | rezervate — respinse | — |
+
+- Blocul `compare` este generic: trecut / prezent, două fotografii, două hărți, A/B etc. Nu există un tip de misiune pentru comparația istorică.
+- Media stă în panoul puzzle-ului pentru misiunile cu răspuns și în pagină pentru celelalte (ex. schița drumului pe o misiune `location`). Un sunet nu pornește niciodată singur; un singur sunet se redă odată; sunetul se oprește când panoul lui se ascunde.
+- **Viewer-ul** (D-073) este un strat generic pe tot ecranul pentru orice bloc vizual (`image`, `compare`): titlu, legendă, credit, „Mărește imaginea” / „Potrivește pe ecran”, pinch-zoom nativ. Se închide cu „Închide”, Escape sau Back (stratul de sus); restul paginii este inert cât este deschis; nu schimbă starea jocului și nu se salvează.
+- Fișierele media se încarcă din rețea, la afișarea misiunii (imagini `loading="lazy"`, sunet `preload="none"`). Service worker-ul **nu** le pune în cache; pre-descărcarea pentru joc offline aparține pachetului aventurii (D-056). `listMediaPaths(content)` (`media.js`) dă deja lista completă și deterministă a fișierelor unei aventuri.
+- URL-ul unui asset se obține printr-un singur punct: `resolveMediaUrl(path, adventureUrl(id))`, apelat de modelul interfeței (`buildViewModel({ …, mediaBaseUrl })`).
 
 ## 11. Progresul salvat (D-043)
 
@@ -368,7 +433,7 @@ Adăugat 2026-10-01 (aditiv): `getProgressSummary().collectedItems` și funcția
 
 ## 13. Ce NU este implementat în această etapă
 
-Vezi tabelul din secțiunea 0. În plus, nu există: GPS în fundal / geofencing, hartă offline (harta online este implementată în M-003.2), audio, notificări, parteneri reali și coduri reale, plăți, backend, cache offline pentru mai multe aventuri sau pentru audio, validarea GPS a prezenței pentru aventuri competitive (confirmarea manuală acordă punctele fără verificarea distanței — secțiunea 5, „Confirmarea manuală”).
+Vezi tabelul din secțiunea 0. În plus, nu există: GPS în fundal / geofencing, hartă offline (harta online este implementată în M-003.2), redarea automată a efectelor audio, cache offline pentru media, tipurile media `video` / `model3d` / `ar`, rezolvările `hotspot` / `items` / `acknowledge` / `bearing`, Play Mode (Walk / Bike — D-070), notificări, parteneri reali și coduri reale, plăți, backend, cache offline pentru mai multe aventuri sau pentru audio, validarea GPS a prezenței pentru aventuri competitive (confirmarea manuală acordă punctele fără verificarea distanței — secțiunea 5, „Confirmarea manuală”).
 
 Nu există nici elementele Platform V1.1: sesiuni cu identitate, echipe, participanți, rejoin, stare comună / sincronizare, pachet offline per versiune, fixarea sesiunii pe versiune, GPS adaptiv, Route Health / bypass, flux graf, `answerHash` — vezi secțiunea 14 și `13_PLATFORM_V1.1.md` §17.
 
@@ -433,7 +498,7 @@ Această secțiune arată cum se integrează cerințele V1.1 în schema V2 **fă
 ```
 
 - `settings.session` — D-054. `deviceMode` spune ce moduri permite aventura; `hints` spune dacă indiciile sunt comune echipei.
-- `settings.gpsPolling` — D-058. Doar alegerea unui **profil**; valorile concrete (intervale, praguri de distanță) stau în `defaults.js`, ca opțiunile `watchPosition` de azi (D-045), și **nu sunt fixate în arhitectură**.
+- `settings.gpsPolling` — D-058. Doar alegerea unui **profil**; valorile concrete (intervale, praguri de distanță) stau în `defaults.js`, ca opțiunile `watchPosition` de azi (D-045), și **nu sunt fixate în arhitectură**. **Precizat de D-070 (2026-10-01):** profilul de deplasare aparține modului de joc al sesiunii (Play Mode), nu aventurii; câmpul nu se adaugă în aventură în această formă.
 - `settings.integrity` — D-060. `casual`: comportamentul de azi (GPS sau „Am ajuns”). `verified`: checkpoint-urile cer o dovadă suplimentară (`location.proof`), iar confirmarea manuală nu acordă singură punctele. Regula exactă: DESCHIS (legat de secțiunea 5, „Aventuri competitive”).
 - `offline.assets` — D-056. Lista explicită a fișierelor din pachet (căi relative, aceleași reguli ca `audio.basePath`). **Nu** conține tile-uri de hartă (D-046).
 
@@ -451,7 +516,7 @@ Această secțiune arată cum se integrează cerințele V1.1 în schema V2 **fă
 }
 ```
 
-- `safetyWarning` — D-059; afișat înainte de interacțiunea cu telefonul la checkpoint.
+- `safetyWarning` — D-059; afișat înainte de interacțiunea cu telefonul la checkpoint. **Precizat de D-070:** nota de siguranță depinde de modul de joc; forma propusă este `safetyNotes: { "<mod>": "…" }`, aleasă de Play Mode.
 - `proof.method` — D-060; reutilizează vocabularul existent din `partner.verification.method` acolo unde se suprapune.
 - `bypass` — D-061; spune dacă și cum se poate trece peste checkpoint. **Starea de disponibilitate** (`ACTIVE / UNAVAILABLE / BYPASSED`) **nu** stă în conținut: este strat operațional al rutei (Route Health), ca să se poată schimba fără o versiune nouă.
 

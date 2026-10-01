@@ -6,7 +6,7 @@
  * - upgradeV1ToV2(v1): conversia în memorie a unei aventuri schemaVersion 1.
  *   Fișierul V1 nu se modifică (D-038 / D1).
  * - toAdventureV2(data): forma normalizată folosită de motor (V1 sau V2 la intrare;
- *   valori implicite aplicate). Idempotentă.
+ *   valori implicite aplicate; registrul media unificat — media.js). Idempotentă.
  *
  * Motorul nu conține conținut: tot ce ține de o aventură anume (oraș, texte,
  * coduri, locații) vine din JSON. Specificația: docs/11_ADVENTURE_SCHEMA_V2.md.
@@ -17,6 +17,18 @@
 import { resolveSettings } from "./defaults.js";
 import { isValidCoordinates } from "./geo.js";
 import { EVENT_TYPES, FILTER_KEYS, ACTION_TYPES } from "./events.js";
+import {
+  AUDIO_KINDS,
+  MEDIA_ASSET_TYPES,
+  RESERVED_MEDIA_ASSET_TYPES,
+  MEDIA_BLOCK_TYPES,
+  RESERVED_MEDIA_BLOCK_TYPES,
+  COMPARE_MODES,
+  TRANSCRIPT_DISPLAY,
+  IMAGE_ROLES,
+  INPUT_MODES,
+  normalizeMediaRegistry,
+} from "./media.js";
 
 export const SCHEMA_V1 = 1;
 export const SCHEMA_V2 = 2;
@@ -46,7 +58,8 @@ export const PARTNER_STATUSES = Object.freeze(["locked", "unlocked"]);
 export const VERIFICATION_METHODS = Object.freeze(["code", "staff_code", "receipt_code", "password", "qr", "physical_item", "none"]);
 export const REWARD_TYPES = Object.freeze(["discount", "clue", "item", "points", "none"]);
 
-export const AUDIO_KINDS = Object.freeze(["voice", "sfx", "music"]);
+// Vocabularul media (inclusiv AUDIO_KINDS) stă în media.js; re-exportat aici pentru compatibilitate.
+export { AUDIO_KINDS, MEDIA_ASSET_TYPES, MEDIA_BLOCK_TYPES, COMPARE_MODES, INPUT_MODES };
 export const PROGRESSION_MODES = Object.freeze(["linear"]);
 
 /* ---------- Utilitare ---------- */
@@ -129,7 +142,9 @@ export function validateAdventureV2(data) {
   const settings = resolveSettings(isObject(data.settings) ? data.settings : {});
 
   // Colecții: id-uri unice, păstrate pentru verificarea referințelor.
-  const ids = { missions: new Set(), locations: new Set(), partners: new Set(), secrets: new Set(), items: new Set(), messages: new Set(), tracks: new Set() };
+  // `tracks` = toate sunetele (audio.tracks + media.assets de tip „audio”): ținta referințelor
+  // narrator.messages[].audio și play_audio.trackId. `media` = toate asset-urile din media.assets.
+  const ids = { missions: new Set(), locations: new Set(), partners: new Set(), secrets: new Set(), items: new Set(), messages: new Set(), tracks: new Set(), media: new Set() };
 
   function collectArray(key, required) {
     const value = data[key];
@@ -159,6 +174,35 @@ export function validateAdventureV2(data) {
   // narrator.messages și audio.tracks sunt dicționare: cheia este id-ul.
   const messages = collectDictionary("narrator", "messages");
   const tracks = collectDictionary("audio", "tracks");
+  const mediaAssets = collectMediaAssets();
+
+  // media.assets: dicționar, ca audio.tracks. Id-urile sunt unice în ambele registre (devin unul singur).
+  function collectMediaAssets() {
+    const media = data.media;
+    if (media === undefined) return {};
+    if (!isObject(media)) {
+      err("media trebuie să fie un obiect.");
+      return {};
+    }
+    if (media.basePath !== undefined && !isSafeRelativePath(media.basePath)) {
+      err("media.basePath trebuie să fie o cale relativă (fără „/” la început, fără „..”).");
+    }
+    const dict = media.assets;
+    if (dict === undefined) return {};
+    if (!isObject(dict)) {
+      err("media.assets trebuie să fie un obiect { id: … }.");
+      return {};
+    }
+    for (const [id, asset] of Object.entries(dict)) {
+      if (!isValidId(id)) err(`media.assets: id invalid „${id}”.`);
+      else if (ids.tracks.has(id)) err(`media.assets.${id}: id-ul există deja în audio.tracks (registrul media este unic).`);
+      else {
+        ids.media.add(id);
+        if (isObject(asset) && asset.type === "audio") ids.tracks.add(id);
+      }
+    }
+    return dict;
+  }
 
   function collectDictionary(parentKey, key) {
     const parent = data[parentKey];
@@ -215,6 +259,91 @@ export function validateAdventureV2(data) {
     if (track.kind === "voice" && track.transcriptMessage === undefined) {
       err(`${where}: sunetele cu voce trebuie să aibă transcriptMessage (text alternativ).`);
     }
+  }
+
+  // media.assets: tipul decide metadatele obligatorii. Tipurile rezervate sunt respinse explicit (D-072).
+  const assetType = (id) => (isObject(mediaAssets[id]) ? mediaAssets[id].type : tracks[id] !== undefined ? "audio" : undefined);
+  for (const [id, asset] of Object.entries(mediaAssets)) {
+    const where = `media.assets.${id}`;
+    if (!isObject(asset)) {
+      err(`${where} trebuie să fie un obiect { type, src, … }.`);
+      continue;
+    }
+    if (RESERVED_MEDIA_ASSET_TYPES.includes(asset.type)) {
+      err(`${where}.type „${asset.type}” este rezervat și nu este implementat încă (permis: ${MEDIA_ASSET_TYPES.join(", ")}).`);
+      continue;
+    }
+    if (!MEDIA_ASSET_TYPES.includes(asset.type)) {
+      err(`${where}.type necunoscut: „${asset.type}” (permis: ${MEDIA_ASSET_TYPES.join(", ")}).`);
+      continue;
+    }
+    if (!isSafeRelativePath(asset.src)) err(`${where}.src trebuie să fie o cale relativă.`);
+    for (const key of ["caption", "credit", "title"]) {
+      if (asset[key] !== undefined && typeof asset[key] !== "string") err(`${where}.${key} trebuie să fie text.`);
+    }
+    if (asset.type === "image") {
+      if (!isNonEmptyString(asset.alt)) err(`${where}.alt lipsește (textul alternativ al imaginii este obligatoriu).`);
+      if (asset.role !== undefined && !IMAGE_ROLES.includes(asset.role)) err(`${where}.role necunoscut: „${asset.role}”.`);
+      for (const key of ["width", "height"]) {
+        if (asset[key] !== undefined && !isPositiveNumber(asset[key])) err(`${where}.${key} trebuie să fie un număr pozitiv (pixeli).`);
+      }
+      if (asset.provenance !== undefined && !isObject(asset.provenance)) err(`${where}.provenance trebuie să fie un obiect.`);
+      // Imaginile de arhivă cer sursa și licența (D-011; cercetarea istorică este o fază separată).
+      if (asset.role === "archival" && !(isObject(asset.provenance) && isNonEmptyString(asset.provenance.credit) && isNonEmptyString(asset.provenance.license))) {
+        err(`${where}: o imagine „archival” cere provenance.credit și provenance.license.`);
+      }
+    } else if (asset.type === "audio") {
+      if (asset.kind !== undefined && !AUDIO_KINDS.includes(asset.kind)) err(`${where}.kind necunoscut: „${asset.kind}”.`);
+      if (asset.transcript !== undefined && !isNonEmptyString(asset.transcript)) err(`${where}.transcript trebuie să fie un text nevid.`);
+      if (asset.transcript !== undefined && asset.transcriptMessage !== undefined) err(`${where}: folosește transcript SAU transcriptMessage, nu ambele.`);
+      ref("messages", asset.transcriptMessage, `${where}.transcriptMessage`);
+      if (asset.kind === "voice" && asset.transcript === undefined && asset.transcriptMessage === undefined) {
+        err(`${where}: sunetele cu voce trebuie să aibă transcript sau transcriptMessage (text alternativ).`);
+      }
+    }
+  }
+
+  /** Blocurile media ale unei misiuni (mission.media). */
+  function validateMediaBlocks(blocks, where) {
+    if (!Array.isArray(blocks)) return err(`${where} trebuie să fie o listă de blocuri.`);
+    const expectAsset = (id, type, at) => {
+      if (!isNonEmptyString(id)) return err(`${at} lipsește.`);
+      const actual = assetType(id);
+      if (actual === undefined) return err(`${at}: referință inexistentă „${id}” (media.assets).`);
+      if (actual !== type) err(`${at}: „${id}” este de tip „${actual}”, nu „${type}”.`);
+    };
+    blocks.forEach((block, b) => {
+      const at = `${where}[${b}]`;
+      if (!isObject(block)) return err(`${at} trebuie să fie un obiect { type, … }.`);
+      if (RESERVED_MEDIA_BLOCK_TYPES.includes(block.type)) {
+        return err(`${at}.type „${block.type}” este rezervat și nu este implementat încă (permis: ${MEDIA_BLOCK_TYPES.join(", ")}).`);
+      }
+      if (!MEDIA_BLOCK_TYPES.includes(block.type)) return err(`${at}.type necunoscut: „${block.type}” (permis: ${MEDIA_BLOCK_TYPES.join(", ")}).`);
+      for (const key of ["alt", "caption", "credit", "label", "title"]) {
+        if (block[key] !== undefined && typeof block[key] !== "string") err(`${at}.${key} trebuie să fie text.`);
+      }
+      if (block.type === "image") {
+        expectAsset(block.asset, "image", `${at}.asset`);
+      } else if (block.type === "audio") {
+        expectAsset(block.asset, "audio", `${at}.asset`);
+        if (block.showTranscript !== undefined && !TRANSCRIPT_DISPLAY.includes(block.showTranscript)) {
+          err(`${at}.showTranscript necunoscut: „${block.showTranscript}” (permis: ${TRANSCRIPT_DISPLAY.join(", ")}).`);
+        }
+      } else if (block.type === "compare") {
+        expectAsset(block.before, "image", `${at}.before`);
+        expectAsset(block.after, "image", `${at}.after`);
+        if (isNonEmptyString(block.before) && block.before === block.after) err(`${at}: before și after trebuie să fie imagini diferite.`);
+        if (block.mode !== undefined && !COMPARE_MODES.includes(block.mode)) {
+          err(`${at}.mode necunoscut: „${block.mode}” (permis: ${COMPARE_MODES.join(", ")}).`);
+        }
+        if (block.labels !== undefined) {
+          if (!isObject(block.labels)) err(`${at}.labels trebuie să fie un obiect { before, after }.`);
+          else for (const key of ["before", "after"]) {
+            if (block.labels[key] !== undefined && typeof block.labels[key] !== "string") err(`${at}.labels.${key} trebuie să fie text.`);
+          }
+        }
+      }
+    });
   }
 
   // locations
@@ -286,6 +415,14 @@ export function validateAdventureV2(data) {
         err(`${where}.choices trebuie să fie o listă de 2–6 texte nevide, diferite.`);
       }
     }
+    // inputMode: tastatura răspunsului tastat (indiciu pentru telefon; verificarea rămâne în answers.js).
+    if (mission.inputMode !== undefined) {
+      if (!ANSWER_MISSION_TYPES.includes(mission.type)) err(`${where}.inputMode este permis doar pentru misiunile cu răspuns.`);
+      else if (!INPUT_MODES.includes(mission.inputMode)) err(`${where}.inputMode necunoscut: „${mission.inputMode}” (permis: ${INPUT_MODES.join(", ")}).`);
+      else if (mission.choices !== undefined && mission.inputMode !== "text") err(`${where}: inputMode „${mission.inputMode}” nu se folosește împreună cu choices.`);
+    }
+    // media: blocurile afișate de misiune (orice tip de misiune, inclusiv „location”).
+    if (mission.media !== undefined) validateMediaBlocks(mission.media, `${where}.media`);
     if (mission.type === "timed" && !(Number.isInteger(mission.timeLimitSeconds) && mission.timeLimitSeconds > 0)) {
       err(`${where}.timeLimitSeconds trebuie să fie un întreg pozitiv pentru o misiune „timed”.`);
     }
@@ -470,6 +607,9 @@ export function toAdventureV2(data) {
     settings: resolveSettings(source.settings),
     narrator: { name: source.narrator?.name, messages: { ...(source.narrator?.messages || {}) } },
     audio: { basePath: source.audio?.basePath, tracks: { ...(source.audio?.tracks || {}) } },
+    // Registrul media unificat: media.assets + audio.tracks (format vechi), fiecare asset cu `path`.
+    // Motorul și interfața citesc doar acest registru (D-072).
+    media: normalizeMediaRegistry(source),
     // Implicit „locked” (fog of war): o locație devine vizibilă când misiunea ei devine activă.
     locations: (source.locations || []).map((location) => ({ ...location, initialStatus: location.initialStatus ?? "locked" })),
     missions,

@@ -2,9 +2,9 @@
 
 | | |
 | --- | --- |
-| **Status** | PROPUNERE DE DESIGN, **revizia 2** (2026-10-01). Direcția generală a fost aprobată de proprietar; ajustările cerute la revizie sunt incluse (lista în §13). Nimic nu este implementat și nimic nu este încă înregistrat ca decizie în `04_DECISIONS_LOG.md`. |
+| **Status** | Design **revizia 2**, aprobat de proprietar (2026-10-01). D1–D4 sunt înregistrate ca D-070 – D-073 în `04_DECISIONS_LOG.md`. **Partea NOW este implementată** (vezi „Note de implementare” la final); NEXT / FUTURE rămân neimplementate. |
 | **Data** | 2026-10-01 |
-| **Baza** | `main` la `e18abec` + modificările locale necomise ale proprietarului (`items` / `collect_item`, `mission.choices`, jurnalul naratorului — `viewModel.story`). `npm test`: 240/240 PASS pe working tree-ul de la 2026-10-01. |
+| **Baza** | design: `main` la `e18abec` + obiecte / variante / jurnal (comise ulterior în `63debe7`); implementarea NOW pornește de la `9cb72b7`. |
 | **Citit** | `04_DECISIONS_LOG.md`, `11_ADVENTURE_SCHEMA_V2.md`, `13_PLATFORM_V1.1.md` (§1, §2, §10, §11, §15, §16), `05_GAME_DESIGN_SPEC.md`, `src/js/*.js`, `src/index.html`, `src/css/app.css`, `src/sw.js`, testele, propunerea privată pentru prima aventură reală și JSON-ul ei local |
 | **Conținut real** | Acest document este **generic** și nu conține conținutul primei aventuri reale (D-034). Designul concret al celor 8 provocări („Challenge Design V2”) este în `Claude outputs/TASK_CHALLENGE_SYSTEM_V1_PRIVAT.md` (ignorat de Git, D-044). |
 
@@ -132,7 +132,7 @@ Câmpurile fiecărei fișe: **Scop · Input (JSON) · UI · Interacțiune · Rez
 #### `image_observation` — NOW
 
 - **Scop:** imaginea îndreaptă privirea spre ceva real (schiță, detaliu decupat, fotografie adnotată care fixează limitele observației, scan de document). Rezolvă ambiguitatea „ce anume număr / unde mă uit”.
-- **Input:** `media: [{ "kind": "image", "asset", "caption?", "label?" }]`.
+- **Input:** `media: [{ "type": "image", "asset", "caption?", "label?" }]`.
 - **UI:** imaginea în panoul provocării, sub `briefing`; atingerea o deschide în `media_viewer`.
 - **Interacțiune:** privește imaginea, caută corespondentul în jur, rezolvă (text / cifre / alegere).
 - **Rezultat:** rezolvare prin răspuns (`answers.js`) → misiunea `solved`.
@@ -144,7 +144,7 @@ Câmpurile fiecărei fișe: **Scop · Input (JSON) · UI · Interacțiune · Rez
 #### `historical_overlay` — NOW
 
 - **Scop:** comparația trecut / prezent din același unghi; jucătorul observă ce s-a schimbat sau ce a rămas.
-- **Input:** `{ "kind": "compare", "before", "after", "mode": "slider" | "toggle", "labels?" }`; imaginea veche cu `role: "archival"` și metadatele de proveniență (§5.1).
+- **Input:** `{ "type": "compare", "before", "after", "mode": "slider" | "toggle", "labels?" }`; imaginea veche cu `role: "archival"` și metadatele de proveniență (§5.1).
 - **UI:** `slider` — imaginile suprapuse, o bară trasă orizontal (accesibilă și cu tastatura); `toggle` — un buton „Atunci / Acum”. `slider` cere imagini aliniate; `toggle` tolerează diferențe de cadru. Ambele se pot deschide în viewer.
 - **Interacțiune:** compară imaginile și realitatea, apoi rezolvă.
 - **Rezultat:** rezolvare prin răspuns. Comparația nu validează nimic.
@@ -156,7 +156,7 @@ Câmpurile fiecărei fișe: **Scop · Input (JSON) · UI · Interacțiune · Rez
 #### `audio_clue` — NOW
 
 - **Scop:** informația vine printr-o voce sau un sunet: mesajul unui personaj, mai multe voci care se contrazic, un sunet de recunoscut.
-- **Input:** `media: [{ "kind": "audio", "asset", "showTranscript" }]`; asset `type: "audio"` cu `transcriptMessage` (obligatoriu pentru `kind: "voice"`). Mesajele naratorului: `narrator.messages.<id>.audio` (există).
+- **Input:** `media: [{ "type": "audio", "asset", "showTranscript" }]`; asset `type: "audio"` cu `transcriptMessage` (obligatoriu pentru `kind: "voice"`). Mesajele naratorului: `narrator.messages.<id>.audio` (există).
 - **UI:** player nativ (`<audio controls>`), fără autoplay; transcriptul sub player, pliat sau desfășurat.
 - **Interacțiune:** apasă „Play” sau citește transcriptul; rezolvă.
 - **Rezultat:** rezolvare prin răspuns.
@@ -312,7 +312,7 @@ Când apare prima formă care cere configurație proprie, se introduce un câmp 
 ```json
 {
   "type": "observation",
-  "media": [ { "kind": "image", "asset": "img-fatada-larga" } ],
+  "media": [ { "type": "image", "asset": "img-fatada-larga" } ],
   "resolution": {
     "kind": "hotspot",
     "media": 0,
@@ -397,7 +397,7 @@ Exemplele sunt **fictive**. Numele câmpurilor sunt **propuse**; se fixează în
 | `type` | Obligatoriu | Opțional | Status |
 | --- | --- | --- | --- |
 | `image` | `alt` | `role` (`photo` \| `archival` \| `map` \| `document` \| `illustration`), `width`, `height`, `provenance` | NOW |
-| `audio` | `kind` (`voice` \| `sfx` \| `music` — lista existentă), `transcriptMessage` dacă `kind: "voice"` | `durationSeconds` | NOW |
+| `audio` | pentru `kind: "voice"`: `transcript` (text) sau `transcriptMessage` (mesaj) | `kind` (`voice` \| `sfx` \| `music` — lista existentă), `title`, `durationSeconds` | NOW |
 | `video` | rezervat (ex. `poster`, `captions`) | — | FUTURE |
 | `model3d` | rezervat | — | FUTURE |
 | `ar` | rezervat (D-050) | — | FUTURE |
@@ -423,9 +423,9 @@ Listă ordonată de blocuri, afișate deasupra rezolvării. Permisă pe **orice*
   "briefing": "Comparați fotografia veche cu ce vedeți în fața voastră.\nCâte frontoane au rămas la fel?",
   "locationId": "loc-piata",
   "media": [
-    { "kind": "compare", "before": "img-arhiva-piata", "after": "img-azi-piata", "mode": "slider", "labels": { "before": "Atunci", "after": "Acum" } },
-    { "kind": "image", "asset": "img-detaliu", "caption": "Detaliul încercuit", "label": "A" },
-    { "kind": "audio", "asset": "voce-personaj", "showTranscript": "collapsed" }
+    { "type": "compare", "before": "img-arhiva-piata", "after": "img-azi-piata", "mode": "slider", "labels": { "before": "Atunci", "after": "Acum" } },
+    { "type": "image", "asset": "img-detaliu", "caption": "Detaliul încercuit", "label": "A" },
+    { "type": "audio", "asset": "voce-personaj", "showTranscript": "collapsed" }
   ],
   "inputMode": "numeric",
   "answer": "2",
@@ -434,7 +434,7 @@ Listă ordonată de blocuri, afișate deasupra rezolvării. Permisă pe **orice*
 }
 ```
 
-| `kind` | Câmpuri | Asset cerut | Status |
+| `type` | Câmpuri | Asset cerut | Status |
 | --- | --- | --- | --- |
 | `image` | `asset`, `caption?`, `label?` | `image` | NOW |
 | `compare` | `before`, `after`, `mode: "slider" \| "toggle"`, `labels?` | `image` × 2 | NOW |
@@ -463,7 +463,7 @@ O „galerie” nu este un tip separat: sunt mai multe blocuri `image` cu `label
 "missions": [
   { "id": "m-sosire-piata", "type": "location", "track": "main", "title": "Piața", "briefing": "Mergeți în piață.", "locationId": "loc-piata", "points": 0 },
   { "id": "m-atunci-acum", "type": "observation", "track": "main", "title": "Atunci și acum", "briefing": "…", "locationId": "loc-piata",
-    "media": [ { "kind": "compare", "before": "img-arhiva-piata", "after": "img-azi-piata", "mode": "slider" } ],
+    "media": [ { "type": "compare", "before": "img-arhiva-piata", "after": "img-azi-piata", "mode": "slider" } ],
     "inputMode": "numeric", "answer": "2", "points": 100 }
 ],
 "events": [
@@ -756,3 +756,18 @@ Toate patru pot fi înregistrate împreună, în `04_DECISIONS_LOG.md`, la înce
 
 **Ce am verificat:** documentele și codul enumerate în antet; `npm test` (240/240 PASS) pe working tree-ul curent.
 **Ce NU am modificat:** codul, motorul, schema, interfața, testele, service worker-ul, aventurile, `04_DECISIONS_LOG.md`, `11_ADVENTURE_SCHEMA_V2.md`. Nu am făcut commit.
+
+---
+
+## Note de implementare — NOW (2026-10-01)
+
+Implementarea urmează acest document, cu următoarele precizări (forma finală este în `11_ADVENTURE_SCHEMA_V2.md` §10):
+
+- **Blocurile media** folosesc câmpul `type` (nu `kind`): `{ "type": "image" | "compare" | "audio", … }`. `kind` rămâne doar câmpul unui asset audio (`voice` / `sfx` / `music`). Blocurile audio trimit la asset prin `asset` (nu `track`).
+- **Asset-urile audio** pot avea transcript propriu (`transcript`, text) sau, ca în formatul vechi, `transcriptMessage` (un mesaj al naratorului) — nu ambele.
+- **`audio.tracks`** este normalizat în `media.assets` (`normalizeMediaRegistry`, `media.js`); referințele `narrator.messages[].audio` și `play_audio.trackId` acceptă orice asset `audio` din registrul unificat.
+- **Locul fișierelor:** căile media sunt relative la fișierul aventurii și nu pot conține „..”, deci media unei aventuri stă sub `content/adventures/` (demo-ul: `content/adventures/media/demo-challenge-media/`). Pentru media reală, locul local ignorat de Git (ex. `content/adventures/media/private-<id>/`) rămâne decizia deschisă din §13.3.
+- **Etichetele implicite** ale unei comparații sunt neutre („Imaginea A” / „Imaginea B”): codul nu presupune „trecut / prezent”.
+- **Rezolvarea** se deduce din câmpurile existente (§4.2); câmpul explicit `resolution` nu a fost introdus.
+- **Module noi:** `src/js/media.js` (pur) și `src/js/media-ui.js` (DOM). `game.js`, `events.js` și `answers.js` nu au fost modificate. `CACHE_VERSION` = `v9`.
+- **Demo fictiv:** `content/adventures/demo-challenge-media.json` (`src/?adventure=demo-challenge-media`). **Teste:** `tests/challenge-media.test.js`.

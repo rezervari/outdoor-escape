@@ -100,6 +100,8 @@
 
       <h2 id="challenge-title"></h2>
       <p id="challenge-description" class="text-block"></p>
+      <!-- Media misiunilor fără răspuns (ex. „location”): blocuri image / compare / audio (media-ui.js). -->
+      <div id="mission-media" class="media-list" hidden></div>
 
       <!-- Jurnalul naratorului (viewModel.story): mesajele regulilor deja declanșate, derivate din
            progresul salvat. Apare doar dacă aventura are mesaje și cel puțin unul a fost primit. -->
@@ -129,6 +131,8 @@
           </div>
           <h2 id="puzzle-title" class="puzzle-title" tabindex="-1"></h2>
           <p id="puzzle-question" class="puzzle-question text-block"></p>
+          <!-- Media provocării (Challenge System V1): imagine, comparație, sunet. Niciodată răspunsul. -->
+          <div id="puzzle-media" class="media-list" hidden></div>
 
           <form id="answer-form" novalidate>
             <!-- Variante de răspuns (mission.choices): fiecare buton trimite varianta prin același
@@ -136,7 +140,7 @@
             <div id="choice-list" class="choice-list" role="group" aria-label="Alege răspunsul" hidden></div>
             <div id="typed-answer">
               <label for="answer-input">Răspunsul tău</label>
-              <input id="answer-input" name="answer" type="text"
+              <input id="answer-input" name="answer" type="text" inputmode="text"
                      autocomplete="off" autocapitalize="off" autocorrect="off"
                      spellcheck="false" enterkeyhint="done">
               <button type="submit" class="button button-primary" id="btn-check">Verifică răspunsul</button>
@@ -232,5 +236,16 @@
       </dl>
     </details>
   </main>
+
+  <!-- Viewer-ul media (D-073): strat generic pe tot ecranul (fotografie, arhivă, hartă, document,
+       comparație). Stă în afara <main>, ca restul paginii să poată deveni inert cât este deschis.
+       Se închide cu „Închide”, Escape sau Back; nu schimbă starea jocului. -->
+  <div id="media-viewer" class="media-viewer" role="dialog" aria-modal="true" aria-labelledby="media-viewer-title" hidden>
+    <div class="media-viewer-head">
+      <h2 id="media-viewer-title" class="media-viewer-title" tabindex="-1"></h2>
+      <button type="button" class="button button-secondary" id="btn-viewer-close">Închide</button>
+    </div>
+    <div id="media-viewer-body" class="media-viewer-body"></div>
+  </div>
 </body>
 </html>

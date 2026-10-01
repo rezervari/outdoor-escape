@@ -14,11 +14,16 @@
  * (D-021); interfața primește oricum conținutul fără răspunsuri (withoutAnswers).
  * Textele pentru jucător nu sunt aici: modelul întoarce valori enumerate.
  *
+ * Media misiunii (Challenge System V1, D-072) vine rezolvată de media.js: URL-uri, texte
+ * alternative, transcript. Modelul nu știe ce reprezintă imaginile și nici în ce mod de joc
+ * (Walk / Bike) este jucată aventura (D-070).
+ *
  * Separat de map-model.js, care construiește modelul hărții (D-048).
  */
 
 import { GameStatus, ChallengeStatus, MissionStatus, LocationStatus, isMissionClosed, deriveProgress, maxScore, countSolved, collectedItems } from "./game.js";
 import { ANSWER_MISSION_TYPES } from "./schema.js";
+import { resolveMissionMedia } from "./media.js";
 
 /** Ce vizualizare corespunde stării motorului. */
 export const View = Object.freeze({
@@ -96,6 +101,8 @@ function buildPuzzle(mission, progress) {
     question: mission.briefing,
     // Variantele de răspuns afișate ca butoane (mission.choices); null = răspuns tastat.
     choices: Array.isArray(mission.choices) ? [...mission.choices] : null,
+    // Tastatura răspunsului tastat (D-072): doar indiciu pentru telefon; verificarea rămâne în answers.js.
+    inputMode: mission.inputMode === "numeric" ? "numeric" : "text",
     points: mission.points,
     status: progress.status,
     available: pending,
@@ -191,10 +198,11 @@ function buildItems(content, state) {
 
 /**
  * Construiește modelul interfeței.
- *   content — aventura normalizată V2 (game.content)
- *   state   — starea motorului (game.getState())
+ *   content      — aventura normalizată V2 (game.content)
+ *   state        — starea motorului (game.getState())
+ *   mediaBaseUrl — URL-ul fișierului aventurii, față de care se rezolvă căile media (opțional)
  */
-export function buildViewModel({ content, state }) {
+export function buildViewModel({ content, state, mediaBaseUrl = null }) {
   const main = content.missions.filter((m) => m.track === "main");
   const summary = {
     score: state.score,
@@ -267,6 +275,8 @@ export function buildViewModel({ content, state }) {
       index,
       total: main.length,
       isLast: index === main.length - 1,
+      // Blocurile media ale misiunii (image / compare / audio), rezolvate; [] fără media.
+      media: resolveMissionMedia(content, mission.media, { baseUrl: mediaBaseUrl }),
     },
     objective,
     puzzle,

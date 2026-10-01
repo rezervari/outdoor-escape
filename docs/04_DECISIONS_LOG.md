@@ -480,6 +480,7 @@ Mecanism:
 - Se folosește History API al browserului: fiecare strat deschis are o intrare internă în istoric, fără URL nou și fără rută nouă. Aceasta **nu** este routing bazat pe URL: regula 2 rămâne valabilă.
 - Starea de navigare a straturilor nu este stare de joc: nu ajunge în motor și nu se salvează în `localStorage`.
 - Detaliile tehnice: `03_ARCHITECTURE.md`, secțiunea 3c.
+- Extins de D-073 (2026-10-01): `media_viewer` este al treilea strat închis de Back, deasupra celorlalte.
 
 Motivare pe scurt:
 - Cu aceeași structură local și online, căile relative (de exemplu `../content/...` din `src/`) funcționează identic în ambele medii, fără cod care verifică mediul și fără transformări la publicare.
@@ -800,6 +801,8 @@ Neschimbat: aplicația rămâne la adresa din D-035. Data și modul mutării pe 
 
 Documentul principal: [`13_PLATFORM_V1.1.md`](13_PLATFORM_V1.1.md).
 
+Notă (2026-10-01): precizată de D-070 — diferențele Walk / Bike aparțin modului de joc al sesiunii (Play Mode), nu aventurii.
+
 ---
 
 ## D-051 — Modelul de domeniu: Route, Adventure, Session, Pass, roluri
@@ -922,6 +925,8 @@ Decizie:
 - Nu se introduc mecanisme care recompensează viteza, folosirea telefonului în mers sau interacțiunea cu telefonul în timpul deplasării (constrângere pentru D-025).
 - Beep, vibrație, text-to-speech și prompturi audio sunt posibile funcționalități de **siguranță / UX**, nu mecanici de joc.
 - Nu se presupune că browserul poate reda audio în fundal sau cu ecranul oprit pe toate dispozitivele; limitările sunt risc tehnic de testat pe dispozitive reale.
+
+Notă (2026-10-01): precizată de D-071 — audio de gameplay este permis în Bike numai în stare sigură.
 
 ---
 
@@ -1094,3 +1099,58 @@ Relații:
 Un `FAIL` care arată un defect devine un task de corectare separat. Un rezultat care confirmă o limită documentată nu este un defect.
 
 Nu se schimbă: D-025, D-028, D-063, motorul, schema V2, aplicația, conținutul și testele.
+
+---
+
+## D-070 — Adventure și Play Mode (Walk / Bike) sunt dimensiuni separate
+Status: CONFIRMED (2026-10-01) — arhitectural; Play Mode neimplementat
+
+Context:
+Challenge System V1 (`TASK_CHALLENGE_SYSTEM_V1.md` §2, D1) introduce capabilități multimedia reutilizabile. D-050 spunea că diferențele Walk / Bike vin „din configurația aventurii”, iar `11_ADVENTURE_SCHEMA_V2.md` §14.3 propunea `settings.gpsPolling.profile` și `location.safetyWarning` în aventură. Aceeași aventură trebuie însă să poată fi jucată în moduri diferite fără duplicarea provocărilor.
+
+Decizie (proprietar, 2026-10-01):
+- **Adventure** conține conținutul și regulile (locații, misiuni, media, obiecte, evenimente, final). Nu știe cum se deplasează jucătorii.
+- **Modul de joc** (Walk / Bike / …) este o dimensiune separată a **sesiunii** (Session / Play Mode, D-051). Profilul GPS (D-058), regulile de siguranță (D-059), ritmul și avertismentele țin de Play Mode.
+- Capabilitățile (media, rezolvarea misiunilor, obiectele, jurnalul) **nu citesc** modul de joc. Niciun contract nu presupune că o aventură este pietonală; nu se introduc câmpuri `walk` / `bike` în misiuni sau în blocurile media.
+- Session / Play Mode **nu se implementează acum**.
+
+Consecințe:
+- Precizează D-050: „configurația” care diferențiază Walk / Bike este a sesiunii (Play Mode), nu a aventurii.
+- Câmpurile propuse în `11_ADVENTURE_SCHEMA_V2.md` §14.3 `settings.gpsPolling.profile` și `location.safetyWarning` (neimplementate) sunt înlocuite conceptual de profilul din Play Mode și de note de siguranță pe mod (`location.safetyNotes`, propus). Forma exactă se decide la implementarea Play Mode.
+
+---
+
+## D-071 — Audio de gameplay în Bike: numai în stare sigură
+Status: CONFIRMED (2026-10-01) — regulă de design; neimplementat
+
+Decizie (proprietar, 2026-10-01; `TASK_CHALLENGE_SYSTEM_V1.md` §7.1, D2):
+- Audio de gameplay (capabilitatea generică `audio_clue`) poate fi folosit și în aventurile jucate în modul Bike.
+- În Bike, conținutul audio de gameplay se consumă **numai într-o stare sigură** (bicicleta oprită, la checkpoint). Player-ul nu pornește niciodată singur.
+- Prompturile audio / vibrația de **siguranță** („te apropii de checkpoint, oprește”) rămân funcționalitate de UX, separată de gameplay (D-059).
+- Nu se implementează acum sistemul complet de siguranță Bike. Dacă va fi necesar, poarta de stare sigură aparține Play Mode (D-070), fără modificarea provocărilor.
+
+Precizează D-059 („audio … nu mecanici de joc” se referă la semnalele de siguranță, nu interzice audio de gameplay ascultat în stare sigură).
+
+---
+
+## D-072 — Registrul media unificat (`media.assets`)
+Status: CONFIRMED (2026-10-01) — implementat în Challenge System V1 (NOW)
+
+Decizie (proprietar, 2026-10-01; `TASK_CHALLENGE_SYSTEM_V1.md` §5.1, D3):
+- Media aventurii folosește un registru unificat `media.assets[id]`, în care fiecare asset are `type` și metadate specifice tipului.
+- Tipurile implementate (NOW): `image`, `audio`.
+- Tipurile viitoare `video`, `model3d`, `ar` sunt **rezervate** și **respinse** de validator până la implementare.
+- `audio.tracks` (formatul existent) rămâne compatibil, ca format legacy, și este **normalizat** către registrul unificat. Motorul și interfața citesc un singur registru.
+- Răspunsul numeric: `inputMode: "numeric"` (indiciu de tastatură; verificarea rămâne în `answers.js`, D-021).
+
+Specificație: `11_ADVENTURE_SCHEMA_V2.md` (secțiunile despre media și misiuni).
+
+---
+
+## D-073 — `media_viewer`: strat UI generic, închis prin Back
+Status: CONFIRMED (2026-10-01) — implementat în Challenge System V1 (NOW)
+
+Decizie (proprietar, 2026-10-01; `TASK_CHALLENGE_SYSTEM_V1.md` §3.1, D4):
+- `media_viewer` este un strat generic de interfață, pe tot ecranul, care poate afișa orice media compatibilă cu viewer-ul: fotografie, fotografie istorică, hartă, document și, ulterior, alte tipuri compatibile.
+- Nu există viewer dedicat unei aventuri.
+- Viewer-ul este un strat închis prin Back (extinde precizarea U2 din D-035): ordinea de închidere este viewer-ul, apoi confirmarea indiciului, apoi overlay-ul puzzle-ului — un Back închide un singur strat. Închiderea nu modifică starea jocului, iar starea viewer-ului nu se salvează.
