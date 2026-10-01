@@ -464,7 +464,7 @@ Aventura fictivă `content/adventures/demo-vertical-slice.json` (`src/?adventure
 
 ### 27.2 Manual în browser
 
-Verificat la 2026-10-01 într-un browser Chromium pe desktop (server local `127.0.0.1`), la 360×640 și 1280×800, cu butonul Back al browserului. **Netestat încă:** telefon real (Back hardware Android, gest swipe-back iOS, tastatura virtuală peste overlay) și instalarea service worker-ului `v7` (browserul folosit nu permite service workers) — de făcut după D-031.
+Verificat la 2026-10-01 într-un browser Chromium pe desktop (server local `127.0.0.1`), la 360×640 și 1280×800, cu butonul Back al browserului. Pe telefon real Android (inclusiv Back fizic): Field Test 1, secțiunea 27.3 — PASS. **Netestat încă:** iPhone (gest swipe-back iOS) și instalarea service worker-ului `v7` (browserul de pe desktop nu permite service workers; în Field Test 1 starea service worker-ului nu a fost consemnată).
 
 | ID | Pași | Rezultat așteptat |
 | --- | --- | --- |
@@ -482,3 +482,58 @@ Verificat la 2026-10-01 într-un browser Chromium pe desktop (server local `127.
 | VS12 | Back cu overlay-ul deschis | Overlay-ul se închide; harta activă; puzzle-ul rămâne activ (se poate redeschide); scor și misiune neschimbate; URL neschimbat |
 | VS13 | Back fără overlay / confirmare deschisă | Navigarea normală a browserului (pagina anterioară), dintr-un singur Back |
 | VS14 | V1 (`src/`): „Arată indiciul”, apoi Back | Confirmarea (în pagină) se închide fără consum; fluxul V1 continuă normal (secțiunea 22.2) |
+
+### 27.3 Telefon real — Field Test 1 (Android)
+
+Raport în formatul secțiunii 16. Pașii sunt identificați `FT1-F0` … `FT1-F21` (prefixul `FT1-` evită confuzia cu ID-urile `F1`–`F11` din secțiunea 21).
+
+```text
+Data: 2026-10-01
+Tester: proprietarul proiectului
+Commit testat (git log -1 --oneline): 37f4450 feat: complete TASK 4 vertical slice
+Adresă testată: http://localhost:8000/src/?adventure=demo-vertical-slice
+  (server static local; telefonul conectat prin USB, port redirecționat cu ADB reverse
+   port forwarding → originea este localhost, deci context sigur — 10_LOCAL_DEVELOPMENT.md §6.B)
+Dispozitiv + sistem de operare: Google Pixel 9 Pro XL, Android
+Browser + versiune: Chrome (versiunea nu a fost consemnată)
+Mod: tab browser
+GPS: real (permisiunea de localizare acordată în Chrome)
+```
+
+| ID test | Pași | Rezultat așteptat | Rezultat obținut | PASS / FAIL / NETESTAT | Observații |
+| --- | --- | --- | --- | --- | --- |
+| FT1-F0 | Date de site șterse; deschiderea URL-ului de test | Ecranul de start al aventurii demo | ca așteptat | PASS | |
+| FT1-F1 | „Activează locația” → permite | Stare GPS activă (sau semnal slab), cu precizie | ca așteptat | PASS | GPS real |
+| FT1-F2 | „Începe aventura” | Harta ca suprafață principală; cardul „[DEMO] Punctul A” peste hartă; „Am ajuns” vizibil; atribuirea OSM vizibilă | ca așteptat | PASS | |
+| FT1-F3 | „Vezi obiectivele” | Harta revine la obiectiv | ca așteptat | PASS | |
+| FT1-F4 | Sosirea la Punctul A | Cardul arată sosirea; scorul 50; „Deschide provocarea” | ca așteptat | PASS | sosire declanșată manual prin „Am ajuns” — vezi observația 1 |
+| FT1-F5 | „Deschide provocarea” | Overlay-ul puzzle-ului peste hartă | ca așteptat | PASS | |
+| FT1-F6 | Răspuns greșit | Feedback „incorect”; puzzle-ul rămâne deschis | ca așteptat | PASS | |
+| FT1-F7 | „Arată indiciul” | Doar confirmarea (ireversibilitate), fără consum | ca așteptat | PASS | |
+| FT1-F8 | **Back fizic** cu confirmarea deschisă | Se închide doar confirmarea; puzzle-ul rămâne | ca așteptat | PASS | |
+| FT1-F9 | **Back fizic** cu overlay-ul deschis | Overlay-ul se închide; harta activă; puzzle-ul poate fi redeschis | ca așteptat | PASS | |
+| FT1-F10 | Redeschidere → indiciu confirmat | Indiciul 1 vizibil; „1 din 2” disponibil | ca așteptat | PASS | |
+| FT1-F11 | Reîncărcare în puzzle, după indiciu | Overlay-ul revine cu indiciul deschis; GPS-ul se reactivează manual (D-045) | ca așteptat | PASS | |
+| FT1-F12 | Al doilea indiciu confirmat | Ambele indicii vizibile; butonul dispare | ca așteptat | PASS | |
+| FT1-F13 | Răspuns corect la puzzle-ul 1 | „Corect!”; „Continuă” în overlay | ca așteptat | PASS | |
+| FT1-F14 | „Continuă” | Obiectivul B; scorul 150 | scorul 150, obiectivul B afișat corect | PASS | |
+| FT1-F15 | Reîncărcare | Obiectivul B curent; scorul 150 | scorul și progresul păstrate | PASS | |
+| FT1-F16 | Sosirea la B, apoi reîncărcare | Starea „ai ajuns” la B rămâne | sosirea la B și starea aferentă păstrate | PASS | sosire declanșată manual prin „Am ajuns” — vezi observația 1 |
+| FT1-F17 | Puzzle-ul 2: indiciu confirmat, răspuns `2DEMO` | „Corect! +150 puncte”; „Vezi rezultatul” | răspuns acceptat, +150 puncte | PASS | |
+| FT1-F18 | „Vezi rezultatul” | Rezultatul: 350 din 350, 4 din 4, indiciile folosite | 350/350, 4/4 provocări, 3 indicii folosite | PASS | fără penalizări (D-025) |
+| FT1-F19 | Reîncărcare pe rezultat | Rezultatul identic | rezultatul final păstrat | PASS | |
+| FT1-F20 | **Back fizic** fără overlay / confirmare deschisă | Navigarea normală a browserului (pagina anterioară) | revenire la pagina anterioară din istoricul browserului | PASS | conform D-035 / U2 |
+| FT1-F21 | „Joacă din nou” | Ecranul de start; progresul șters; după start, din nou Punctul A | sesiune nouă: scorul 0, primul obiectiv, niciun indiciu consumat | PASS | vezi observația 4 |
+
+Rezultat: **FT1-F0 … FT1-F21: 22/22 PASS.** Probleme critice (secțiunea 9): niciuna. Nu au fost identificate probleme funcționale.
+
+Observații:
+
+1. **GPS și sosirea.**
+   - Arrival flow: PASS — sosirea la ambele obiective (FT1-F4, FT1-F16) a fost declanșată manual prin „Am ajuns” (rezerva standard, D-006).
+   - GPS-ul real a fost activ și funcțional pe dispozitiv (permisiune, poziție, precizie), dar coordonatele fictive ale aventurii demo (lângă 0°, 0°) nu pot fi atinse fizic, deci nu permit validarea fizică a pragului de sosire. Sosirea declanșată de poziția fizică reală rămâne de verificat cu o aventură cu locații reale (D-049-M).
+2. **Persistența după reîncărcare.** Puzzle-ul activ cu indiciul deschis (FT1-F11), scorul și obiectivul curent (FT1-F15), sosirea la B (FT1-F16) și rezultatul final (FT1-F19) au fost restaurate exact din progresul salvat.
+3. **Back fizic (U2 / D-035).** Primul Back a închis doar confirmarea indiciului, următorul overlay-ul puzzle-ului (FT1-F8, FT1-F9); fără straturi deschise, Back a fost navigarea normală a browserului (FT1-F20).
+4. **Reset.** „Joacă din nou” (în raportul testerului: „Joacă un joc nou”) a pornit o sesiune nouă, cu progresul la 0, primul obiectiv și fără indicii consumate.
+
+Neacoperit de Field Test 1: iPhone / Safari (secțiunea 14), starea service worker-ului pe telefon, modul offline, ecranul blocat, aplicația în fundal, instalarea pe ecranul de pornire și ceilalți pași din secțiunea 13. Metoda standard de testare pe telefon rămâne nedecisă (D-031, PROPOSED); acest test a folosit varianta B din `10_LOCAL_DEVELOPMENT.md` §6.
