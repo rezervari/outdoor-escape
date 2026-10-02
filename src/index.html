@@ -21,7 +21,14 @@
 </head>
 <body>
   <main class="container">
-    <p class="badge">Versiune de dezvoltare</p>
+    <div class="top-bar">
+      <p class="badge">Versiune de dezvoltare</p>
+      <!-- Mesajele (M6): apare în joc și pe ecranul final; numărul = mesajele necitite din Inbox. -->
+      <button type="button" class="button button-secondary inbox-toggle" id="btn-inbox"
+              aria-haspopup="dialog" aria-controls="inbox-panel" hidden>
+        <span aria-hidden="true">✉️</span> Mesaje <span id="inbox-unread" class="inbox-unread" hidden></span>
+      </button>
+    </div>
     <h1>Outdoor Escape</h1>
 
     <noscript>
@@ -104,10 +111,11 @@
       <div id="mission-media" class="media-list" hidden></div>
 
       <!-- Jurnalul naratorului (viewModel.story): mesajele regulilor deja declanșate, derivate din
-           progresul salvat. Apare doar dacă aventura are mesaje și cel puțin unul a fost primit. -->
+           progresul salvat. Apare doar dacă aventura are mesaje și cel puțin unul a fost primit.
+           Doar vizual (D-107): mesajele noi sunt anunțate de notificare (#notification-live), nu aici. -->
       <section id="story-panel" class="story-panel" hidden aria-labelledby="story-title">
         <h3 id="story-title" class="story-title"></h3>
-        <p id="story-latest" class="story-latest text-block" aria-live="polite"></p>
+        <p id="story-latest" class="story-latest text-block"></p>
         <details id="story-history" class="story-history" hidden>
           <summary id="story-history-summary"></summary>
           <ol id="story-list" class="story-list"></ol>
@@ -247,5 +255,42 @@
     </div>
     <div id="media-viewer-body" class="media-viewer-body"></div>
   </div>
+
+  <!-- Panoul „Mesaje” (M6, D-086): istoricul comunicării aventurii (Inbox), doar citire.
+       Stă în afara <main>, ca viewer-ul; se închide cu „Închide”, Escape sau Back și nu schimbă jocul.
+       Un mesaj devine citit doar după ce este desenat în listă, cu panoul deschis (D-090). -->
+  <div id="inbox-panel" class="inbox-panel" role="dialog" aria-modal="true" aria-labelledby="inbox-title" hidden>
+    <div class="inbox-sheet">
+      <div class="inbox-head">
+        <h2 id="inbox-title" class="inbox-title" tabindex="-1">Mesaje</h2>
+        <button type="button" class="button button-secondary" id="btn-inbox-close">Închide</button>
+      </div>
+      <p id="inbox-empty" class="inbox-empty" hidden>Nu ai mesaje încă.</p>
+      <ol id="inbox-list" class="inbox-list"></ol>
+    </div>
+  </div>
+
+  <!-- Notificarea (M7, D-104 – D-106): reacția efemeră la mesajele nou adăugate în Inbox. Toast mic, sus,
+       peste joc și peste puzzle; NU este dialog și nici strat Back: nu ia focusul, nu face nimic inert,
+       nu blochează jocul. „Deschide” deschide panoul „Mesaje”. Stă în afara <main>, ca panourile de mai sus. -->
+  <div id="notification" class="notification" data-importance="normal" hidden>
+    <p class="notification-body">
+      <span class="notification-icon" aria-hidden="true">✉️</span>
+      <span class="notification-message">
+        <strong id="notification-title" class="notification-title"></strong>
+        <span id="notification-text" class="notification-text text-block"></span>
+      </span>
+    </p>
+    <div class="notification-actions">
+      <button type="button" class="button button-secondary" id="btn-notification-open"
+              aria-label="Deschide mesajele" aria-haspopup="dialog" aria-controls="inbox-panel">Deschide</button>
+      <button type="button" class="button button-secondary notification-close" id="btn-notification-close"
+              aria-label="Închide notificarea">✕</button>
+    </div>
+  </div>
+
+  <!-- Anunțul mesajelor noi pentru cititoarele de ecran (D-107): singura regiune live pentru mesaje noi.
+       Mereu în DOM, în afara <main> și a straturilor, niciodată inertă; ascunsă doar vizual. -->
+  <div id="notification-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 </body>
 </html>

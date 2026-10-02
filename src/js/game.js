@@ -315,14 +315,17 @@ export function createGame({ adventure, validator, savedState = null, now = () =
   let checking = false;
   const listeners = new Set();
   let effectsQueue = [];
+  // Ultimul `seq` al unui GameEvent: ordinea evenimentelor în această rulare (nu se salvează).
+  let lastEventSeq = 0;
 
   function getState() {
     return structuredClone(state);
   }
 
-  function commit(nextState) {
+  /** `events` — GameEvent-urile tranzacției care a produs starea (fiecare listener primește copia lui). */
+  function commit(nextState, events = []) {
     state = nextState;
-    for (const listener of listeners) listener(getState());
+    for (const listener of listeners) listener(getState(), [...events]);
   }
 
   function requirePlaying(action) {
@@ -493,8 +496,9 @@ export function createGame({ adventure, validator, savedState = null, now = () =
    * Execută o schimbare pe o copie a stării, procesează evenimentele (reguli din conținut)
    * și salvează rezultatul o singură dată. `change(ctx)` întoarce evenimentele inițiale
    * sau null (nimic de schimbat → nu se face commit).
+   * `cause` — comanda sau observația care a pornit tranzacția (metadata `cause` a GameEvent-urilor).
    */
-  function transact(change, base = state) {
+  function transact(cause, change, base = state) {
     const ctx = { draft: structuredClone(base), effects: [] };
     const initialEvents = change(ctx);
     if (initialEvents === null) return null;
@@ -503,13 +507,16 @@ export function createGame({ adventure, validator, savedState = null, now = () =
       alreadyFired: ctx.draft.firedEvents,
       maxChainDepth: content.settings.events.maxChainDepth,
       now,
+      lastSeq: lastEventSeq,
+      cause,
       applyAction: (action) => applyAction(ctx, action),
     });
+    lastEventSeq += result.events.length;
     Object.assign(ctx.draft.firedEvents, result.fired);
     if (result.truncated) ctx.effects.push({ type: "warning", code: "event_chain_limit" });
     ctx.draft.score = calculateScore(content, ctx.draft.missions, ctx.draft);
     effectsQueue = [...effectsQueue, ...ctx.effects].slice(-MAX_QUEUED_EFFECTS);
-    commit(ctx.draft);
+    commit(ctx.draft, result.events);
     return result;
   }
 
@@ -553,7 +560,7 @@ export function createGame({ adventure, validator, savedState = null, now = () =
       return { result: "ignored" };
     }
 
-    transact((ctx) => {
+    transact("submit_answer", (ctx) => {
       ctx.draft.missions[id].attempts += 1;
       return correct
         ? closeMission(ctx, id, ChallengeStatus.SOLVED)
@@ -570,7 +577,7 @@ export function createGame({ adventure, validator, savedState = null, now = () =
     const entry = state.missions[id];
     if (entry.status === MissionStatus.LOCKED) return null;
     if (entry.hintsUsed < mission.hints.length) {
-      transact((ctx) => {
+      transact("request_hint", (ctx) => {
         ctx.draft.missions[id].hintsUsed += 1;
         return [{ type: "hint_requested", missionId: id, locationId: mission.locationId, hintIndex: ctx.draft.missions[id].hintsUsed - 1 }];
       });
@@ -582,7 +589,7 @@ export function createGame({ adventure, validator, savedState = null, now = () =
     requirePlaying(action);
     const id = resolveMissionId(missionId);
     if (!missionById.has(id) || state.missions[id].status !== ChallengeStatus.PENDING) return;
-    transact((ctx) => closeMission(ctx, id, status));
+    transact(status === ChallengeStatus.SKIPPED ? "skip_mission" : "fail_mission", (ctx) => closeMission(ctx, id, status));
   }
 
   function isLocationEvaluated(location) {
@@ -599,6 +606,14 @@ export function createGame({ adventure, validator, savedState = null, now = () =
 
     getState,
 
+    /**
+     * listener(state, events) la fiecare commit (o singură notificare per tranzacție):
+     * - state:  instantaneul stării (ca getState());
+     * - events: GameEvent-urile produse de acea tranzacție, în ordinea procesării
+     *           ([] pentru o tranzacție fără evenimente și pentru reset()).
+     * Batch-ul este doar runtime: nu se salvează și nu se reia la abonare sau după reîncărcare.
+     * Un listener cu un singur parametru (state) funcționează ca înainte.
+     */
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -656,7 +671,7 @@ export function createGame({ adventure, validator, savedState = null, now = () =
       const fresh = createInitialState(content);
       fresh.status = GameStatus.PLAYING;
       fresh.startedAt = now();
-      transact((ctx) => [{ type: "adventure_started" }, ...startMission(ctx, main[0].id)], fresh);
+      transact("start", (ctx) => [{ type: "adventure_started" }, ...startMission(ctx, main[0].id)], fresh);
     },
 
     /**
@@ -705,7 +720,7 @@ export function createGame({ adventure, validator, savedState = null, now = () =
       if (following && state.missions[following.id].status === MissionStatus.LOCKED) {
         throw new Error(`next: misiunea „${following.id}” este încă blocată.`);
       }
-      transact((ctx) => (following ? startMission(ctx, following.id) : completeAdventure(ctx)));
+      transact("next", (ctx) => (following ? startMission(ctx, following.id) : completeAdventure(ctx)));
     },
 
     /**
@@ -739,7 +754,7 @@ export function createGame({ adventure, validator, savedState = null, now = () =
       }
 
       if (pending.length > 0) {
-        transact((ctx) => {
+        transact("gps_position", (ctx) => {
           const events = [];
           for (const { location, presence, transitions, proximity } of pending) {
             ctx.draft.locations[location.id].presence = presence;
@@ -770,7 +785,7 @@ export function createGame({ adventure, validator, savedState = null, now = () =
       const allowed = location.fallback?.allowManualConfirmation ?? content.settings.gps.allowManualConfirmation;
       if (!allowed) return { accepted: false, reason: "manual_not_allowed" };
       if (entry.presence === Presence.INSIDE) return { accepted: false, reason: "already_inside" };
-      transact((ctx) => {
+      transact("confirm_arrival", (ctx) => {
         ctx.draft.locations[locationId].presence = Presence.INSIDE;
         return arrive(ctx, locationId, "manual");
       });

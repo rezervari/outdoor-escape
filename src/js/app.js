@@ -12,6 +12,10 @@
  * - view-model.js — ce ecran și ce acțiuni se afișează, derivat din starea motorului (TASK 4);
  * - play-ui.js — panoul puzzle-ului (overlay / în pagină) și acțiunea cardului, derivate din model;
  * - media.js / media-ui.js — media misiunilor (image / compare / audio) și viewer-ul generic (D-072, D-073).
+ * - message-engine.js / inbox.js / inbox-ui.js — comunicarea (M6): GameEvent[] din fiecare tranzacție
+ *   → GameMessage[] → Inbox (stocare proprie, citit / necitit) → panoul „Mesaje”.
+ * - notification-policy.js / gong.js — notificarea (M7, D-104 – D-107): după desenare, mesajele nou
+ *   adăugate în Inbox (`added`) → toast efemer + anunț pentru cititoarele de ecran + gong (Web Audio).
  *
  * Nu conține logică de joc și nici conținut de joc. Nu calculează distanțe,
  * praguri de precizie sau tranziții GPS: le primește interpretate de la
@@ -32,6 +36,11 @@ import { buildViewModel, View, NextKind } from "./view-model.js";
 import { describePlayUi, CardAction, Layer, openLayers, planHistorySync, planBack } from "./play-ui.js";
 import { DEFAULT_MAP_TILES, DEFAULT_MAP_VIEW } from "./defaults.js";
 import { renderMediaList, renderViewerContent, viewerTitle, pauseMedia } from "./media-ui.js";
+import { processGameEvents } from "./message-engine.js";
+import { createInbox } from "./inbox.js";
+import { describeInbox } from "./inbox-ui.js";
+import { evaluateNotification, describeNotification, describeAnnouncement, NotificationOutcome } from "./notification-policy.js";
+import { createGong } from "./gong.js";
 
 const APP_NAME = "outdoor-escape";
 const DEFAULT_ADVENTURE_ID = "brasov-centrul-vechi";
@@ -43,6 +52,19 @@ const PRESENCE_LABELS = {
 };
 
 const DIFFICULTY_LABELS = { easy: "ușoară", medium: "medie", hard: "dificilă" };
+
+// Denumirile afișate ale categoriilor și importanței mesajelor (id-urile sunt valori tehnice — D-087, D-088).
+const MESSAGE_CATEGORY_LABELS = { position: "Poziție", gameplay: "Joc", hint: "Indiciu", story: "Poveste", alert: "Alertă" };
+const MESSAGE_IMPORTANCE_LABELS = { important: "Important", urgent: "Urgent" };
+
+// Notificarea (M7): duratele sunt comportament de interfață, nu reguli ale politicii (D-104).
+const NOTIFICATION_DISMISS_MS = 6000; // normal / important; urgent rămâne până la închidere (D-105)
+const ANNOUNCE_DELAY_MS = 100; // regiunea live se golește, apoi primește textul: anunțul este sigur și pentru texte repetate
+// Gesturile explicite care permit sunetul în browser (D-106): primul dintre ele deblochează gong-ul.
+const AUDIO_UNLOCK_EVENTS = ["pointerdown", "pointerup", "keydown", "click"];
+
+// Pentru două sau mai multe mesaje: „3 mesaje noi”, „20 de mesaje noi” (în română, „de” de la 20 în sus).
+const newMessagesLabel = (count) => `${count}${count % 100 >= 20 || (count >= 100 && count % 100 === 0) ? " de" : ""} mesaje noi`;
 
 // „ +N puncte.” doar pentru misiunile care dau puncte (un checkpoint cu 0 puncte nu afișează „+0”).
 const pointsSuffix = (points) => (points > 0 ? ` +${points} puncte.` : "");
@@ -93,10 +115,14 @@ function requestedAdventureId() {
   return fromQuery && isValidId(fromQuery) ? fromQuery : DEFAULT_ADVENTURE_ID;
 }
 
-function setupGameUi(game, storage) {
+function setupGameUi(game, storage, inbox) {
   const adventure = game.content; // forma normalizată V2 (fără răspunsuri)
   const meta = adventure.meta;
   let feedback = null; // { kind: "correct" | "incorrect" | "empty" | "skipped" | "failed", text }
+
+  // Pornire fără o parcurgere activă (fără progres salvat sau progres respins): istoricul rămas ar
+  // aparține unei parcurgeri care nu mai există — aceeași regulă ca resetul (M5). O singură dată.
+  if (game.getState().status === GameStatus.IDLE) inbox.clear();
 
   /* --- Locația (M-003.1): browser → location.js → game.reportPosition → geo.js → evenimente --- */
 
@@ -120,7 +146,20 @@ function setupGameUi(game, storage) {
   let viewerKey = null;
   let viewerOpener = null;
   let viewerShownKey = null; // blocul desenat acum în viewer (ca să nu fie redesenat la fiecare render)
-  const currentPlayUi = (viewModel) => describePlayUi(viewModel, { dismissedMissionId, hintConfirmMissionId, viewerKey });
+  // A patra stare efemeră (M6): panoul „Mesaje” deschis și mesajele necitite la afișare, care rămân
+  // marcate „Nou” cât timp panoul este deschis. Citit / necitit este stare a Inbox-ului, nu a jocului.
+  let inboxOpen = false;
+  let inboxShownAsNew = [];
+  // A cincea stare efemeră (M7, D-104): prezentarea activă a notificării — { messages, importance } sau
+  // null. Nu se salvează: reîncărcarea nu reia nimic, resetul o golește. Nu spune nimic despre joc.
+  let notification = null;
+  let notificationTimer = null;
+  const notificationHold = { pointer: false, focus: false }; // pauză cât timp jucătorul folosește toast-ul
+  let focusBeforeNotification = null;
+  let pendingAnnouncement = null; // { politeness, texts } până la scrierea în regiunea live
+  let announceTimer = null;
+  const gong = createGong(); // D-106: doar sunet; când sună decide politica
+  const currentPlayUi = (viewModel) => describePlayUi(viewModel, { dismissedMissionId, hintConfirmMissionId, viewerKey, inboxOpen });
 
   // Fiecare observație merge nemodificată în motor; tranzițiile le decide geo.js.
   function reportFix(fix) {
@@ -533,6 +572,226 @@ function setupGameUi(game, storage) {
     document.documentElement.dataset.viewer = "open";
   }
 
+  /* --- Mesajele (M6): panoul „Mesaje”, strat pe tot ecranul ca viewer-ul (închis de „Închide”,
+         Escape și Back). Deschiderea și închiderea sunt doar interfață: nu ating motorul. --- */
+
+  function openInbox() {
+    if (inboxOpen) return;
+    closeNotification(); // D-105: în Inbox mesajele sunt deja prezentate
+    inboxOpen = true;
+    inboxShownAsNew = [];
+    render();
+    $("inbox-title").focus();
+    // Primul mesaj nou (dacă există) ajunge în zona vizibilă a listei.
+    const firstNew = $("inbox-list").querySelector('[data-new="true"]');
+    if (firstNew) firstNew.scrollIntoView({ block: "nearest" });
+  }
+
+  function closeInbox() {
+    if (!inboxOpen) return;
+    inboxOpen = false;
+    inboxShownAsNew = [];
+    render();
+    if (!$("btn-inbox").closest("[hidden], [inert]")) $("btn-inbox").focus();
+    // Deschis din notificare peste puzzle (M7): „Mesaje” este inert sub overlay; focusul revine în puzzle.
+    else if (overlayOpen) $("puzzle-title").focus();
+  }
+
+  /** Un mesaj din listă: expeditorul (dacă există), etichetele (text, nu doar culoare) și textul. */
+  function inboxItem(item) {
+    const entry = document.createElement("li");
+    entry.className = "inbox-message";
+    entry.dataset.category = item.category;
+    entry.dataset.importance = item.importance;
+    entry.dataset.new = String(item.isNew);
+    const meta = document.createElement("p");
+    meta.className = "inbox-meta";
+    if (item.senderName) {
+      const sender = document.createElement("strong");
+      sender.className = "inbox-sender";
+      sender.textContent = item.senderName;
+      meta.append(sender);
+    }
+    const tags = [
+      ["inbox-tag", MESSAGE_CATEGORY_LABELS[item.category]],
+      ["inbox-tag inbox-tag-importance", MESSAGE_IMPORTANCE_LABELS[item.importance]],
+      ["inbox-tag inbox-tag-new", item.isNew ? "Nou" : null],
+    ];
+    for (const [className, label] of tags) {
+      if (!label) continue;
+      const tag = document.createElement("span");
+      tag.className = className;
+      tag.textContent = label;
+      meta.append(tag);
+    }
+    const text = document.createElement("p");
+    text.className = "inbox-text text-block";
+    text.textContent = item.text;
+    entry.append(meta, text);
+    return entry;
+  }
+
+  // Numărul necititelor vine mereu din Inbox (derivat), niciodată dintr-o copie locală.
+  function renderInboxBadge() {
+    const count = inbox.unreadCount();
+    $("inbox-unread").textContent = String(count);
+    $("inbox-unread").hidden = count === 0;
+    $("btn-inbox").setAttribute("aria-label", count === 0 ? "Mesaje" : `Mesaje, ${count} ${count === 1 ? "necitit" : "necitite"}`);
+  }
+
+  /**
+   * Butonul „Mesaje” (în joc și pe ecranul final) și panoul. D-090: cu panoul deschis, lista se
+   * desenează întâi; abia apoi mesajele desenate devin citite (inbox.markMessageRead) și numărul
+   * necititelor se actualizează. Cât timp panoul este deschis, <main> este inert (ca la viewer).
+   */
+  function renderInbox(viewModel) {
+    const { inbox: inboxLayer } = currentPlayUi(viewModel);
+    if (!inboxLayer.open) inboxOpen = false; // ex. ecranul de start după reset
+    const ui = describeInbox(inbox.getMessages(), { open: inboxOpen, shownAsNew: inboxShownAsNew });
+    const panel = $("inbox-panel");
+    $("btn-inbox").hidden = viewModel.view === View.INTRO;
+    panel.hidden = !ui.open;
+    document.documentElement.dataset.inbox = ui.open ? "open" : "closed";
+    if (ui.open) {
+      panel.inert = false; // setOverlayOpen marchează frații lui <main> ca inerți
+      document.querySelector("main").inert = true;
+      $("inbox-empty").hidden = !ui.empty;
+      $("inbox-list").replaceChildren(...ui.items.map(inboxItem));
+      // Mesajele sunt acum în DOM, în panoul afișat: devin citite (D-090).
+      for (const id of ui.toMarkRead) {
+        inbox.markMessageRead(id);
+        inboxShownAsNew.push(id);
+      }
+    }
+    renderInboxBadge();
+  }
+
+  /* --- Notificarea (M7, D-104 – D-107): reacția efemeră la mesajele nou adăugate în Inbox. Toast-ul nu
+         este dialog și nici strat Back (nu ia focusul, nu face nimic inert); regiunea live este singurul
+         anunț al mesajelor noi; gong-ul este doar sunet. Ce se întâmplă decide notification-policy.js. --- */
+
+  // Contextul interfeței DUPĂ desenarea tranzacției (inboxOpen / viewerKey sunt deja actualizate de render).
+  function notificationContext() {
+    return {
+      inboxOpen,
+      viewerOpen: viewerKey !== null,
+      puzzleOpen: overlayOpen,
+      // Un sunet al misiunii (media-ui.js) se redă acum: gong-ul tace; player-ul nu este atins (D-106).
+      missionAudioPlaying: [...document.querySelectorAll("audio")].some((audio) => !audio.paused && !audio.ended),
+      pageHidden: document.visibilityState === "hidden",
+    };
+  }
+
+  // `added` vine numai din inbox.addMessages() (D-104); `cause` doar ca context runtime al tranzacției.
+  // O eroare a notificării nu oprește jocul și nu atinge Inbox-ul (D-084, D-106).
+  function notify(added, cause, status) {
+    try {
+      const decision = evaluateNotification({ added, cause, status, context: notificationContext(), presentation: notification });
+      if (decision.announcement) announce(decision.announcement);
+      if (decision.outcome === NotificationOutcome.PRESENT || decision.outcome === NotificationOutcome.ABSORB) {
+        showNotification(decision.presentation);
+      } else if (notification && !decision.presentation) {
+        closeNotification();
+      }
+      if (status === GameStatus.COMPLETED) clearAnnouncement(); // ecranul final: nimic de anunțat (D-105)
+      if (decision.gong) gong.play(); // o singură încercare; un eșec audio nu schimbă nimic altceva
+    } catch (error) {
+      console.error(`[${APP_NAME}] Notificarea nu a putut fi afișată:`, error);
+    }
+  }
+
+  // Toast-ul: un mesaj (expeditor + începutul textului) sau numărul mesajelor; textul complet este în Inbox.
+  function showNotification(presentation) {
+    notification = presentation;
+    const view = describeNotification(presentation);
+    const single = view.count === 1;
+    $("notification").dataset.importance = view.importance;
+    $("notification-title").textContent = single ? view.senderName || "Mesaj nou" : newMessagesLabel(view.count);
+    $("notification-text").textContent = single ? view.text : "";
+    $("notification-text").hidden = !single;
+    $("notification").hidden = false;
+    restartNotificationTimer();
+  }
+
+  function closeNotification() {
+    const box = $("notification");
+    const hadFocus = box.contains(document.activeElement);
+    notification = null;
+    clearTimeout(notificationTimer);
+    notificationTimer = null;
+    notificationHold.pointer = false;
+    notificationHold.focus = false;
+    box.hidden = true;
+    // Focusul ajunsese în toast (Tab): revine unde era, dacă elementul mai poate primi focus.
+    const back = focusBeforeNotification;
+    focusBeforeNotification = null;
+    if (hadFocus && back && back.isConnected && !back.closest("[hidden], [inert]")) back.focus();
+  }
+
+  // Normal / important: se închide singur; urgent: rămâne până la închidere (D-105). Pauză la indicator / focus.
+  function restartNotificationTimer() {
+    clearTimeout(notificationTimer);
+    notificationTimer = null;
+    if (!notification || describeNotification(notification).persistent) return;
+    if (notificationHold.pointer || notificationHold.focus) return;
+    notificationTimer = setTimeout(closeNotification, NOTIFICATION_DISMISS_MS);
+  }
+
+  function holdNotification(kind, value) {
+    notificationHold[kind] = value;
+    restartNotificationTimer();
+  }
+
+  // Anunțul (D-107): expeditorul și textul integral al fiecărui mesaj din lot; politețea după importanță.
+  function announcementText({ count, items }) {
+    if (count === 1) {
+      const [{ senderName, text }] = items;
+      return senderName ? `Mesaj nou de la ${senderName}: ${text}` : `Mesaj nou: ${text}`;
+    }
+    const parts = items.map(({ senderName, text }) => (senderName ? `De la ${senderName}: ${text}` : text));
+    return `${newMessagesLabel(count)}. ${parts.join(" ")}`;
+  }
+
+  // Loturile anunțate în aceeași clipă se adună într-un singur text (niciunul nu se pierde).
+  function announce(announcement) {
+    const spoken = describeAnnouncement(announcement);
+    const live = $("notification-live");
+    pendingAnnouncement = {
+      politeness: pendingAnnouncement?.politeness === "assertive" ? "assertive" : spoken.politeness,
+      texts: [...(pendingAnnouncement?.texts || []), announcementText(spoken)],
+    };
+    clearTimeout(announceTimer);
+    live.textContent = "";
+    live.setAttribute("aria-live", pendingAnnouncement.politeness);
+    announceTimer = setTimeout(() => {
+      live.textContent = pendingAnnouncement.texts.join(" ");
+      pendingAnnouncement = null;
+      announceTimer = null;
+    }, ANNOUNCE_DELAY_MS);
+  }
+
+  function clearAnnouncement() {
+    clearTimeout(announceTimer);
+    announceTimer = null;
+    pendingAnnouncement = null;
+    $("notification-live").textContent = "";
+    $("notification-live").setAttribute("aria-live", "polite");
+  }
+
+  // Resetul (D-102): prezentarea, timer-ele, anunțul și un gong în curs. Deblocarea audio rămâne (doar memorie).
+  function resetNotifications() {
+    closeNotification();
+    clearAnnouncement();
+    gong.stop();
+  }
+
+  // Toast-ul și regiunea live stau în afara <main>; setOverlayOpen marchează frații lui <main> ca inerți.
+  // Regiunea live nu este niciodată inertă; toast-ul este inert doar sub viewer, care îl acoperă (D-105).
+  function renderNotificationLayer() {
+    $("notification-live").inert = false;
+    $("notification").inert = viewerKey !== null;
+  }
+
   /**
    * Variantele (viewModel.puzzle.choices): un buton per variantă, în locul câmpului de text.
    * Butonul pune varianta în câmp și trimite formularul: aceeași cale ca un răspuns tastat.
@@ -664,6 +923,8 @@ function setupGameUi(game, storage) {
     renderLocation();
     renderMap();
     renderViewer(viewModel);
+    renderInbox(viewModel); // după viewer: păstrează <main> inert cât timp panoul este deschis
+    renderNotificationLayer(); // după straturi: notificarea nu este strat și nu rămâne inertă (M7)
     syncHistory(viewModel);
   }
 
@@ -707,6 +968,7 @@ function setupGameUi(game, storage) {
     }
     for (const layer of plan.close) {
       if (layer === Layer.VIEWER) closeViewer();
+      else if (layer === Layer.INBOX) closeInbox();
       else if (layer === Layer.HINT_CONFIRM) cancelHintConfirm();
       else if (layer === Layer.PUZZLE) closePuzzleOverlay();
     }
@@ -722,8 +984,14 @@ function setupGameUi(game, storage) {
     if (!input.closest("[hidden]")) input.focus();
   }
 
+  // Singura cale de reset („Începe de la capăt”, „Joacă din nou”): progresul și istoricul
+  // comunicării aventurii se șterg împreună (M5); panoul „Mesaje” se închide.
   function resetEverything() {
     storage.resetGame(adventure.id);
+    inbox.clear();
+    inboxOpen = false;
+    inboxShownAsNew = [];
+    resetNotifications(); // M7: nicio notificare, anunț sau gong nu supraviețuiește resetului
     feedback = null;
     viewerKey = null;
     dismissedMissionId = null;
@@ -733,11 +1001,27 @@ function setupGameUi(game, storage) {
     game.reset();
   }
 
-  // Salvare automată la fiecare schimbare de stare, apoi redesenare.
-  game.subscribe((state) => {
+  // Mesajele unei tranzacții (M6): doar batch-ul primit, niciodată evenimentele istorice.
+  // Message Engine → Inbox; deduplicarea după GameMessage.id aparține Inbox-ului (D-092).
+  // O eroare a comunicării nu oprește jocul: comunicarea nu influențează progresul (D-084).
+  // Întoarce mesajele nou adăugate (`added`), singura sursă a notificării (M7, D-104).
+  function receiveMessages(state, events) {
+    try {
+      return inbox.addMessages(processGameEvents(events, { content: game.content, state })).added;
+    } catch (error) {
+      console.error(`[${APP_NAME}] Mesajele nu au putut fi actualizate:`, error);
+      return [];
+    }
+  }
+
+  // Salvare automată la fiecare schimbare de stare, mesajele tranzacției, redesenare, apoi notificarea
+  // (după desenare: contextul interfeței este cel produs de tranzacție — D-104).
+  game.subscribe((state, events) => {
     if (state.status === GameStatus.IDLE) storage.resetGame(adventure.id);
     else storage.saveGame(adventure.id, state);
+    const added = events.length > 0 ? receiveMessages(state, events) : [];
     render();
+    notify(added, events[0]?.cause ?? null, state.status);
   });
 
   $("btn-start").addEventListener("click", () => {
@@ -857,11 +1141,38 @@ function setupGameUi(game, storage) {
 
   $("btn-puzzle-close").addEventListener("click", closePuzzleOverlay);
   $("btn-viewer-close").addEventListener("click", closeViewer);
-  // Tastatură: Escape închide întâi viewer-ul, apoi confirmarea indiciului, apoi overlay-ul
-  // (aceeași ordine ca Back — U2, D-073, mai sus).
+  $("btn-inbox").addEventListener("click", openInbox);
+  $("btn-inbox-close").addEventListener("click", closeInbox);
+
+  // Notificarea (M7): „Deschide” → panoul „Mesaje”; „✕” o închide. Nu interceptează Escape sau Back.
+  $("btn-notification-open").addEventListener("click", openInbox);
+  $("btn-notification-close").addEventListener("click", closeNotification);
+  const notificationBox = $("notification");
+  notificationBox.addEventListener("pointerenter", (event) => { if (event.pointerType === "mouse") holdNotification("pointer", true); });
+  notificationBox.addEventListener("pointerleave", (event) => { if (event.pointerType === "mouse") holdNotification("pointer", false); });
+  notificationBox.addEventListener("focusin", (event) => {
+    if (!notificationBox.contains(event.relatedTarget)) focusBeforeNotification = event.relatedTarget;
+    holdNotification("focus", true);
+  });
+  notificationBox.addEventListener("focusout", (event) => {
+    if (!notificationBox.contains(event.relatedTarget)) holdNotification("focus", false);
+  });
+
+  // Gong-ul (D-106): browserul permite sunetul numai după un gest explicit al jucătorului. Primul gest
+  // deblochează sunetul din gong.js (doar în memorie, nu se salvează); ascultătorii se retrag după deblocare.
+  // Faza de captură: deblocarea are loc înaintea acțiunii butonului (ex. „Începe aventura” → intro + gong).
+  function unlockAudio(event) {
+    if (!event.isTrusted || navigator.userActivation?.isActive === false) return; // ex. Escape: nu este gest de activare
+    if (!gong.unlock()) return;
+    for (const type of AUDIO_UNLOCK_EVENTS) document.removeEventListener(type, unlockAudio, true);
+  }
+  for (const type of AUDIO_UNLOCK_EVENTS) document.addEventListener(type, unlockAudio, true);
+  // Tastatură: Escape închide întâi viewer-ul, apoi panoul „Mesaje”, apoi confirmarea indiciului,
+  // apoi overlay-ul (aceeași ordine ca Back — U2, D-073, mai sus).
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (viewerKey !== null) closeViewer();
+    else if (inboxOpen) closeInbox();
     else if (hintConfirmMissionId !== null) cancelHintConfirm();
     else if (overlayOpen) closePuzzleOverlay();
   });
@@ -931,7 +1242,10 @@ async function startGame() {
     validator: createLocalValidator(adventure),
     savedState: storage.loadGame(adventure.id),
   });
-  setupGameUi(game, storage);
+  // Un singur Inbox pentru aventura curentă (M5): istoricul comunicării, cu propria stocare
+  // (outdoor-escape:inbox:<id>), separat de progres. Motorul nu știe de el.
+  const inbox = createInbox({ adventureId: adventure.id });
+  setupGameUi(game, storage, inbox);
 }
 
 function init() {

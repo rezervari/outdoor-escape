@@ -26,7 +26,7 @@
  */
 
 const CACHE_PREFIX = "outdoor-escape:shell:";
-const CACHE_VERSION = "v9";
+const CACHE_VERSION = "v12";
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
 // Relative la sw.js, adică la src/.
@@ -41,12 +41,18 @@ const SHELL_FILES = [
   "js/defaults.js",
   "js/events.js",
   "js/game.js",
+  "js/game-message.js",
   "js/geo.js",
+  "js/gong.js",
+  "js/inbox.js",
+  "js/inbox-ui.js",
   "js/location.js",
   "js/map.js",
   "js/map-model.js",
   "js/media.js",
   "js/media-ui.js",
+  "js/message-engine.js",
+  "js/notification-policy.js",
   "js/play-ui.js",
   "js/schema.js",
   "js/storage.js",

@@ -332,6 +332,22 @@ Descoperiri separate de traseul principal (acțiunea `discover_secret`, evenimen
 
 **Efecte:** motorul nu afișează și nu redă nimic. `show_message`, `play_audio` și `award_points` produc efecte (`game.takeEffects()` → `[{ type: "message", messageId, text, audio }, { type: "audio", trackId }, { type: "points", points, reason }]`) pe care interfața le prezintă. Redarea audio (după activarea explicită a sunetului) este o etapă ulterioară.
 
+**GameEvent (M1 — D-082, D-083, D-085):** pentru fiecare eveniment procesat, `processEvents` construiește prin `createGameEvent` (`events.js`, funcție pură) forma canonică a faptului:
+
+```js
+{ type: "mission_completed", payload: { missionId: "m-1", locationId: "loc-a" }, seq: 12, at: 1790000000000, cause: "submit_answer" }
+```
+
+- `type` — din lista de mai sus; vocabularul nu se schimbă și nu se dublează.
+- `payload` — câmpurile din tabel, cu aceleași nume și valori; numai valori simple, fără text, HTML, audio, expeditor, categorie sau acțiuni (un GameEvent nu este un mesaj).
+- `seq` — ordinea procesării pe durata unei instanțe a motorului (`createGame`), crescător de la 1; nu se salvează și nu este id de mesaj.
+- `at` — momentul dispatch-ului, după ceasul motorului (`now`); evenimentele aceleiași tranzacții au același `at`.
+- `cause` (opțional) — comanda sau observația care a pornit tranzacția: `start`, `submit_answer`, `request_hint`, `skip_mission`, `fail_mission`, `next`, `gps_position`, `confirm_arrival`. Este metadata, nu un eveniment: nu declanșează reguli.
+
+Regulile (`on` / `where`) citesc în continuare forma internă, plată (`{ type, missionId, … }`), neschimbată. GameEvent-urile nu se salvează (D-043).
+
+**Expunerea (M2):** `subscribe(listener)` apelează `listener(state, events)` la fiecare commit, o singură dată per tranzacție. `state` este instantaneul stării, ca înainte. `events` conține GameEvent-urile produse de acea tranzacție (inclusiv reacțiile în lanț), în ordinea procesării; este `[]` pentru o tranzacție fără evenimente și pentru `reset()`. Batch-ul este doar runtime: nu este istoricul jocului, nu se salvează și nu se reia la abonare, la re-randare sau după reîncărcare. Un listener cu un singur parametru (`state`) funcționează neschimbat.
+
 ## 10. Media (D-072) și audio
 
 ### 10.1 Registrul `media.assets`
@@ -466,6 +482,8 @@ Compatibil cu versiunea anterioară: `start`, `submitAnswer`, `useHint`, `skipCh
 Nou în M-002: `content` (aventura normalizată), `getCurrentMission`, `getMission`, `getOpenMissions`, `getLocation`, `getProgressSummary`, `takeEffects`, `submitMissionAnswer(missionId, input)`, `requestHint(missionId?)`, `skipMission`, `failMission`, `reportPosition(fix)`, `confirmArrival(locationId)`.
 
 Adăugat 2026-10-01 (aditiv): `getProgressSummary().collectedItems` și funcția exportată `collectedItems(adventure, firedEvents)`.
+
+Adăugat 2026-10-02 (M2, aditiv): al doilea argument al listenerului `subscribe` — `listener(state, events)`, batch-ul GameEvent al tranzacției (secțiunea 9).
 
 ## 13. Ce NU este implementat în această etapă
 

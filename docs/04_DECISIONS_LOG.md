@@ -1058,6 +1058,8 @@ Aceasta este o excepție explicită pentru demo-ul public și **nu** modifică r
 
 Nu se schimbă: motorul, schema V2, aplicația, conținutul fișierului `demo-gps-brasov.json` și testele.
 
+Notă (2026-10-02): restricția asupra conținutului fișierului `demo-gps-brasov.json` și a testelor care îi fixează forma este ridicată limitat și temporar de D-081 (extinderea fictivă pentru vertical slice); coordonatele reale existente rămân neschimbate.
+
 ---
 
 ## D-069 — TASK 5: Field Test 2 — Real-Coordinate GPS & Cross-Device Validation
@@ -1099,6 +1101,8 @@ Relații:
 Un `FAIL` care arată un defect devine un task de corectare separat. Un rezultat care confirmă o limită documentată nu este un defect.
 
 Nu se schimbă: D-025, D-028, D-063, motorul, schema V2, aplicația, conținutul și testele.
+
+Notă (2026-10-02): TASK 5 este suspendat pe forma veche a demo-ului; Field Test 2 se re-scopează pe versiunea extinsă a `demo-gps-brasov` (D-081).
 
 ---
 
@@ -1286,3 +1290,691 @@ Relații:
 - **D-076:** se aplică în continuare textelor și vocilor generate care nu sunt adăugate explicit; fișierele media publicate aici sunt placeholder-e.
 - **D-079:** nu se mai folosește pentru această aventură; procedura și scriptul rămân disponibile pentru alte aventuri private (scriptul refuză, intenționat, o aventură ale cărei fișiere sunt urmărite de Git).
 - **D-068:** neschimbată (demo-ul GPS public); D-080 este o excepție separată.
+
+---
+
+## D-081 — Extinderea fictivă a `demo-gps-brasov` pentru vertical slice
+Status: CONFIRMED (2026-10-02) — decizia proprietarului; ridicare limitată și temporară a freeze-ului din D-068 / D-069
+
+Decizie (proprietar, 2026-10-02):
+Se aprobă ridicarea limitată și temporară a freeze-ului stabilit prin D-068 și D-069 pentru conținutul aventurii `demo-gps-brasov`, exclusiv pentru transformarea acesteia într-un vertical slice reprezentativ al arhitecturii existente.
+
+Scope autorizat pentru `content/adventures/demo-gps-brasov.json`:
+- mesaj introductiv prin mecanismul existent `show_message` pe `adventure_started`;
+- 1–2 misiuni / provocări de tip răspuns;
+- wrong answer / retry;
+- cel puțin un hint;
+- continuarea aventurii după rezolvarea challenge-ului;
+- epilog prin mecanismul existent `finale.messageId`.
+
+Rămân neschimbate:
+- adventure id `demo-gps-brasov`;
+- `demo: true`;
+- titlul `[DEMO GPS]`;
+- toate coordonatele GPS existente;
+- caracterul fictiv al conținutului.
+
+Nu se adaugă coordonate reale noi și nu se introduc afirmații istorice sau geografice reale. Se respectă D-011 și D-034.
+
+Nu se modifică în cadrul acestui scope:
+- engine / runtime;
+- schema V2;
+- UI / HTML / CSS;
+- GPS / map implementation;
+- storage / persistence implementation;
+- service worker;
+- audio implementation;
+- celelalte aventuri.
+
+Teste:
+- Este autorizată actualizarea strictă a testelor care fixează forma demo-ului: `tests/adventure-qa.test.js`, `tests/persistence-reload.test.js`, `scripts/adventure-qa/exceptions.mjs`.
+- Testele nu trebuie slăbite sau eliminate pentru a obține PASS.
+- În implementarea efectivă a TASK 1 s-a constatat că doar `tests/persistence-reload.test.js` a necesitat modificări; celelalte două fișiere au rămas neschimbate.
+
+TASK 5 / Field Test 2:
+- TASK 5 din D-069 este suspendat pe forma veche a demo-ului.
+- Field Test 2 va fi re-scopat și executat pe versiunea extinsă, incluzând cel puțin fluxul `GPS → arrival → response challenge → wrong/retry → hint → correct → Continue`.
+- Rezultatele Field Test 2 realizate pe versiunea veche nu reprezintă validarea vertical slice-ului extins.
+
+Documentație:
+`docs/07_TESTING.md` §28 și referințele din `docs/03_ARCHITECTURE.md` care descriu forma veche a demo-ului **nu** sunt actualizate prin această decizie. Actualizarea lor va fi tratată separat.
+
+Persistence / `contentVersion`:
+- D-081 nu introduce o politică nouă pentru `contentVersion`.
+- Pentru testarea versiunii extinse, progresul salvat pe versiunea veche trebuie resetat.
+- Problema generală `A v1 → progress → A v2 → resume` rămâne separată, conform concluziilor Pistei A.
+
+---
+
+## D-082 — Game Communication Layer
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Context:
+Auditul read-only M0 (2026-10-02; raportul nu este versionat) a constatat că motorul emite deja evenimente (D-040), dar le folosește doar intern: `transact()` le procesează și nu le expune, iar interfața primește numai instantanee de stare (`subscribe(state)`). Mesajele afișate azi provin din trei surse diferite: jurnalul naratorului, derivat din `firedEvents` (`buildStory`, `view-model.js`), textele de feedback din `app.js` și efectele `takeEffects()` (produse de motor, dar neconsumate de aplicație).
+
+Decizie (proprietar, 2026-10-02):
+- Proiectul va avea un strat separat de comunicare (Game Communication Layer), cu fluxul:
+  `PlayerAction / Observation → Game Engine → GameEvent → Message Engine → GameMessage → Conversation / Inbox → UI notification / Chat`.
+- Intrările motorului sunt acțiunile jucătorului (comenzi) și observațiile (ex. fix-uri GPS). GameEvent-urile sunt **ieșirea** motorului: fapte produse de el, nu intrări.
+- GameEvent și GameMessage rămân concepte distincte: un GameEvent descrie ce s-a întâmplat în joc și nu conține text pentru jucător; un GameMessage este comunicarea prezentată jucătorului ca rezultat al unui eveniment sau al unei reguli de comunicare.
+- Game Engine nu conține texte narative și nu controlează direct interfața de chat sau audio-ul.
+- Message Engine nu modifică direct starea jocului.
+
+Precizare (proprietar, 2026-10-02 — M0.5B): textele generice vs. GameMessage
+- Textele generice ale interfeței tehnice rămân în stratul de interfață (ex. GPS indisponibil, eroare de permisiuni, buton dezactivat, stare tehnică). Ele nu devin GameMessage.
+- Mesajele care fac parte din experiența narativă / de gameplay a aventurii pot deveni GameMessage; ele provin din conținut / Message Engine, conform arhitecturii de mai sus.
+- Textele existente nu se mută acum; `app.js` nu se modifică în M0.5 / M0.5B.
+
+Rămân deschise:
+- dacă textele generice de gameplay ale unui GameMessage (ex. o confirmare de sosire fără text definit în conținut) stau ca șabloane în Message Engine sau în conținut; în ambele cazuri, fără texte specifice unei aventuri în cod (D-038);
+- forma exactă a expunerii evenimentelor din motor: o schimbare aditivă a API-ului `game.js`, care se aprobă explicit la implementare (D-012).
+
+Relații:
+- **D-040:** neschimbată. Motorul nu afișează și nu redă nimic; produce efecte pentru interfață. Acțiunile `show_message` și `play_audio` rămân reguli de conținut: regula decide că un mesaj / un sunet există, stratul de comunicare decide cum este prezentat.
+- **D-038 / D-041:** motorul rămâne fără texte specifice unei aventuri; textele pentru jucător vin din conținut sau din interfață.
+
+---
+
+## D-083 — Vocabularul GameEvent
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Evenimentele existente din `src/js/events.js` (`EVENT_TYPES`, lista închisă din D-040; `11_ADVENTURE_SCHEMA_V2.md` §9) rămân vocabularul canonic al GameEvent.
+- Nu se introduc familii paralele de evenimente (ex. `PLAYER_ARRIVED_AT_LOCATION` când există `player_arrived`, `PLAYER_APPROACHING_LOCATION` când există `player_near_location`).
+- Metadatele suplimentare necesare comunicării (ex. ordinea, momentul, acțiunea care a produs evenimentul, „prima sosire”) se adaugă **aditiv**, fără a schimba semantica, numele sau câmpurile existente ale evenimentelor și fără a schimba regulile de conținut existente (`on` / `where` / `do`).
+
+Precizare (rezultă din deciziile existente; nu le schimbă):
+- `hint_requested` rămâne evenimentul emis la **deschiderea** unui indiciu (D-030). Intenția jucătorului de a cere un indiciu, înainte de confirmare, este stare de interfață efemeră și nu atinge motorul (D-030), deci nu este un GameEvent.
+
+Relații:
+- **D-040:** lista rămâne închisă; un eveniment nou intră în aceeași listă, printr-o decizie separată.
+- **`15_SESSION_SYNC.md` §3.2:** aceeași regulă — evenimentele de sesiune corespund evenimentelor motorului, fără redenumirea acestora.
+
+---
+
+## D-084 — Game Engine ca sursă de adevăr pentru gameplay
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Game Engine (`game.js`) rămâne singura autoritate pentru: progres, misiuni, locații, provocări, indicii, scor și finalizare.
+- GameMessage, Conversation și Inbox sunt proiecții / comunicare și nu devin surse independente de adevăr pentru gameplay. Starea de comunicare (mesaje, citit / necitit, notificări) nu influențează progresul, scorul sau acțiunile posibile.
+- MessageAction trece prin Game Engine și prin API-urile existente (D-093).
+
+Relații:
+- Extinde la stratul de comunicare principiul existent din `03_ARCHITECTURE.md` §3c: motorul rămâne singura sursă de adevăr, iar interfața modifică starea jocului numai prin API-ul motorului.
+- **D-043:** se salvează faptele; listele sunt derivate.
+- **D-064:** neschimbată; Adventure Session rămâne sursa logică a stării.
+
+---
+
+## D-085 — Conversația derivată
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Prima versiune a Conversation / Inbox este **derivată** din conținut, starea jocului și GameEvent-urile / faptele disponibile, după modelul jurnalului existent (`buildStory`, derivat din `firedEvents`).
+- Nu se introduce inițial un `conversation.messageIds[]` persistent (sau altă listă persistentă de mesaje) ca a doua sursă de adevăr.
+- Mesajele derivate au o identitate stabilă, calculată din fapte (cheia sursei), astfel încât aceeași stare produce aceeași conversație, inclusiv după reîncărcare.
+- Dacă ulterior este necesară cronologia exactă a unor evenimente efemere (ex. fiecare răspuns greșit sau momentul deschiderii unui indiciu — azi salvate doar ca numărători `attempts` / `hintsUsed`, fără moment), se decide explicit ce fapte / timestamp-uri se persistă. Se persistă fapte, nu mesaje.
+- `takeEffects()` nu este sursa persistentă a conversației (coadă în memorie, pierdută la reîncărcare).
+- Game State rămâne sursa de adevăr pentru gameplay; istoricul conversației nu se persistă ca `messageIds[]`. Starea Inbox-ului (citit / necitit) este separată de Game State (D-090).
+
+Precizare (proprietar, 2026-10-02 — M0.5B): mesaje persistente vs. comunicări efemere
+- **Persistent GameMessage** — mesaj relevant pentru istoricul aventurii și pentru Conversation (ex. mesaj narativ, sosire importantă, succes, indiciu primit, mesaj de progres). „Persistent” înseamnă că mesajul face parte din istoricul durabil al conversației și reapare după reîncărcare, reconstruit din fapte (regulile de mai sus); nu înseamnă că textul sau lista mesajelor se salvează.
+- **Ephemeral UI notification** — feedback temporar, care nu trebuie neapărat să intre în istoricul conversației (ex. GPS indisponibil temporar, eroare tehnică, feedback UI tranzitoriu).
+- Principiu: nu orice text afișat jucătorului devine automat un GameMessage persistent.
+- Cele două clase nu devin acum o taxonomie de interfață; implementarea lor concretă (inclusiv stocarea, dacă va fi necesară) nu se decide acum.
+
+Rămâne deschis:
+- încadrarea concretă a fiecărui eveniment într-una dintre cele două clase (ex. un răspuns greșit) se stabilește la implementarea Message Engine.
+
+Relații:
+- **D-043:** consecventă (fapte salvate, liste derivate).
+- **D-090:** starea citit / necitit nu este conținutul conversației.
+- **D-057 / D-066:** conversația derivată depinde de versiunea conținutului; politica pentru progresul salvat pe o versiune veche rămâne separată (problema `A v1 → progress → A v2 → resume`, D-081).
+
+Clarificare prin D-100 (proprietar, 2026-10-02 — M6.5):
+- Istoricul comunicării livrate este păstrat de Inbox, în propria stocare (`outdoor-escape:inbox:<id-aventură>`), cu textul și metadatele mesajelor și starea citit / necitit. Formulările de mai sus care cer o conversație derivată exclusiv din fapte („Prima versiune a Conversation / Inbox este **derivată**…”, „Nu se introduce inițial… altă listă persistentă de mesaje…”, „Se persistă fapte, nu mesaje”, „nu înseamnă că textul sau lista mesajelor se salvează”) sunt înlocuite de D-100 pentru istoricul comunicării. Lista păstrată de Inbox nu este o a doua sursă de adevăr pentru gameplay.
+- Rămân valabile: identitatea stabilă a mesajului, calculată din sursa semantică; Game State fără mesaje, `messageIds[]` sau citit / necitit; `takeEffects()` nu este sursa istoricului; distincția mesaj persistent / feedback efemer al interfeței.
+- Relația D-057 / D-066 de mai sus privea conversația derivată: istoricul păstrat de Inbox nu se rescrie la o versiune nouă de conținut.
+- Textul original se păstrează ca istoric.
+
+---
+
+## D-086 — Inbox și Chat
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Aplicația va avea, conceptual:
+  - un punct de intrare permanent accesibil către Inbox / Chat;
+  - un indicator pentru mesajele necitite;
+  - o fereastră / un panou de conversație;
+  - filtrarea pe categorii (D-095).
+- Notificarea **nu** este un GameEvent și nu este un al doilea GameMessage: este stare / comportament de interfață, derivat din apariția unui mesaj nou.
+
+Precizare (proprietar, 2026-10-02 — M0.5B): relația cu interfața existentă
+- Inbox / Conversation nu creează, pe termen lung, un al doilea sistem paralel de storytelling. Arhitectura țintă:
+  - **Inbox / Conversation** răspunde de: comunicarea aventurii; istoricul mesajelor relevante; mesajele de la personaje; mesajele de poziționare; mesajele de gameplay; indiciile comunicate prin sistemul de mesaje.
+  - **Gameplay UI** rămâne responsabil de: obiectivul curent; controale; formularul provocării; feedback-ul imediat al acțiunii; starea GPS; alte elemente necesare interacțiunii directe.
+- `#story-panel` (jurnalul naratorului, `buildStory`) este precursorul / sursa existentă care va fi integrată în noul sistem, nu un al doilea sistem de chat permanent. Nu se elimină și nu se modifică acum.
+
+Rămân deschise (la implementare):
+- migrarea concretă a `#story-panel` (pașii și momentul) și relația cu epilogul de pe ecranul final — la milestone-ul de interfață;
+- relația dintre indiciile comunicate prin mesaje și zona de indicii din panoul provocării, unde rămân controalele și confirmarea D-030;
+- dacă panoul de conversație este un strat închis prin Back; în acest caz respectă precizarea U2 (D-035) și ordinea straturilor din D-073.
+
+---
+
+## D-087 — Categoriile mesajelor
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat; lista inițială, extensibilă
+
+Decizie (proprietar, 2026-10-02):
+- Un GameMessage poate avea o categorie semantică (`category`).
+- Lista inițială (extensibilă):
+  - `position` — apropiere, sosire, plecare, poziționare;
+  - `gameplay` — progresul jocului, obiective, misiuni;
+  - `hint` — indicii;
+  - `story` — narațiune / personaje;
+  - `alert` — comunicări care necesită atenție.
+- Categoria se stabilește la nivelul Message Engine / conținutului; interfața nu o deduce arbitrar.
+- Id-urile categoriilor sunt valori tehnice; denumirile afișate („Poziție”, „Joc” …) sunt texte de interfață (D-041).
+
+Rămâne deschis:
+- cum declară conținutul categoria unui mesaj (ex. un câmp nou în `narrator.messages`): extindere a schemei V2, care cere o decizie separată. Până atunci, categoria se stabilește în Message Engine.
+
+---
+
+## D-088 — Importanță vs. categorie
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Categoria și importanța sunt concepte distincte. Conceptual, un mesaj poate avea: `category`, `importance`, starea citit / necitit și un comportament de notificare.
+- O categorie nu implică automat o anumită importanță.
+- Modelul permite ulterior nivelurile `normal`, `important` și `urgent`, fără a bloca arhitectura actuală. Prima implementare nu trebuie să le implementeze pe toate.
+
+---
+
+## D-089 — Politica de notificare
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Un GameMessage nu trebuie obligatoriu să afișeze o notificare, să producă un sunet, să întrerupă jocul sau să fie afișat imediat.
+- Comportamentul de notificare este separat de conținutul mesajului.
+- Message Engine / politica de notificare aplică principiul „smart silence”: un eveniment poate exista (și poate actualiza starea) fără ca fiecare apariție să producă o notificare pentru jucător. Este necesar mai ales pentru GPS, unde aceleași evenimente pot reapărea (D-097).
+
+Relații:
+- **D-028** (fundal / ecran stins, PROPOSED): neschimbată; notificările cu aplicația în fundal nu fac parte din această decizie (D-099).
+
+---
+
+## D-090 — Citit / necitit
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Inbox-ul suportă conceptual stările `unread` și `read`.
+- Regula pentru prima implementare: un GameMessage devine `read` atunci când:
+  1. Inbox / Conversation este deschis; și
+  2. mesajul este efectiv prezentat în zona vizibilă a conversației.
+- Deschiderea Inbox-ului nu este suficientă pentru ca toate mesajele să devină `read`; mesajele care nu au fost efectiv prezentate rămân `unread`. Prima versiune nu are nevoie de un sistem sofisticat de urmărire a viewport-ului.
+- La reîncărcare, starea `unread` persistă. Un mesaj deja notificat nu produce din nou gong doar pentru că pagina a fost reîncărcată (D-092).
+
+Precizare (proprietar, 2026-10-02 — M0.5B): Game State vs. Inbox State
+- Game State rămâne sursa de adevăr pentru gameplay (D-084); istoricul conversației nu se persistă ca `messageIds[]` (D-085).
+- Starea citit / necitit este stare a stratului de comunicare / interfață, legată de identitatea stabilă a mesajului (D-085). Nu influențează progresul.
+- Citit / necitit **nu** se introduce în Game State (progresul salvat) doar pentru a rezolva persistența Inbox-ului.
+- Starea Inbox-ului poate avea propria persistență, separată de starea de gameplay.
+- Numele cheii de stocare, schema și structura JSON a acestei persistențe se decid la milestone-ul în care se implementează persistența Inbox-ului.
+
+Rămân deschise:
+- ce se întâmplă cu starea Inbox-ului la „Joacă din nou” / „Începe de la capăt”;
+- în `multi_device` (FUTURE): citit / necitit per participant sau comun echipei.
+
+Relații:
+- **D-043:** neschimbată. Citit / necitit este stare de interfață / comunicare, nu fapt de gameplay; persistența ei separată nu contrazice regula „se salvează faptele, listele sunt derivate”, care privește progresul jocului.
+- **D-085:** marcajele de citire nu sunt o listă persistentă a conversației; conținutul conversației rămâne derivat.
+- **D-035:** orice cheie persistentă nouă păstrează prefixul `outdoor-escape:`.
+
+Clarificare prin D-100 (proprietar, 2026-10-02 — M6.5):
+- Conținutul conversației nu „rămâne derivat”: Inbox-ul păstrează mesajele livrate (text, metadate) împreună cu starea citit / necitit, în propria stocare, separat de Game State (D-100). Precizarea „istoricul conversației nu se persistă ca `messageIds[]`” rămâne valabilă pentru Game State.
+- Cheia și formatul persistenței (decise la implementarea M5): `outdoor-escape:inbox:<id-aventură>`, `{ version: 1, messages: [{ id, text, category, importance, sender, at, read }] }`.
+- Prima întrebare de la „Rămân deschise” are răspuns: „Joacă din nou” / „Începe de la capăt” golesc Inbox-ul odată cu progresul (D-100). Citit / necitit în `multi_device` rămâne deschis.
+- Notificarea și gong-ul nu au stare salvată: un mesaj deja existent nu este notificat din nou la reîncărcare (D-102).
+- Textul original se păstrează ca istoric.
+
+---
+
+## D-091 — Audio pentru notificări
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Primirea unui mesaj poate produce un semnal audio distinct, inițial un gong scurt, recognoscibil. Gong-ul este parte confirmată a experienței de notificare; politica de notificare decide ce mesaje îl produc (D-089).
+- Audio-ul de notificare:
+  - aparține stratului UI / de notificare;
+  - nu este redat de Game Engine și nici de GameEvent;
+  - GameMessage nu cunoaște API-ul audio al browserului;
+  - nu este necesar pentru funcționarea gameplay-ului: imposibilitatea redării nu afectează jocul;
+  - are rezervă vizuală: dacă audio-ul nu poate fi redat (autoplay blocat, sunet dezactivat), indicatorul vizual de mesaj nou continuă să funcționeze.
+- Prima implementare poate folosi un singur profil audio (mesaje normale). Arhitectura permite ulterior profiluri diferite pentru `normal`, `important` și `urgent` (D-088), fără modificarea Game Engine.
+- Politica de notificare trebuie să permită ulterior dezactivarea sau modificarea comportamentului audio în funcție de Play Mode și de cerințele de siguranță (D-059, D-071, D-070). Regula finală pentru Bike nu se decide acum.
+
+Rămân deschise (decizii de implementare ulterioare):
+- asset-ul audio final al gong-ului: sursa, licența, formatul, cache-ul offline și fișierul concret;
+- regula finală de comportament audio în Bike / Play Mode.
+
+Relații:
+- **D-059:** semnalele de siguranță (beep, vibrație, prompturi) rămân funcționalitate de siguranță / UX separată; D-091 nu decide dacă ele folosesc același strat de notificare.
+- **D-075:** audio-ul mesajelor de narator (`narrator.messages[].audio`) rămâne conținut, distinct de gongul de notificare.
+
+Clarificare prin D-106 (M7-C, 2026-10-02):
+- Gong-ul este implementat în `src/js/gong.js` ca sunet generat cu Web Audio API (oscilatoare), fără fișier audio: primul punct de la „Rămân deschise” (sursa, licența, formatul, cache-ul offline al asset-ului) nu mai este necesar pentru această implementare. Un fișier audio rămâne posibil ulterior, ca alegere de implementare.
+- Regula audio pentru Bike / Play Mode rămâne deschisă.
+- Textul original se păstrează ca istoric.
+
+---
+
+## D-092 — Deduplicarea notificărilor
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Deduplicarea împiedică, pentru același mesaj logic:
+  - GameMessage duplicate (în Conversation);
+  - incrementări duplicate ale indicatorului de necitite;
+  - notificări vizuale duplicate;
+  - gong-uri duplicate.
+- Cazuri obligatorii: re-randarea; reîncărcarea; re-abonarea (re-subscription); re-emiterea evenimentelor GPS; revenirea într-o zonă.
+- Un mesaj deja existent și deja notificat nu generează un nou gong (și nici o nouă notificare vizuală) doar pentru că aceeași stare este observată din nou.
+- Deduplicarea se bazează pe identitatea stabilă a mesajului / cheia sursei (D-085), nu pe faptul că interfața a fost re-randată.
+
+Context tehnic (audit M0):
+- `player_arrived` este re-emis după ieșirea din zonă și revenire: `arrive()` emite evenimentul necondiționat, iar `arrivedAt` păstrează doar prima sosire;
+- `player_near_location` este re-emis după depășirea `nearDistance + exitMargin` și revenire;
+- `player_left_area` este emis la fiecare ieșire; primul fix după o reîncărcare poate produce un `player_left_area` întârziat;
+- regulile `once` (D-040) protejează starea, nu și un consumator care tratează evenimentele 1:1.
+
+---
+
+## D-093 — MessageAction
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Un GameMessage poate avea ulterior acțiuni / răspunsuri rapide (quick replies).
+- O MessageAction nu modifică direct interfața și nu modifică direct starea.
+- Fluxul canonic: `MessageAction → Game Engine API → state mutation → GameEvent → Message Engine → GameMessage`.
+- MessageAction respectă aceleași reguli și porți ca acțiunile existente din interfață (azi: `viewModel.actions`), inclusiv confirmarea explicită a indiciului (D-030).
+- **Precondiție:** înainte de implementarea MessageAction se rezolvă protecția la nivelul motorului pentru indicii, inclusiv cazul unei misiuni deja închise. Azi `requestHint()` refuză doar misiunile `locked`: pe o misiune rezolvată crește `hintsUsed` și emite `hint_requested`, iar regula din D-030 (indiciile se pot cere doar cât timp misiunea este `pending`) este aplicată numai de interfață.
+- Corecția este un task separat, aprobat explicit: modifică comportamentul Engine V2, aliniindu-l la D-030, fără a schimba D-030.
+
+---
+
+## D-094 — Expeditor / personaje
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Un GameMessage poate identifica ulterior un expeditor (`sender`) / personaj. Exemplul actual: `narrator.name` („Ghidul DEMO” în `demo-gps-brasov`).
+- Modelul trebuie să permită ulterior mai multe personaje, fără ca Game Engine să cunoască logica de prezentare a personajelor. Personajele sunt date de conținut, generice; motorul nu conține logică specifică unui personaj.
+- Avatarurile, indicatorii de scriere (typing) și alte elemente de prezentare nu fac parte din M0.5.
+
+Rămâne deschis:
+- forma în conținut pentru mai multe personaje (azi există un singur `narrator.name`): extindere a schemei V2, decizie separată.
+
+Relații:
+- **D-074:** neschimbată. Identitatea vocală și procesul TTS rămân unelte de producție, necunoscute aplicației; D-094 se referă doar la expeditorul afișat al unui mesaj, ca dată de conținut.
+
+---
+
+## D-095 — Filtre pe categorii în Inbox
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Inbox-ul are un mecanism de filtrare pe categorii (D-087), nu neapărat un sistem clasic de foldere.
+- Filtrele conceptuale: Toate, Poziție, Joc, Indicii, Poveste, Alerte.
+- „Toate” păstrează istoricul complet al aventurii într-un singur loc.
+- Categoriile pot primi ulterior indicatoare proprii de necitite.
+- Nu se implementează acum.
+
+---
+
+## D-096 — Contextul curent vs. istoric
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Inbox / Conversation și starea curentă a jocului sunt concepte distincte. Istoricul conversației păstrează mesajele relevante.
+- Interfața poate avea ulterior o proiecție separată de tip „Acum” (contextul curent), derivată din starea jocului: obiectivul curent, locația, provocarea și disponibilitatea indiciilor.
+- Această proiecție nu se transformă într-o serie de mesaje artificiale.
+- Nu se implementează acum.
+
+Relații:
+- Proiecția existentă din `view-model.js` (obiectivul, provocarea, acțiunile posibile) este deja un context curent derivat din motor.
+
+---
+
+## D-097 — Smart Silence pentru GPS
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Observațiile și evenimentele GPS nu se traduc 1:1 în mesaje.
+- Message Engine poate decide:
+  - ce eveniment produce un mesaj;
+  - ce eveniment produce doar o actualizare de stare;
+  - ce eveniment produce o notificare;
+  - când un eveniment repetat este ignorat ca mesaj duplicat (D-092).
+- `player_near_location` și `player_arrived` se tratează cu atenție, deoarece pot reapărea după ieșire și revenire. În plus, `player_near_location` nu este garantat înaintea lui `player_arrived` (o trecere directă din „outside” în „inside” produce doar sosirea) și poate fi emis și pentru locații care nu sunt obiectivul curent.
+
+Relații:
+- **D-039:** regulile de zonă și histerezisul rămân neschimbate.
+- **D-006:** GPS-ul nu poate bloca jucătorul; „Am ajuns” rămâne calea de rezervă, indiferent de politica de mesaje.
+
+---
+
+## D-098 — Separarea audio / UI
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Notificarea audio, indicatorul vizual (badge), starea citit / necitit și interfața de chat sunt responsabilități ale stratului de comunicare / interfață.
+- Game Engine rămâne independent de DOM, de API-urile audio și de interfața de chat (ca azi: `game.js` nu folosește DOM, stocare sau API-uri de browser).
+
+---
+
+## D-099 — Scope-ul primei implementări a Game Communication Layer
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M0.5); arhitectural / neimplementat
+
+Decizie (proprietar, 2026-10-02):
+- Prima implementare a Game Communication Layer rămâne minimală.
+- Nu se implementează încă: conversație AI, voice chat, notificări push, vibrații complexe, typing indicator, dialog ramificat avansat, narațiune dinamică generată de AI, sistem complex de personaje, sistem audio elaborat.
+- Arhitectura nu trebuie să le blocheze.
+- Deciziile D-082 – D-099 sunt arhitecturale: nu modifică motorul, schema V2, interfața, stocarea, testele sau conținutul. Implementarea pornește într-un milestone ulterior, după confirmarea proprietarului.
+- Detaliile de implementare lăsate intenționat pentru milestone-urile ulterioare nu fac neconfirmate principiile arhitecturale din D-082 – D-099 (precizare M0.5B).
+
+Rămân deschise intenționat (se tratează la milestone-urile lor; precizare M0.5B):
+- cheia de stocare exactă pentru starea Inbox-ului;
+- extinderea schemei V2 pentru `category`, `sender`, `importance` și MessageAction;
+- expunerea concretă a GameEvent-urilor;
+- formatul exact al GameMessage;
+- asset-ul audio;
+- interfața finală;
+- politica audio finală pentru Bike;
+- citit / necitit în `multi_device`;
+- conversația AI;
+- notificările push.
+
+Relații:
+- **D-081:** neschimbată. `demo-gps-brasov` nu se extinde acum cu conținut narativ suplimentar; orice modificare de conținut necesară ulterior pentru demo cere o decizie explicită separată.
+- **D-018 / D-019:** rămân valabile pentru implementare (fără pas de build, fără backend, fără dependențe noi).
+
+---
+
+## D-100 — Istoricul comunicării aparține Inbox-ului
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M6.5); implementat în M5 / M6; clarifică D-085 și D-090
+
+Context:
+Auditul M6.5 (2026-10-02; raportul nu este versionat) a constatat că Inbox-ul implementat în M5 (`src/js/inbox.js`) salvează mesajele livrate, cu text și metadate, sub o cheie proprie, în timp ce D-085 (inclusiv precizarea M0.5B) și D-090 (relația cu D-085) puteau fi citite ca cerând o conversație derivată exclusiv din Game State, fără salvarea textului sau a listei mesajelor.
+
+Decizie (proprietar, 2026-10-02):
+- Inbox-ul este sursa de adevăr pentru **istoricul comunicării efectiv livrate** jucătorului.
+- Inbox-ul persistă GameMessage-urile livrate, cu metadatele lor (`id`, `text`, `category`, `importance`, `sender`, `at`) și starea `read` / `unread`, separat de Game State. Implementarea (M5): cheia `outdoor-escape:inbox:<id-aventură>` (prefix D-035), formatul `{ version: 1, messages: [{ id, text, category, importance, sender, at, read }] }`.
+- Inbox-ul poate păstra textul și metadatele mesajului exact în forma în care a fost livrat: o actualizare ulterioară a conținutului nu rescrie istoricul.
+- Game State rămâne sursa de adevăr pentru progresul și starea jocului (D-084).
+- Inbox-ul:
+  - nu controlează gameplay-ul și nu este sursă de adevăr pentru progres;
+  - nu produce GameEvent;
+  - se golește odată cu resetarea / reluarea aventurii („Începe de la capăt”, „Joacă din nou”);
+  - nu se reconstruiește automat din `firedEvents` (și nici prin reluarea GameEvent-urilor, care nu există).
+- Persistența Inbox-ului este **persistență de comunicare**, nu persistență de gameplay.
+
+Rămân valabile (D-085, D-090):
+- identitatea stabilă a mesajului, calculată din sursa semantică, independent de `seq` și de timp (implementată în M3 / M4); deduplicarea din Inbox se bazează pe ea (D-092);
+- Game State nu conține mesaje, liste de id-uri de mesaje sau starea citit / necitit;
+- `takeEffects()` nu este sursa istoricului comunicării;
+- nu orice text afișat jucătorului devine GameMessage (distincția mesaj persistent / feedback efemer al interfeței, precizarea M0.5B din D-085);
+- regula de citire din D-090 (un mesaj devine citit doar când este efectiv prezentat).
+
+Consecințe acceptate:
+- un progres salvat înainte de M6 nu are istoric în Inbox (istoricul nu se reconstruiește);
+- pierderea stocării Inbox-ului pierde istoricul comunicării, nu progresul;
+- cât timp coexistă cu Inbox-ul (D-101), jurnalul naratorului (`buildStory`, derivat din fapte) poate diverge de Inbox (ex. după o actualizare de conținut sau pentru regulile `once: false`).
+
+Relații:
+- **D-085:** clarificată — formulările despre o conversație derivată exclusiv din fapte și despre nesalvarea textului / listei mesajelor sunt înlocuite de D-100 (vezi clarificarea de la D-085). Textul original se păstrează ca istoric.
+- **D-090:** clarificată — conținutul conversației este păstrat de Inbox; cheia și formatul persistenței și comportamentul la „Joacă din nou” / „Începe de la capăt” sunt cele de mai sus (vezi clarificarea de la D-090).
+- **D-084 / D-043:** neschimbate; privesc progresul jocului.
+- **D-092:** deduplicarea după identitatea stabilă a mesajului.
+- **D-101 – D-103:** celelalte granițe stabilite în M6.5.
+
+---
+
+## D-101 — Story Journal se retrage treptat în favoarea Inbox-ului
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M6.5); direcție arhitecturală, neimplementată
+
+Context:
+Auditul M6.5 a constatat că jurnalul naratorului (`buildStory()` în `view-model.js`, afișat în `#story-panel`) și Inbox-ul conțin aceleași mesaje de narator, cu aceeași identitate (cheia jurnalului `<rule.id>:<actionIndex>` corespunde id-ului `rule:<rule.id>:<actionIndex>`); Inbox-ul conține în plus indiciile.
+
+Decizie (proprietar, 2026-10-02):
+- Inbox-ul devine, pe termen lung, suprafața principală pentru istoricul comunicării.
+- Jurnalul naratorului (`buildStory()`, `#story-panel`) se păstrează temporar, pentru compatibilitate și tranziție.
+- În M6.5 și M7:
+  - `buildStory()` nu se elimină;
+  - `#story-panel` nu se elimină;
+  - nu se face migrare;
+  - comportamentul existent nu se schimbă doar pentru această decizie.
+- Retragerea jurnalului este un milestone separat.
+- Înainte de eliminarea jurnalului se rezolvă explicit rolul lui de „mesaj curent / ultim mesaj” în timpul jocului (ultimul mesaj este vizibil și anunțat prin `aria-live`). Rolul poate fi preluat ulterior de Notification și / sau de o proiecție „Acum” (D-096), printr-o decizie viitoare.
+- D-101 este o decizie de **direcție arhitecturală**, nu o autorizație de modificare imediată a codului.
+
+Relații:
+- **D-086:** precizarea M0.5B („`#story-panel` este precursorul… nu un al doilea sistem de chat permanent”) primește direcția de retragere; migrarea concretă rămâne pentru milestone-ul ei.
+- **D-096:** proiecția „Acum” rămâne neimplementată.
+- **D-100:** Inbox-ul păstrează istoricul comunicării.
+
+Clarificare prin D-107 (M7-C, 2026-10-02):
+- Rolul de anunțare (`aria-live`) al „ultimului mesaj” a fost preluat de Notification (`#notification-live`); `#story-latest` nu mai este regiune live. Jurnalul rămâne vizual, `buildStory()` și `#story-panel` sunt neschimbate, fără migrare. Rolul vizual de „mesaj curent / ultim mesaj” rămâne deschis pentru milestone-ul de retragere.
+- Textul original se păstrează ca istoric.
+
+---
+
+## D-102 — Notification se declanșează pentru mesajele nou adăugate
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M6.5); arhitectural / neimplementat (M7)
+
+Decizie (proprietar, 2026-10-02):
+- Notification este o **reacție efemeră a interfeței** la GameMessage-urile **nou adăugate** în Inbox.
+- Sursa pentru Notification Policy este lista `added[]` returnată de `inbox.addMessages(gameMessages)`.
+- Un mesaj deja existent în Inbox nu generează o notificare nouă doar pentru că:
+  - aplicația este re-randată;
+  - există o nouă abonare (re-subscription);
+  - GPS-ul re-emite un eveniment;
+  - aplicația este reîncărcată.
+- Prin urmare: un GameMessage existent ≠ notificare în așteptare; `unread` ≠ notificare. Numărul de necitite rămâne indicatorul vizual persistent al Inbox-ului (rezerva vizuală din D-091), nu o notificare.
+- Starea notificării nu este persistentă. Nu se adaugă în această etapă câmpuri precum `notified`, `notificationPlayed`, `audioPlayed`.
+- Gong-ul / audio-ul de notificare este de asemenea efemer și aparține stratului UI / Notification, nu Game Engine-ului (D-091, D-098).
+- Reload-ul nu reia automat notificarea sau gong-ul pentru mesajele deja existente.
+- Reset / replay golește Inbox-ul și orice stare efemeră de notificare / audio.
+- Politica concretă (de exemplu comportamentul când Inbox-ul, un puzzle sau alt strat este deschis) se stabilește în M7.
+
+Rămâne deschis (M7):
+- ce informații primește Notification Policy în afara mesajelor adăugate (ex. cauza evenimentului, contextul interfeței, acțiunea explicită a jucătorului).
+
+Relații:
+- **D-086:** notificarea nu este un GameEvent și nu este un al doilea GameMessage.
+- **D-089:** politica de notificare și „smart silence”.
+- **D-090 / D-092:** un mesaj deja notificat nu produce din nou gong la reîncărcare; deduplicarea după identitatea mesajului.
+- **D-091:** gong-ul, rezerva vizuală și profilurile audio.
+- **D-097:** re-emiterea GPS nu produce mesaje noi în Inbox, deci nici notificări.
+- **D-100:** Inbox-ul este sursa listei `added[]`.
+
+Clarificare prin D-104 (M7-C, 2026-10-02):
+- Întrebarea de la „Rămâne deschis (M7)” are răspuns: politica primește, în afara lui `added[]`, `cause`-ul tranzacției (context runtime, folosit doar pentru excepția indiciului cerut), `status`-ul jocului (finalul) și contextul interfeței după desenare (D-104, D-105).
+- Textul original se păstrează ca istoric.
+
+---
+
+## D-103 — Finale / Epilogue nu este implicit GameMessage
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M6.5); descrie comportamentul actual
+
+Decizie (proprietar, 2026-10-02):
+- `finale.messageId` reprezintă conținutul experienței finale, afișat pe ecranul de încheiere (epilogul: `viewModel.story.epilogue`, `#end-epilogue`).
+- Un `finale.messageId` nu produce implicit un GameMessage și nu se adaugă automat în Inbox.
+- Separat, o regulă de conținut care execută `show_message` poate produce un GameMessage normal (inclusiv pentru același mesaj din `narrator.messages`).
+- Este valid ca `show_message → GameMessage → Inbox` să coexiste cu `finale.messageId → ecranul final`. Dacă același text apare în ambele, rolurile sunt diferite, iar acest lucru nu reprezintă automat o duplicare arhitecturală.
+- În această etapă nu se modifică logica finalului sau Message Engine.
+
+Relații:
+- **D-086:** relația cu epilogul de pe ecranul final, lăsată deschisă în precizarea M0.5B, are răspuns pentru epilog; migrarea `#story-panel` rămâne la D-101.
+- **D-100:** Inbox-ul conține doar comunicarea livrată ca GameMessage.
+
+---
+
+## D-104 — Notification Policy: intrare, unitatea de prezentare, absorbție
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M7-B, specificația pentru M7-C); implementat în M7-C
+
+Context:
+D-102 a stabilit că Notification este reacția efemeră a interfeței la mesajele nou adăugate în Inbox (`added[]`) și a lăsat deschis ce informații primește politica în afara mesajelor. Auditul M7-A (2026-10-02; raportul nu este versionat) a constatat că o tranzacție poate produce mai multe GameMessage-uri, că două tranzacții pot urma la câteva secunde (ex. pornirea aventurii și primul fix GPS) și că indiciul cerut de jucător este afișat imediat în panoul puzzle-ului.
+
+Decizie (proprietar, 2026-10-02):
+- Notification Policy rulează în stratul de interfață, după `inbox.addMessages()` și după desenarea stării produse de aceeași tranzacție. Game Engine, GameEvent, GameMessage, Message Engine și Inbox nu se modifică și nu cunosc politica.
+- Intrarea politicii:
+  - `added[]` — mesajele nou adăugate, întoarse de `inbox.addMessages()`; singura sursă a mesajelor notificabile (D-102);
+  - `cause` — cauza tranzacției, citită din metadata `cause` a GameEvent-urilor ei (`11_ADVENTURE_SCHEMA_V2.md` §9), comună tuturor evenimentelor tranzacției. Este context runtime: nu intră în GameMessage, nu se salvează și se folosește numai pentru excepția indiciului (mai jos);
+  - `status` — starea jocului, numai pentru a recunoaște finalizarea (D-105);
+  - contextul interfeței după desenare: straturile deschise, redarea unui audio de misiune, vizibilitatea paginii (D-105).
+- Politica nu cunoaște regulile de gameplay: nu citește conținutul aventurii, misiunile, regulile sau Game State în afara lui `status`; nu scrie în Game State, în Inbox sau în stocare; nu produce GameEvent sau GameMessage.
+- Mesajele notificabile sunt toate mesajele din `added[]`, cu o singură excepție: într-o tranzacție cu `cause === "request_hint"`, mesajele de categorie `hint` nu se notifică — indiciul deschis este deja afișat în panoul puzzle-ului, ca rezultat direct al acțiunii jucătorului. Ele rămân în Inbox, necitite (D-090). Celelalte mesaje ale aceleiași tranzacții rămân notificabile. Categoriile `position`, `gameplay`, `story` și `alert` sunt notificabile, fără reguli speciale.
+- Deduplicarea rămâne exclusiv a Inbox-ului (D-092): un `GameMessage.id` deja cunoscut nu apare în `added[]`, deci nu produce notificare și nici gong. Notification nu are un al doilea mecanism de deduplicare.
+- Unitatea de prezentare: lotul = mesajele notificabile ale unei tranzacții. Un lot nevid produce cel mult o prezentare (un toast):
+  - 1 mesaj — toast-ul arată expeditorul (dacă există) și începutul textului; anunțul conține expeditorul și textul integral;
+  - N > 1 mesaje (ex. 3 sau 10) — un singur toast cu numărul mesajelor noi; anunțul conține numărul și, pentru fiecare mesaj, expeditorul și textul integral, în ordinea Inbox-ului. Nu există prezentări separate per mesaj și nici o limită a numărului.
+  - Textul complet rămâne în Inbox. Toast-ul nu este o listă și nu păstrează istoric.
+- Prezentarea este activă de la apariția toast-ului până la închiderea lui: de către jucător, automat (comportament de interfață), la deschiderea Inbox-ului, la finalizare, la reset sau la reîncărcare.
+- Absorbție: cât timp aceeași prezentare este activă, un lot nou care poate fi prezentat (D-105) este absorbit în prezentarea existentă:
+  - numărul = toate mesajele notificabile primite de prezentare de la apariția ei; cu un singur mesaj rămâne forma pentru un mesaj, de la două mesaje forma cu număr;
+  - textul vizual se actualizează corespunzător; anunțul conține doar mesajele lotului nou;
+  - importanța prezentării = importanța maximă a mesajelor primite (`normal` < `important` < `urgent`); poate crește, nu scade;
+  - nu se produce un al doilea gong (D-106).
+- Durata afișării toast-ului este comportament de interfață, nu regulă semantică.
+- Starea politicii (prezentarea activă) este efemeră: nu se salvează, se pierde la reîncărcare și se golește la reset (D-102).
+
+Consecințe acceptate:
+- Categoria este stabilită de Message Engine după tipul evenimentului: textul narativ al unei reguli pe `mission_completed` are categoria `gameplay`. M7 nu corectează acest lucru (declararea categoriei în conținut rămâne o extindere separată a schemei — D-087); de aceea politica nu tratează `gameplay` diferit.
+- Într-o tranzacție `request_hint` nu se notifică nici mesajele de narator ale unei reguli pe `hint_requested` (categoria `hint`); ele rămân în Inbox.
+- GPS nu are o regulă separată și nu există cooldown: reintrarea produce același id → `added[]` gol → nicio notificare (D-092, D-097); apropierea și sosirea pot produce două mesaje distincte, în tranzacții diferite, tratate după regulile normale (inclusiv absorbția, dacă prezentarea precedentă este încă activă).
+
+Implementare (M7-C):
+- `src/js/notification-policy.js` (modul pur, fără importuri): `evaluateNotification({ added, cause, status, context, presentation })` → `{ outcome: none | announce | present | absorb, messages, presentation, gong, announcement }`; `describeNotification` / `describeAnnouncement` descriu toast-ul și anunțul.
+- `src/js/app.js`: `receiveMessages` întoarce `added`; abonarea: salvare → Message Engine → `inbox.addMessages` → `render()` → `notify(added, events[0]?.cause, state.status)`. Prezentarea activă este o variabilă de interfață, nesalvată.
+- Teste: `tests/notification-policy.test.js`, `tests/notification-ui.test.js`.
+
+Relații:
+- **D-102:** răspunde la întrebarea „ce informații primește Notification Policy în afara mesajelor adăugate”.
+- **D-092 / D-100:** deduplicarea și `added[]` aparțin Inbox-ului.
+- **D-089 / D-097:** Message Engine decide ce eveniment produce un mesaj; prezentarea notificării aparține Notification Policy. M7 nu adaugă responsabilități de notificare în Message Engine.
+- **D-084:** Notification nu este sursă de adevăr și nu influențează progresul.
+- **D-093:** MessageAction nu este implementată; excepția `request_hint` presupune indiciul afișat în puzzle și se revede la implementarea D-093.
+
+---
+
+## D-105 — Notification: contextul interfeței, importanța și finalizarea
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M7-B, specificația pentru M7-C); implementat în M7-C
+
+Decizie (proprietar, 2026-10-02):
+- Notification nu întrerupe și nu blochează jocul: toast-ul este non-modal, nu primește și nu fură focusul, nu este dialog, nu face restul paginii inert și nu este un strat Back / Escape (nu adaugă intrări de istoric; precizarea U2 din D-035 și ordinea straturilor din D-073 rămân neschimbate). Regula se aplică tuturor nivelurilor de importanță, inclusiv `urgent`.
+- Contextul se evaluează după desenarea tranzacției:
+
+  | Context | Toast | Gong | aria-live |
+  | --- | --- | --- | --- |
+  | joc normal | da — prezentare nouă sau absorbție (D-104) | da, numai la o prezentare nouă (D-106) | da |
+  | puzzle overlay (inclusiv confirmarea indiciului) | da — non-modal, fără focus | da, numai la o prezentare nouă | da |
+  | media audio în redare (audio de misiune pornit de jucător) | ca în contextul de bază | nu | da |
+  | Inbox deschis | nu; o prezentare activă se închide la deschiderea Inbox-ului | nu | da (lotul nou) |
+  | media viewer deschis | nu; fără amânare și fără coadă; prezentarea activă nu se modifică | nu | nu |
+  | final / `completed` | nu; prezentarea activă se închide când finalul devine activ | nu | nu |
+
+- Inbox deschis: panoul „Mesaje” este deschis după desenarea tranzacției. Inbox-ul desenează tot istoricul, deci mesajele lotului sunt deja în listă și devin citite în aceeași desenare (D-090). Regula nu depinde de desenare: dacă un mesaj nu ar fi desenat (ex. o listă viitoare care desenează doar zona vizibilă), el rămâne necitit conform D-090, iar Notification tot nu afișează toast și nu produce gong.
+- Media viewer deschis: lotul nu este prezentat nici ulterior. Mesajele rămân în Inbox, necitite; numărul de necitite (D-102) este disponibil după închiderea viewer-ului.
+- Pagina ascunsă (`document.visibilityState === "hidden"`): lotul nu este prezentat — fără toast, fără gong, fără anunț, fără amânare. Mesajele rămân în Inbox, necitite; la revenire nu se reia nimic. Notificările în fundal nu fac parte din M7 (D-028, D-099).
+- Finalizare: după `status === "completed"` nu există toast, gong sau anunț de notificare, inclusiv pentru mesajele produse de tranzacția care încheie aventura. Mesajele rămân în Inbox; numărul de necitite este vizibil pe ecranul final. Ecranul final și epilogul rămân experiența de încheiere (D-103, neschimbată).
+- Importanța: importanța unui lot / a unei prezentări este maximul importanțelor mesajelor (D-104); categoria nu influențează importanța (D-088).
+
+  | Importanță | Toast | Gong | aria-live |
+  | --- | --- | --- | --- |
+  | `normal` | se închide automat | da (D-106) | `polite` |
+  | `important` | ca `normal` — fără comportament vizual separat în M7 | da | `polite` |
+  | `urgent` | rămâne până la închiderea de către jucător sau schimbarea de context (deschiderea Inbox-ului, finalizare, reset, reîncărcare) | da | `assertive` |
+
+  `urgent` nu devine modal, nu primește focus și nu ignoră contextele din tabelul de mai sus.
+- Mobil / tastatură: poziția exactă a toast-ului este comportament de interfață, validat prin smoke test în browser și pe telefoane fizice. Dacă toast-ul acoperă câmpul de răspuns sau interferează cu tastatura, interfața se ajustează în implementare, fără schimbarea acestei decizii și fără o arhitectură separată pentru mobil.
+
+Consecințe acceptate:
+- Un mesaj sosit cât viewer-ul este deschis sau pagina este ascunsă nu are toast, gong sau anunț; rămâne doar necitit în Inbox. Același lucru este valabil pentru `urgent`: `urgent` nu este un semnal de siguranță (D-059 rămâne separat).
+- În joc normal, același text poate apărea simultan în toast și în jurnal până la retragerea jurnalului (D-101); anunțarea nu se dublează (D-107).
+
+Implementare (M7-C):
+- `#notification` (în `src/index.html`, în afara `<main>`): toast sus (`top: max(0.5rem, env(safe-area-inset-top))`), lățime maximă 40rem, `z-index` 2400 — peste overlay-ul puzzle-ului (2000), sub panoul „Mesaje” (2500) și sub viewer (3000), care îl acoperă (sub viewer este și inert). „Deschide” (deschide panoul „Mesaje”) și „✕”, ținte de 44 px. `normal` / `important`: închidere automată după ~6 s, cu pauză cât indicatorul mouse-ului sau focusul este pe toast; `urgent`: fără închidere automată.
+- `src/js/app.js`: `notificationContext()` furnizează contextul (`inboxOpen`, `viewerOpen`, `puzzleOpen`, `missionAudioPlaying` = un `<audio>` în redare, `pageHidden`); `openInbox()` și `resetEverything()` închid prezentarea. Dacă panoul „Mesaje” a fost deschis din toast peste puzzle, la închidere focusul revine pe titlul puzzle-ului (butonul „Mesaje” este inert sub overlay).
+
+Relații:
+- **D-089 / D-102:** politica concretă cerută pentru M7.
+- **D-090:** citirea rămâne exclusiv a Inbox-ului; toast-ul nu marchează nimic ca citit.
+- **D-035 (U2) / D-073:** Notification nu este strat Back.
+- **D-103:** neschimbată.
+
+---
+
+## D-106 — Gong-ul notificării
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M7-B, specificația pentru M7-C); implementat în M7-C
+
+Decizie (proprietar, 2026-10-02):
+- Gong-ul este un efect UI al unei prezentări de notificare. Nu este GameEvent, nu este GameMessage, nu este redat sau cunoscut de Game Engine, Message Engine ori Inbox și nu are stare persistentă (D-091, D-098, D-102).
+- Nu există gong fără prezentare (toast). Fără toast — Inbox deschis, media viewer deschis, final, pagină ascunsă, indiciu cerut de jucător — nu există gong.
+- Cel mult un gong per prezentare, decis la apariția ei. Absorbția unui lot nou nu produce gong, nici dacă importanța prezentării crește, nici dacă gong-ul inițial nu a putut fi redat.
+- Gong-ul nu se reia: la reîncărcare, la re-randare, la re-abonare, pentru duplicate (id cunoscut → `added[]` gol) sau la revenirea paginii în prim-plan.
+- Gong-ul nu se redă cât timp un audio de misiune este în redare, ca să nu se suprapună două surse audio. Notificarea nu oprește, nu pune pe pauză și nu modifică media player-ul.
+- Eșecul audio ≠ eșecul notificării ≠ eșecul jocului. Dacă gong-ul nu poate fi redat în acel moment (redare blocată de browser, înainte de prima interacțiune a jucătorului, sunet indisponibil, eroare), gong-ul acelei prezentări se omite: toast-ul, anunțul, Inbox-ul și jocul continuă. Nu există redare amânată, reîncercare automată sau gong în așteptare.
+- Gong-ul nu blochează: nimic din joc sau din interfață nu așteaptă redarea lui.
+- Un singur profil audio pentru toate nivelurile de importanță (D-091); profiluri diferite rămân posibile ulterior, fără modificarea Game Engine.
+- Sursa sunetului și mecanismul prin care prima interacțiune explicită a jucătorului permite redarea sunt detalii de implementare ale Gong UI. Sistemul audio existent al misiunilor nu se schimbă.
+- Reset: prezentarea se închide și un gong în curs se oprește; nu există altă stare audio de notificare de golit (D-102).
+
+Implementare (M7-C):
+- `src/js/gong.js`: sunet scurt (~1,1 s), discret, generat cu Web Audio API (oscilatoare cu timbru de clopot), fără fișier audio și fără `<audio>` (`media-ui.js` oprește orice alt `<audio>` din pagină). `unlock()` creează / reia `AudioContext` la primul gest explicit (`app.js` ascultă `pointerdown`, `pointerup`, `keydown`, `click` în faza de captură, deci înaintea acțiunii butonului, și se retrage după deblocare); starea există doar în memorie. `play()` este o singură încercare: dacă contextul nu rulează, gong-ul se abandonează; singura așteptare este reluarea contextului începută chiar atunci (ex. gestul care pornește aventura), de cel mult 300 ms — altfel abandon, fără redare ulterioară. `stop()` oprește un gong în curs și anulează o încercare neterminată.
+- `app.js` apelează `gong.play()` numai când decizia politicii are `gong: true`.
+- Teste: `tests/gong.test.js` (AudioContext simulat), `tests/notification-policy.test.js`, `tests/notification-ui.test.js`.
+
+Rămân deschise:
+- regula audio pentru Bike / Play Mode (D-071, D-091) — Play Mode nu este implementat; decizia de redare a gong-ului rămâne într-un singur punct, ca să poată fi restrânsă ulterior;
+- setări de sunet în aplicație (ex. oprirea gong-ului de către jucător) — milestone ulterior.
+
+Relații:
+- **D-091:** gong-ul confirmat, rezerva vizuală, profilurile; asset-ul este o alegere de implementare (Web Audio în M7-C).
+- **D-075:** audio-ul mesajelor de narator rămâne conținut, distinct de gong.
+- **D-059:** semnalele de siguranță rămân separate.
+
+---
+
+## D-107 — Notification preia anunțarea mesajelor noi; jurnalul rămâne vizual
+Status: CONFIRMED (2026-10-02) — decizia proprietarului (M7-B, specificația pentru M7-C); implementat în M7-C
+
+Context:
+`#story-latest` (jurnalul naratorului, `#story-panel`) era singura regiune `aria-live` pentru mesajele de narator. Auditul M7-A a constatat că jurnalul este inert cât timp puzzle overlay-ul, media viewer-ul sau Inbox-ul sunt deschise și ascuns pe ecranul final, iar odată cu Notification același mesaj ar fi anunțat de două ori în joc normal. D-101 prevede că rolul jurnalului de „mesaj curent / ultim mesaj” poate fi preluat de Notification printr-o decizie viitoare.
+
+Decizie (proprietar, 2026-10-02):
+- Notification este singurul responsabil pentru anunțarea (`aria-live`) mesajelor noi, în contextele din D-105 (joc normal, puzzle overlay, media audio în redare, Inbox deschis): `polite` pentru `normal` și `important`, `assertive` pentru `urgent`.
+- `#story-latest` nu mai este regiune `aria-live`. Jurnalul:
+  - rămâne vizibil și funcționează vizual ca înainte;
+  - `buildStory()` nu se modifică;
+  - nu se elimină și nu se migrează;
+  - nu devine Inbox.
+- Anunțul este suficient pentru cititorul de ecran (D-104: expeditorul și textul integral; pentru mai multe mesaje, numărul și textele). Nu trebuie să fie identic cu textul vizual al toast-ului.
+- Toast-ul nu primește focus, nu fură focusul, nu este dialog și nu este modal (D-105).
+- Implementarea face parte din M7-C, împreună cu Notification, ca să nu existe o perioadă cu anunțuri duble sau fără anunțuri.
+
+Consecințe acceptate:
+- O regulă repetabilă (`once: false`) mută mesajul în jurnal ca „ultimul”, dar nu mai este reanunțată (Inbox-ul o deduplică — D-092).
+- În contextele fără anunț (media viewer, final, pagină ascunsă) nu se anunță nimic; înainte de M7, jurnalul era oricum inert sau ascuns în aceste contexte.
+- Indiciile rămân anunțate prin focusul pe indiciul deschis din puzzle; ele nu fac parte din jurnal.
+- Rolul vizual de „ultim mesaj” al jurnalului rămâne deschis pentru milestone-ul de retragere (D-101, D-096).
+
+Implementare (M7-C):
+- `#notification-live` (în `src/index.html`, în afara `<main>` și a straturilor, `aria-atomic="true"`, ascuns doar vizual — `.visually-hidden`): singura regiune live pentru mesaje noi; `app.js` nu o face niciodată inertă (`renderNotificationLayer`). Anunțul se scrie după o golire scurtă (~100 ms), cu `aria-live` setat înainte (`polite` / `assertive`); loturile anunțate în aceeași clipă se adună într-un singur text. Resetul și finalul golesc regiunea.
+- `#story-latest` fără `aria-live`; restul jurnalului neschimbat.
+- Cititor de ecran real (VoiceOver / TalkBack / NVDA): netestat în M7-C (`07_TESTING.md` §30).
+
+Relații:
+- **D-101:** direcția rămâne neschimbată; D-107 preia doar anunțarea.
+- **D-086 / D-102 / D-105:** Notification ca reacție efemeră la mesajele noi.

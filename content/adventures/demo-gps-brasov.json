@@ -18,6 +18,17 @@
       "allowManualConfirmation": true
     }
   },
+  "narrator": {
+    "name": "Ghidul DEMO",
+    "messages": {
+      "msg-intro": {
+        "text": "Bun venit în aventura DEMO! Totul aici este fictiv. Ai de parcurs trei puncte pe hartă; la Start și la Bariera te așteaptă câte o provocare, iar dacă te blochezi poți cere un indiciu. Sosirea se confirmă prin GPS (sau cu „Am ajuns”), iar după fiecare pas apeși „Continuă”."
+      },
+      "msg-epilog": {
+        "text": "Felicitări, ai încheiat traseul DEMO! Ai parcurs tot fluxul: GPS, sosire, provocare, indiciu și final. Într-o aventură reală, aici s-ar încheia povestea."
+      }
+    }
+  },
   "locations": [
     {
       "id": "start",
@@ -65,6 +76,21 @@
     "points": 50
   },
   {
+    "id": "m-start-puzzle",
+    "type": "riddle",
+    "track": "main",
+    "title": "[DEMO] Ghicitoarea exploratorului",
+    "briefing": "Provocare de test (fictivă): „Am un ac, dar nu cos. Arăt nordul, dar nu vorbesc.” Ce sunt? Răspunde cu un singur cuvânt.",
+    "locationId": "start",
+    "initialStatus": "locked",
+    "points": 100,
+    "hints": [
+      { "text": "Exploratorii o folosesc ca să afle direcția." },
+      { "text": "Cuvântul începe cu litera B." }
+    ],
+    "answer": "busolă"
+  },
+  {
     "id": "m-bariera",
     "type": "location",
     "track": "main",
@@ -73,6 +99,21 @@
     "locationId": "bariera",
     "initialStatus": "locked",
     "points": 50
+  },
+  {
+    "id": "m-bariera-puzzle",
+    "type": "code",
+    "track": "main",
+    "title": "[DEMO] Codul de acces",
+    "briefing": "Provocare de test (fictivă): codul de acces al demo-ului este numărul de litere din cuvântul EXPLORARE. Scrie codul.",
+    "locationId": "bariera",
+    "initialStatus": "locked",
+    "points": 100,
+    "inputMode": "numeric",
+    "hints": [
+      { "text": "Numără literele una câte una: E-X-P-L-O-R-A-R-E." }
+    ],
+    "answer": "9"
   },
   {
     "id": "m-magazin",
@@ -87,10 +128,20 @@
 ],
   "events": [
     {
+      "id": "ev-intro",
+      "on": "adventure_started",
+      "do": [
+        {
+          "action": "show_message",
+          "messageId": "msg-intro"
+        }
+      ]
+    },
+    {
       "id": "ev-start",
       "on": "mission_completed",
       "where": {
-        "missionId": "m-start"
+        "missionId": "m-start-puzzle"
       },
       "do": [
         {
@@ -107,7 +158,7 @@
       "id": "ev-bariera",
       "on": "mission_completed",
       "where": {
-        "missionId": "m-bariera"
+        "missionId": "m-bariera-puzzle"
       },
       "do": [
         {
@@ -132,5 +183,9 @@
         }
       ]
     }
-  ]
+  ],
+  "finale": {
+    "missionId": "m-magazin",
+    "messageId": "msg-epilog"
+  }
 }

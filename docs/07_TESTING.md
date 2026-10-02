@@ -633,3 +633,95 @@ Precondiții (secțiunea 28.2):
 | FT2-E3 | Pe dispozitivul pregătit la 28.2, punctul 1, după publicarea versiunii FT2, fără ștergerea datelor și înainte de FT2-A2: redeschiderea aplicației | service worker-ul `v7` activ; cache-ul `v6` șters; interfața TASK 4 afișată | Service worker nou: sursa `sw.js`, starea `#1221 activated and is running`, primit la 01/10/2026 13:34:05. `caches.keys()` → `["outdoor-escape:shell:v7"]` (`v6` eliminat). Pe `src/?adventure=demo-vertical-slice` (v7) s-a confirmat vizual interfața TASK 4: harta, fluxul „Am ajuns”, puzzle-ul | PASS | Fără Clear Storage, fără ștergerea cache-ului, fără Unregister; codul și `demo-gps-brasov` nemodificate în timpul verificării |
 
 Domeniul FT2-E3: rezultatul confirmă **upgrade-ul service worker-ului și al cache-ului (`v6` → `v7`)** și disponibilitatea interfeței TASK 4 pe versiunea publicată. Nu confirmă **persistența progresului unei sesiuni de joc existente înainte de upgrade**, care nu a fost verificată. Progresul din Field Test 1 era pe `http://localhost:8000` (altă origine, cu stocare separată de GitHub Pages — `10_LOCAL_DEVELOPMENT.md` §7), nu în sesiunea publică `v6`, deci nu a trecut prin acest upgrade.
+
+## 29. M6 — Mesajele (GameEvent → Message Engine → Inbox → panoul „Mesaje”)
+
+Lanțul de comunicare în aplicație (D-082, D-085, D-086, D-090, D-092): batch-ul fiecărei tranzacții nevide → `processGameEvents` → `inbox.addMessages`; butonul „Mesaje” cu numărul de necitite; panoul „Mesaje” (doar citire). Fără audio, notificări, acțiuni sau câmp de răspuns.
+
+### 29.1 Automat — `npm test`
+
+| Fișier | Acoperă |
+| --- | --- |
+| `tests/game-event.test.js`, `tests/game-event-subscribe.test.js` | modelul GameEvent (M1) și expunerea prin `subscribe((state, events) => …)` (M2) |
+| `tests/game-message.test.js`, `tests/message-engine.test.js` | modelul GameMessage (M3) și Message Engine (M4) |
+| `tests/inbox.test.js` | starea Inbox (M5): deduplicare, citit / necitit, persistență separată, reset |
+| `tests/inbox-ui.test.js` | M6: `inbox-ui.js`, stratul Back `Layer.INBOX`, orchestrarea din `app.js` reprodusă fără DOM (runtime, număr de necitite, duplicate, batch gol, deschidere fără efect în joc, citit după desenare, reîncărcare, reset, parcurgere nouă, pornire `idle`, ecranul final) și verificări în sursă (`app.js`, `index.html`) |
+
+### 29.2 Browser — smoke test
+
+Verificat la 2026-10-02 în browserul din aplicația desktop Claude (Chromium), server local `127.0.0.1:8000`, la ~422×734 (layout de telefon) și 1280×800 (desktop, verificat prin dimensiuni măsurate în DOM). Geolocația a fost simulată în pagină (metodele `navigator.geolocation` înlocuite doar în tab-ul de test). Aventuri fictive: `demo-challenge-media`, `demo-vertical-slice`.
+
+| ID | Pași | Rezultat așteptat | Rezultat |
+| --- | --- | --- | --- |
+| M6-1 | Pornirea aplicației | service worker `v11` activ, 27 de intrări (inclusiv `message-engine.js`, `inbox.js`, `inbox-ui.js`), `v10` șters; butonul „Mesaje” ascuns pe ecranul de start | PASS |
+| M6-2 | „Începe aventura” (`demo-challenge-media`) | mesajul de introducere în Inbox, necitit; butonul „Mesaje 1”, `aria-label` „Mesaje, 1 necitit” | PASS |
+| M6-3 | Focus pe „Mesaje”, Enter | panoul se deschide (dialog, `<main>` inert, focus pe titlu, o intrare de istoric); mesajul cu expeditorul și categoria; devine citit după desenare; numărul dispare | PASS |
+| M6-4 | Escape | panoul se închide, focusul revine pe „Mesaje”, intrarea de istoric se retrage | PASS |
+| M6-5 | „Activează locația” + poziții simulate (aproape, apoi la Poartă) | sosire GPS, misiunea rezolvată; fără mesaj nou (conținutul nu are text pentru sosire) | PASS |
+| M6-6 | Puzzle A: indiciu (confirmat), răspuns corect; puzzle B: răspuns corect | mesajul indiciului, apoi fragmentul A, necitite; numărul crește la 2; jurnalul (`#story-panel`) continuă să funcționeze | PASS |
+| M6-7 | Reîncărcare fără deschiderea panoului | numărul rămâne 2; introducerea rămâne citită; fără duplicate | PASS |
+| M6-8 | „Mesaje” → listă (layout de telefon: foaie pe tot ecranul) | 3 mesaje în ordinea sosirii; cele noi marcate „Nou”; toate citite după afișare | PASS |
+| M6-9 | Back al browserului cu panoul deschis | panoul se închide; URL neschimbat; focus pe „Mesaje” | PASS |
+| M6-10 | Reîncărcare | toate mesajele rămân citite | PASS |
+| M6-11 | „Începe de la capăt” → confirmare | progresul și Inbox-ul șterse împreună (ambele chei absente); ecranul de start fără „Mesaje” | PASS |
+| M6-12 | „Începe aventura” din nou | introducerea apare ca mesaj nou, necitit (1) | PASS |
+| M6-13 | `demo-vertical-slice` (fără narator): „Mesaje” | starea goală „Nu ai mesaje încă.” | PASS |
+| M6-14 | Indiciu → final → ecranul de rezultat | „Mesaje 1” disponibil pe ecranul final; „Joacă din nou” șterge progresul și Inbox-ul | PASS |
+| M6-15 | Desktop 1280×800 | insigna și „Mesaje” pe același rând; panoul centrat (foaie 640 px); fără derulare orizontală | PASS |
+| M6-16 | Consola | fără erori | PASS |
+
+**Netestat încă:** telefon real (Android / iOS), cititor de ecran, publicarea pe GitHub Pages.
+
+## 30. M7 — Notificarea și gong-ul (D-104 – D-107)
+
+Lanțul: `inbox.addMessages(...).added` → `render()` → Notification Policy (`notification-policy.js`) → toast `#notification` + anunț `#notification-live` + gong (`gong.js`, Web Audio). Jurnalul (`#story-panel`) rămâne doar vizual (D-107).
+
+### 30.1 Automat — `npm test`
+
+| Fișier | Acoperă |
+| --- | --- |
+| `tests/notification-policy.test.js` | modulul pur: lot gol, un mesaj, 3 / 10 mesaje (o prezentare, cel mult un gong, anunț cu toate textele), duplicate (doar Inbox-ul deduplică), `request_hint` + `hint` (și combinația cu un mesaj non-hint), categorii fără reguli speciale, importanța (normal / important → `polite`, urgent → `assertive` + persistent, maximul lotului), matricea de context D-105 (joc, puzzle, audio de misiune, Inbox, viewer, pagină ascunsă, final), absorbția (fără al doilea gong, escaladarea importanței, fără gong după un gong ratat), finalul închide prezentarea, puritate și verificări în sursă |
+| `tests/gong.test.js` | `gong.js` cu `AudioContext` simulat: fără gest nu sună, deblocare la gest (un singur context, în memorie), gong reușit, reluare la timp / prea lentă (abandon, fără redare amânată), autoplay blocat, Web Audio indisponibil, eroare la generare, `stop()` la reset, fără repetare, fără `<audio>` / fișiere / stocare |
+| `tests/notification-ui.test.js` | orchestrarea din `app.js` reprodusă fără DOM (fixture-ul fictiv): intro, absorbție, reintrare GPS, indiciu cerut, răspuns greșit repetat, audio de misiune, puzzle, Inbox deschis, viewer / pagină ascunsă, final, reîncărcare, reset + parcurgere nouă, audio blocat; în sursă: `notify` după `render`, doar din `added` / `cause` / `status` / context, un singur `gong.play()` (doar din decizie), fără stare persistentă, toast-ul nu este strat Back / Escape, `index.html` (toast și regiune live în afara `<main>`, jurnal fără `aria-live`), `app.css` (z-index, 44 px), `sw.js` |
+| `tests/inbox-ui.test.js` | actualizat pentru M7: abonarea se termină cu `render()` → `notify(...)`; `app.js` nu folosește direct API-uri audio, notificările browserului, Push sau vibrații (sunetul trece numai prin `gong.js`) |
+
+### 30.2 Browser — smoke test
+
+Verificat la 2026-10-02 în browserul din aplicația desktop Claude (Chromium), server local (`localhost:8000`), aventura fictivă `demo-challenge-media`: layout de telefon (panoul, 422×734), emulare telefon 375×700 (touch) și 1280×800 (desktop; geometrie măsurată în DOM). Gong-ul a fost verificat prin numărarea oscilatoarelor create (instrumentare în pagină), nu prin ascultare. Unele contexte nu pot primi un mesaj prin interfață cu conținutul existent (viewer sau panoul „Mesaje” deschis, audio de misiune pe o misiune cu mesaj): tranzacția a fost simulată în pagină (clic programatic pe varianta de răspuns, respectiv un `<audio>` silențios adăugat doar pentru test).
+
+| ID | Pași | Rezultat așteptat | Rezultat |
+| --- | --- | --- | --- |
+| M7-1 | Pornirea aplicației | service worker `v12` activ, `v11` șters; `#story-latest` fără `aria-live`; `#notification-live` în afara `<main>` | PASS |
+| M7-2 | „Începe aventura” (primul gest) | toast „Ghidul demo” + începutul textului; anunț `polite` cu expeditorul și textul complet; gong (contextul audio deblocat de același gest, `running`); focusul nu se mută; „Mesaje 1” | PASS |
+| M7-3 | Așteptare | toast-ul se închide singur după ~6 s | PASS |
+| M7-4 | „Am ajuns” (fără mesaj în conținut) | nimic: fără toast, gong sau anunț | PASS |
+| M7-5 | Puzzle A: indiciu (confirmat) | indiciul afișat în puzzle, cu focus; în Inbox necitit („Mesaje 2”); fără toast, gong sau anunț | PASS |
+| M7-6 | Puzzle B: răspuns corect (mesaj nou), overlay deschis | toast peste overlay, gong, anunț; focusul rămâne pe „Continuă”; toast-ul și regiunea live nu sunt inerte | PASS |
+| M7-7 | Intro + puzzle B la mai puțin de 6 s | aceeași prezentare: „2 mesaje noi”, un singur gong, al doilea lot anunțat; istoricul are o singură intrare (puzzle-ul) | PASS |
+| M7-8 | Indicatorul mouse-ului pe toast | toast-ul rămâne peste 6 s | PASS |
+| M7-9 | Escape cu toast vizibil | se închide overlay-ul (stratul de sus); toast-ul rămâne | PASS |
+| M7-10 | „Deschide” din toast, peste puzzle | panoul „Mesaje” peste puzzle (2 straturi), toast închis, mesaje citite; Escape → panoul se închide, focus pe titlul puzzle-ului | PASS |
+| M7-11 | Viewer deschis + mesaj nou (simulat) | fără toast, gong sau anunț; „Mesaje” +1; toast-ul inert sub viewer; după închidere nu se reia nimic | PASS |
+| M7-12 | Panoul „Mesaje” deschis + mesaj nou (simulat) | mesajul apare în listă „Nou” și devine citit; fără toast și gong; anunț `polite` | PASS |
+| M7-13 | Audio de misiune în redare + mesaj nou (simulat) | toast și anunț, fără gong; sunetul continuă | PASS |
+| M7-14 | Pagina raportată `hidden` de browser | mesaj în Inbox, necitit; fără toast, gong sau anunț; nimic reluat ulterior | PASS (vezi observația) |
+| M7-15 | Final („Vezi rezultatul”) | fără toast, gong sau anunț; regiunea live golită; focus pe titlul rezultatului; „Mesaje” cu necititele | PASS |
+| M7-16 | „Joacă din nou” → „Începe aventura” | toast și gong pentru intro din nou; după reset regiunea live este goală | PASS |
+| M7-17 | Reîncărcare | fără toast, gong sau anunț; „Mesaje” restaurat | PASS |
+| M7-18 | Telefon 375×700 | toast pe un rând (351×87), „Deschide” 100×44, „✕” 45×44; acoperă doar antetul puzzle-ului; câmpul de răspuns (y 480–528) și „Continuă” rămân libere; fără derulare orizontală | PASS |
+| M7-19 | Desktop 1280×800 | toast 640×65, aliniat cu foaia puzzle-ului; fără derulare orizontală | PASS |
+| M7-20 | Consola | fără erori ale aplicației | PASS (vezi observația) |
+
+Observații:
+- Browserul din aplicație a raportat `document.visibilityState === "hidden"` după o reîncărcare din script și sub emularea 1280×800 scalată, deși panoul era afișat; aceste situații au fost folosite ca verificări reale pentru „pagină ascunsă” (M7-14). Geometria desktop (M7-19) a fost măsurată afișând temporar toast-ul, doar pentru inspecție.
+- Singura eroare din consolă a provenit din scriptul de test (clic programatic pe „Continuă”, ascuns, cu provocarea încă deschisă — motorul a refuzat corect), nu din aplicație.
+
+### 30.3 Netestat încă
+
+- telefon real (Android / iOS): tastatura virtuală peste toast, sunetul real, butonul de silențios iOS (Web Audio), poziția sub notch / bara de adrese;
+- cititor de ecran real (VoiceOver / TalkBack / NVDA), inclusiv anunțul regiunii live din afara unui dialog `aria-modal` (puzzle, panoul „Mesaje”);
+- `important` / `urgent` în browser: conținutul nu le poate produce încă (Message Engine dă `normal`); acoperite de testele automate;
+- autoplay blocat real (Chromium a permis sunetul după gest); acoperit de `tests/gong.test.js` și `tests/notification-ui.test.js`;
+- toast activ în momentul finalului (conținutul demo nu are un mesaj imediat înainte de final); acoperit de testele automate;
+- Back (butonul browserului) apăsat cu toast vizibil: verificat indirect (toast-ul nu adaugă intrări de istoric; Escape folosește aceeași cale de închidere);
+- publicarea pe GitHub Pages.

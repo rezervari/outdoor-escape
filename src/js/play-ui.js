@@ -51,6 +51,7 @@ function describeHints(viewModel, hintConfirmMissionId) {
 export const Layer = Object.freeze({
   PUZZLE: "puzzle", // overlay-ul puzzle-ului (doar pentru misiunile cu obiectiv pe hartă)
   HINT_CONFIRM: "hint_confirm", // confirmarea indiciului (D-030), în overlay sau în pagină (V1)
+  INBOX: "inbox", // panoul „Mesaje” (M6, D-086): istoricul comunicării, sub viewer
   VIEWER: "viewer", // media_viewer (D-073): imaginea / comparația pe tot ecranul, deasupra tuturor
 });
 
@@ -59,6 +60,7 @@ export function openLayers(playUi) {
   const layers = [];
   if (playUi.puzzle.open) layers.push(Layer.PUZZLE);
   if (playUi.hints.confirming) layers.push(Layer.HINT_CONFIRM);
+  if (playUi.inbox?.open) layers.push(Layer.INBOX);
   if (playUi.viewer?.open) layers.push(Layer.VIEWER);
   return layers;
 }
@@ -89,11 +91,12 @@ export function planBack(layers, entries) {
  *   dismissedMissionId    — misiunea al cărei overlay a fost închis (sau null)
  *   hintConfirmMissionId  — misiunea pentru care este afișată confirmarea indiciului (sau null)
  *   viewerKey             — cheia blocului media deschis în viewer (sau null)
+ *   inboxOpen             — panoul „Mesaje” este deschis (M6; stare efemeră de interfață)
  * Puzzle-ul se arată ca overlay când misiunea are un obiectiv pe hartă; altfel
  * (ex. aventuri V1 fără locații) rămâne în pagină, ca înainte.
  * Media misiunii stă în panoul puzzle-ului (misiuni cu răspuns) sau în pagină (misiuni „location”).
  */
-export function describePlayUi(viewModel, { dismissedMissionId = null, hintConfirmMissionId = null, viewerKey = null } = {}) {
+export function describePlayUi(viewModel, { dismissedMissionId = null, hintConfirmMissionId = null, viewerKey = null, inboxOpen = false } = {}) {
   const { view, puzzle, actions, next, objective, mission } = viewModel;
   const overlay = Boolean(puzzle && objective);
   const dismissed = Boolean(overlay && mission && dismissedMissionId === mission.id);
@@ -127,6 +130,8 @@ export function describePlayUi(viewModel, { dismissedMissionId = null, hintConfi
       showContinue: actions.continue,
     },
     hints: describeHints(viewModel, hintConfirmMissionId),
+    // Panoul „Mesaje” există cât timp există o parcurgere (în joc sau încheiată), nu pe ecranul de start.
+    inbox: { open: Boolean(inboxOpen) && view !== View.INTRO },
     cardAction,
     nextKind: next ? next.kind : null,
     isFinish: Boolean(next && next.kind === NextKind.FINISH),
