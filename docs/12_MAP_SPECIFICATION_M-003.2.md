@@ -262,9 +262,16 @@ Dacă utilizatorul face pan după recentrare, harta nu îl urmărește la fixuri
 
 ## 6. Pan / zoom manual
 
-- `dragging`, `touchZoom`, `doubleClickZoom`, `keyboard`: activate. `zoomControl`: activat, butoanele +/- mărite la 44 px. `scrollWheelZoom: false` (pe desktop, rotița derulează pagina). `boxZoom: false`. `minZoom: 3`, `maxZoom: 19`. Fără `maxBounds`.
+Revizuit la 2026-10-02 (D-049, amendamentul ulterior — gesturile hărții pe ecran tactil):
+
+- `touchZoom`, `doubleClickZoom`, `keyboard`: activate. `dragging` depinde de pointerul principal, citit o singură dată la `createMap` cu `matchMedia("(pointer: coarse)")`: tactil (telefon / tabletă) → dezactivat; fin (mouse) → activat; fără `matchMedia` → activat (comportamentul anterior). `touchZoom` rămâne `true` (nu `"center"`). `zoomControl`: activat, butoanele +/- mărite la 44 px. `scrollWheelZoom: false` (pe desktop, rotița derulează pagina). `boxZoom: false`. `minZoom: 3`, `maxZoom: 19`. Fără `maxBounds`.
 - Harta nu revine niciodată singură după un gest, cu excepția evenimentelor din §5.2 (schimbarea obiectivului, butoanele).
-- Derularea paginii pe mobil: harta ocupă ≤ ~40% din înălțime, deci pagina rămâne derulabilă din afara ei. Fără pluginuri „two-finger pan”.
+- Pe ecran tactil: **un deget derulează pagina**, inclusiv când gestul începe peste hartă, și nu mută harta; **două degete** măresc / micșorează (pinch) și mută harta (`TouchZoom` nativ Leaflet). Tap-ul pe marker și butoanele +/- funcționează ca înainte; `doubleClickZoom` rămâne activat (double-tap pe ecran tactil: neverificat separat după amendament). Derularea vine din CSS-ul Leaflet din vendor (cu `touchZoom: true`, containerul are clasa `leaflet-touch-zoom` → `touch-action: pan-x pan-y`; fără `leaflet-touch-drag`, valoarea nu mai este suprascrisă cu `none`); `app.css` nu setează `touch-action` pe hartă.
+- Pe desktop (pointer fin): drag cu mouse-ul, butoanele +/-, double-click și tastatura, ca înainte.
+- Comportament acceptat: dacă al doilea deget este pus în timpul unei derulări a paginii deja pornite, pagina poate continua să se miște, iar harta începe și ea să se miște. Nu se corectează (decizia proprietarului, 2026-10-02).
+- Fără pluginuri „two-finger pan” și fără handlere proprii de gesturi: se folosesc doar opțiunile Leaflet.
+- Validare: telefon Android real — HG-1 … HG-12 fără FAIL; HG-6 acceptat de proprietar, HG-10 raportat „OK / no blocking issue”; iPhone / Safari netestat (`07_TESTING.md` secțiunea 31; riscul R-8).
+- *Formularea anterioară (înlocuită la 2026-10-02):* „`dragging`, `touchZoom`, `doubleClickZoom`, `keyboard`: activate. `zoomControl`: activat, butoanele +/- mărite la 44 px. `scrollWheelZoom: false` (pe desktop, rotița derulează pagina). `boxZoom: false`. `minZoom: 3`, `maxZoom: 19`. Fără `maxBounds`.” și „Derularea paginii pe mobil: harta ocupă ≤ ~40% din înălțime, deci pagina rămâne derulabilă din afara ei. Fără pluginuri «two-finger pan».” Premisa „≤ ~40%” nu mai era valabilă din 2026-10-01 (§8, map-first).
 
 ---
 
@@ -400,6 +407,8 @@ export const DEFAULT_MAP_VIEW = Object.freeze({
 | **D-049-L** | Modul separat `map-model.js` (pur, testat cu `node --test`). `leaflet` este injectabil în `createMap` (teste cu Leaflet fals, fără dependențe) | APROBAT |
 | **D-049-M** | Testarea hărții cu obiective: automat (Node) + Chromium local cu geolocație emulată și fixture copiat temporar în copia servită (ca `07_TESTING.md` §24.2). Testul pe telefon cu obiective reale se amână: cere conținut cu coordonate reale, în afara M-003.2 | APROBAT |
 
+*Amendament ulterior D-049 (2026-10-02, `04_DECISIONS_LOG.md`):* pe ecran tactil, un deget derulează pagina, iar harta se mută și se mărește cu două degete; pe desktop, drag cu mouse-ul (§6).
+
 ---
 
 ## 14. Fișiere — etapa de implementare (NU acum)
@@ -491,6 +500,7 @@ export const DEFAULT_MAP_VIEW = Object.freeze({
 | R-5 | ~~Jurnalul deciziilor în urmă~~ | **ÎNCHIS** (2026-09-29) — D-045 `CONFIRMED`; D-046–D-049 adăugate; D-027 `SUPERSEDED` de D-046 |
 | R-6 | Harta nu poate fi văzută pe telefon cu obiective reale | Aventura publică nu are locații, iar conținutul nu se modifică în M-003.2 (D-049-M) |
 | R-7 | Serviciul OSM standard nu are SLA; utilizarea comercială sau intensivă poate fi restricționată | Acceptat pentru dezvoltare (D-046). Înainte de lansarea comercială, providerul se reevaluează doar prin configurație |
+| R-8 | Gesturile hărții pe iPhone / Safari (§6, amendamentul D-049 privind gesturile, 2026-10-02) | Validate fizic doar pe un telefon Android (browserul neconsemnat; `07_TESTING.md` 31.3). Pe iOS nu au fost verificate pe dispozitiv real. Dispozitivele hibride (pointer principal fin + ecran tactil) păstrează pan-ul cu un deget (conform codului; neverificat — `07_TESTING.md` 31.4); pointerul se citește o singură dată, la `createMap` |
 
 ---
 

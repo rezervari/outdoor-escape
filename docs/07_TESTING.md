@@ -580,7 +580,7 @@ Harta ca suprafață principală, cardul peste hartă, atribuirea OSM, „Vezi o
 | FT2-C1 | Tile-uri OSM și atribuire | H2 | OBL |
 | FT2-C2 | Markerul jucătorului și cercul de acuratețe la poziția reală | H3, H5 | OBL |
 | FT2-C3 | Obiectivul curent evidențiat, cercul razei; locațiile `locked` ascunse | H2, D-049-B | OBL |
-| FT2-C4 | Primul fix produce o singură mișcare a hărții; fix-urile următoare nu o mișcă; pan sau zoom manual se păstrează | H3, H4 | OBL |
+| FT2-C4 | Primul fix produce o singură mișcare a hărții; fix-urile următoare nu o mișcă; pan (pe telefon, cu două degete în versiunea care include amendamentul D-049 privind gesturile (2026-10-02, secțiunea 31); în versiunile anterioare: un deget) sau zoom manual se păstrează | H3, H4 | OBL |
 | FT2-C5 | „Centrează pe mine” produce o singură centrare; „Vezi obiectivele” funcționează | H6 | OBL |
 | FT2-C6 | După sosire, cercul obiectivului dispare; obiectivul nou produce o singură recentrare | H7 | OBL |
 | FT2-C7 | Atribuirea neacoperită; „Am ajuns” vizibil fără derulare; lizibil în soare | H9, secțiunea 13.9 | OBL |
@@ -727,3 +727,80 @@ Observații:
 - toast activ în momentul finalului (conținutul demo nu are un mesaj imediat înainte de final); acoperit de testele automate;
 - Back (butonul browserului) apăsat cu toast vizibil: verificat indirect (toast-ul nu adaugă intrări de istoric; Escape folosește aceeași cale de închidere);
 - publicarea pe GitHub Pages.
+
+## 31. M7-C — Gesturile hărții pe ecran tactil (D-049, amendamentul privind gesturile din 2026-10-02)
+
+Pe ecran tactil, un deget derulează pagina (și peste hartă), iar harta se mută și se mărește cu două degete; pe desktop, drag-ul cu mouse-ul rămâne. Se schimbă `src/js/map.js`: `dragging: !prefersCoarsePointer()` (`matchMedia("(pointer: coarse)")`, citit o dată la `createMap`); `touchZoom: true` (nu `"center"`). În `src/sw.js` se mărește doar `CACHE_VERSION` (`v13` → `v14`, fișier existent modificat), fără altă schimbare. Fără handlere proprii de gesturi și fără modificări în `app.css`, `src/vendor/leaflet/`, GPS sau motor. Specificația: `12_MAP_SPECIFICATION_M-003.2.md` §6.
+
+### 31.1 Automat — `npm test`
+
+| Fișier | Acoperă |
+| --- | --- |
+| `tests/map.test.js` | actualizat pentru gesturile hărții (4 teste „gesturi:”): pointer `coarse` → `dragging: false`; pointer fin și fără `matchMedia` → `dragging: true` (comportamentul anterior); în toate cazurile `touchZoom: true` (nu `"center"`), `doubleClickZoom`, `keyboard`, `zoomControl`, `attributionControl` activate, `scrollWheelZoom: false`, `boxZoom: false`, `minZoom` / `maxZoom` neschimbate; `globalThis.matchMedia` restaurat după fiecare test. Gesturile nu sunt simulate în testele unitare |
+
+La 2026-10-02: `npm test` — 575 de teste, 571 PASS, 4 sărite (aventurile private, D-080), 0 FAIL; `tests/map.test.js` — 32/32 PASS (inclusiv suma SHA-256 a Leaflet din vendor). `npm run qa` — 0 erori, 4 avertismente, 7 excepții declarate (preexistente).
+
+### 31.2 Browser — emulare (nu este validare fizică)
+
+Verificat la 2026-10-02 în browserul din aplicația desktop Claude (Chromium), server local (`localhost:8000`), aventura fictivă `demo-vertical-slice`: desktop (pointer fin) și emulare telefon 375×812 (touch, pointer `coarse`). Gesturile tactile au fost simulate în pagină cu evenimente `TouchEvent` sintetice: acestea verifică reacția Leaflet, nu derularea nativă a paginii.
+
+| ID | Pași | Rezultat așteptat | Rezultat |
+| --- | --- | --- | --- |
+| HGB-1 | Desktop: containerul hărții | `leaflet-touch-drag` prezent, `touch-action: none` (ca înainte) | PASS |
+| HGB-2 | Desktop: drag cu mouse-ul, butoanele +/-, clic pe marker | harta se deplasează; zoom 17 → 18 → 17; popup-ul obiectivului | PASS |
+| HGB-3 | Telefon 375×812: containerul hărții | `leaflet-touch-drag` absent, `touch-action: pan-x pan-y` | PASS |
+| HGB-4 | Un deget (sintetic) peste hartă | harta nu se mișcă; Leaflet nu anulează evenimentele (browserul poate derula pagina) | PASS |
+| HGB-5 | Două degete (sintetic), deplasare | harta se mută cu deplasarea degetelor | PASS (vezi observația) |
+| HGB-6 | Pinch (sintetic) | zoom 17 → 19 (= `maxZoom`) | PASS (vezi observația) |
+| HGB-7 | Tap pe marker, butonul + | popup-ul obiectivului; zoom 17 → 18 | PASS |
+| HGB-8 | Layout | HUD sus-dreapta, cardul obiectivului jos, bannerul ascuns, harta 636 px; fără derulare orizontală | PASS |
+
+Observație: la început, browserul din aplicație a raportat pagina ca `hidden`, deci `requestAnimationFrame` nu rula și Leaflet nu aplica mișcările de pinch / pan; HGB-5 și HGB-6 au fost repetate după ce pagina a devenit vizibilă.
+
+### 31.3 Telefon real — Android
+
+Raport în formatul secțiunii 16. Testul a folosit un server HTTP local, cu telefonul conectat prin ADB, nu metoda standard D-031 (versiunea publicată), pentru că modificarea nu este publicată; versiunea publicată rămâne în 31.4.
+
+```text
+Data: 2026-10-02 (data raportului)
+Tester: proprietarul proiectului
+Commit testat: neconsemnat de tester
+Adresă testată: server HTTP local, telefonul conectat prin ADB (raportul proprietarului: „local HTTP
+  server and the deployed game build”); conexiunea exactă, URL-ul și aventura nu au fost consemnate
+Dispozitiv + sistem de operare: telefon Android (modelul nu a fost consemnat)
+Browser + versiune: neconsemnat
+Mod: neconsemnat
+GPS: real
+```
+
+| ID test | Pași | Rezultat așteptat | Rezultat obținut | PASS / FAIL / NETESTAT | Observații |
+| --- | --- | --- | --- | --- | --- |
+| HG-1 | Un deget, derulare verticală pornită peste hartă | pagina se derulează; harta și markerii nu se mișcă; fără derulare orizontală | ca așteptat | PASS | |
+| HG-2 | Un deget, gest predominant orizontal peste hartă | harta nu se mută; fără derulare orizontală sau salt de layout | ca așteptat | PASS | |
+| HG-3 | Două degete, deplasare în aceeași direcție | harta se mută; pagina nu se derulează în locul ei; HUD-ul și cardul rămân pe loc | ca așteptat | PASS | |
+| HG-4 | Pinch out / pinch in | zoom-ul hărții se schimbă; pagina nu se mărește; markerii rămân corect poziționați | ca așteptat | PASS | |
+| HG-5 | Pinch + deplasare simultan | zoom și pan simultan, fără salturi; pagina nu se mișcă neașteptat | ca așteptat | PASS | |
+| HG-6 | Un deget derulează pagina; în timpul derulării se adaugă al doilea deget | comportamentul se consemnează exact | pagina poate continua să se miște, iar harta începe și ea să se miște | ACCEPTAT de proprietar (nu PASS formal) | vezi observația 1 |
+| HG-7A | Tap pe marker, înainte și după pan cu două degete | popup-ul se deschide și se închide | ca așteptat | PASS | |
+| HG-7B | Butoanele Leaflet +/- | zoom-ul se schimbă | ca așteptat | PASS | |
+| HG-8 | GPS real, indicatorul GPS (HUD), „Centrează pe mine” | o singură centrare, fără urmărire continuă; HUD-ul neschimbat | ca așteptat | PASS | |
+| HG-9 | Vizibilitatea și utilizarea HUD-ului și a cardului obiectivului | rămân pe poziție și utilizabile în timpul gesturilor | ca așteptat | PASS | |
+| HG-10 | Bannerul hărții | nu este afectat de gesturi și nu blochează derularea | fără problemă blocantă | OK raportat de proprietar (nu PASS formal) | vezi observația 2 |
+| HG-11 | Portret / peisaj | gesturile funcționează în ambele orientări | ca așteptat | PASS | |
+| HG-12 | Controale tactile și accesibilitate de bază | markerul se activează prin tap; butoanele de zoom utilizabile; nimic inaccesibil din cauza gesturilor | ca așteptat | PASS | |
+
+Rezultat: **HG-1 … HG-12 (13 verificări): 11 PASS, 0 FAIL.** HG-6 acceptat de proprietar (observația 1); HG-10 raportat „OK / no blocking issue” (observația 2). Probleme critice (secțiunea 9): niciuna raportată. Nu a fost necesară nicio corecție de cod.
+
+Observații:
+
+1. **Al doilea deget în timpul derulării (HG-6).** Când al doilea deget este pus după ce pagina a început deja să se deruleze, pagina poate continua să se miște, iar harta începe și ea să se miște. Proprietarul a judecat comportamentul natural și acceptabil (2026-10-02): nu se corectează și nu se introduce un recunoscător de gesturi propriu (D-049, amendamentul privind gesturile din 2026-10-02).
+2. **Bannerul (HG-10).** Proprietarul a raportat „OK / no blocking issue”, nu un PASS formal. Nu s-a consemnat dacă bannerul a apărut efectiv în timpul testului (apare doar după erori repetate la încărcarea tile-urilor).
+
+### 31.4 Netestat încă
+
+- iPhone / Safari: toate verificările HG (portret și peisaj), inclusiv interacțiunea cu gestul swipe-back de pe margine (secțiunea 14; FT2-H1, FT2-H2);
+- versiunea publicată pe GitHub Pages (metoda standard pentru testele pe telefon, D-031; după publicare);
+- double-tap pe hartă (zoom Leaflet) pe ecran tactil, după amendament;
+- dispozitive hibride (pointer principal fin + ecran tactil: conform codului, un deget mută harta, ca înainte — neverificat) și schimbarea pointerului după crearea hărții (`matchMedia` este citit o singură dată);
+- emularea de telefon din DevTools (secțiunea 12.3): se așteaptă pointer `coarse`, deci drag-ul cu mouse-ul nu mai mută harta (după reîncărcarea paginii cu emularea activă) — neverificat;
+- cititor de ecran real (VoiceOver / TalkBack).

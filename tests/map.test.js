@@ -39,6 +39,61 @@ test("create: o hartă, un singur tile layer OSM HTTPS cu atribuire, zoom din ro
   assert.equal(leafletMap.options.maxZoom, 19);
 });
 
+/* ---------- Gesturi (M7-C): pointer tactil → un deget derulează pagina, două degete mută harta ---------- */
+
+// Înlocuiește temporar globalThis.matchMedia; `coarse` = rezultatul pentru "(pointer: coarse)".
+// Restaurează valoarea inițială (inclusiv absența ei) după apel.
+function withMatchMedia(coarse, fn) {
+  const had = Object.prototype.hasOwnProperty.call(globalThis, "matchMedia");
+  const original = globalThis.matchMedia;
+  if (coarse === undefined) delete globalThis.matchMedia;
+  else globalThis.matchMedia = (query) => ({ matches: query === "(pointer: coarse)" ? coarse : false, media: query });
+  try {
+    return fn();
+  } finally {
+    if (had) globalThis.matchMedia = original;
+    else delete globalThis.matchMedia;
+  }
+}
+
+function assertUnchangedOptions(options) {
+  assert.equal(options.touchZoom, true); // nu "center": pan-ul cu două degete rămâne activ
+  assert.equal(options.doubleClickZoom, true);
+  assert.equal(options.keyboard, true);
+  assert.equal(options.zoomControl, true);
+  assert.equal(options.attributionControl, true);
+  assert.equal(options.scrollWheelZoom, false);
+  assert.equal(options.boxZoom, false);
+  assert.equal(options.minZoom, DEFAULT_MAP_VIEW.minZoom);
+  assert.equal(options.maxZoom, DEFAULT_MAP_TILES.maxZoom);
+}
+
+test("gesturi: pointer coarse (touch) → dragging dezactivat, touchZoom și restul neschimbate", () => {
+  const { leafletMap } = withMatchMedia(true, () => setup());
+  assert.equal(leafletMap.options.dragging, false);
+  assertUnchangedOptions(leafletMap.options);
+});
+
+test("gesturi: pointer fine (mouse) → dragging activat, restul neschimbat", () => {
+  const { leafletMap } = withMatchMedia(false, () => setup());
+  assert.equal(leafletMap.options.dragging, true);
+  assertUnchangedOptions(leafletMap.options);
+});
+
+test("gesturi: fără matchMedia → dragging activat (comportamentul anterior)", () => {
+  const { leafletMap } = withMatchMedia(undefined, () => setup());
+  assert.equal(leafletMap.options.dragging, true);
+  assertUnchangedOptions(leafletMap.options);
+});
+
+test("gesturi: matchMedia restaurat după teste", () => {
+  const before = { had: Object.prototype.hasOwnProperty.call(globalThis, "matchMedia"), value: globalThis.matchMedia };
+  withMatchMedia(true, () => {});
+  withMatchMedia(undefined, () => {});
+  assert.equal(Object.prototype.hasOwnProperty.call(globalThis, "matchMedia"), before.had);
+  assert.equal(globalThis.matchMedia, before.value);
+});
+
 test("fallback: Leaflet lipsă → MapError leaflet_unavailable", () => {
   const container = createFakeElement();
   for (const leaflet of [undefined, null, {}, { map() {} }]) {

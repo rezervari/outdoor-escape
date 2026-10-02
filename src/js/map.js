@@ -111,6 +111,18 @@ function prefersReducedMotion() {
   }
 }
 
+/**
+ * Pointer principal tactil (telefon / tabletă): un deget derulează pagina, harta se mută cu două
+ * degete (TouchZoom nativ Leaflet). Fără `matchMedia` (ex. Node) → false: comportamentul anterior.
+ */
+function prefersCoarsePointer() {
+  try {
+    return typeof globalThis.matchMedia === "function" && globalThis.matchMedia("(pointer: coarse)").matches === true;
+  } catch {
+    return false;
+  }
+}
+
 export function createMap({ container, tileConfig, view = DEFAULT_MAP_VIEW, leaflet = globalThis.L } = {}) {
   const L = leaflet;
   if (!L || typeof L.map !== "function" || typeof L.tileLayer !== "function" || typeof L.divIcon !== "function") {
@@ -133,8 +145,8 @@ export function createMap({ container, tileConfig, view = DEFAULT_MAP_VIEW, leaf
   const map = L.map(container, {
     zoomControl: true,
     attributionControl: true,
-    dragging: true,
-    touchZoom: true,
+    dragging: !prefersCoarsePointer(), // touch: fără pan cu un deget → touch-action: pan-x pan-y (vendor CSS)
+    touchZoom: true, // NU "center": păstrează pan-ul cu două degete
     doubleClickZoom: true,
     keyboard: true,
     scrollWheelZoom: false,
