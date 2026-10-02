@@ -6,7 +6,9 @@
  *   QA-S03  același id în mai multe fișiere;
  *   QA-C02 – QA-C05  misiunile cu răspuns (rules-content.mjs);
  *   QA-M01 – QA-M06  media (rules-media.mjs);
- *   QA-G02 – QA-G07  GPS și structură (rules-gps.mjs).
+ *   QA-G02 – QA-G07  GPS și structură (rules-gps.mjs);
+ *   QA-F00 – QA-F05  flow / progresie (rules-flow.mjs); QA-F00 (simularea cu motorul real) este
+ *                    asincron și rulează doar prin runQaFull.
  *
  * Funcțiile întorc findings structurate
  *   { ruleId, level: "error" | "warning", path, message, subject?, waived? }
@@ -26,6 +28,7 @@ import { CLASSES, classifyAdventure, fileStem } from "./classify.mjs";
 import { checkAnswerMissions } from "./rules-content.mjs";
 import { checkMedia } from "./rules-media.mjs";
 import { checkGps } from "./rules-gps.mjs";
+import { checkFlow, simulateFlow } from "./rules-flow.mjs";
 import { findException } from "./exceptions.mjs";
 
 export const LEVELS = Object.freeze({ ERROR: "error", WARNING: "warning" });
@@ -99,12 +102,13 @@ export function redact(message) {
 }
 
 /**
- * Regulile de conținut, media (Pasul 2) și GPS (Pasul 3) pentru un fișier cu JSON citibil.
+ * Regulile de conținut, media (Pasul 2), GPS (Pasul 3) și flow (Pasul 4, statice) pentru un fișier cu JSON citibil.
  * Rulează pe forma normalizată folosită de motor (toAdventureV2); dacă structura este atât de
  * greșită încât normalizarea eșuează, QA-S01 raportează deja problema și regulile sunt sărite.
  * `classification` (classify.mjs) decide regula coordonatelor: QA-G06 sau QA-G07.
+ * Regulile de flow rulează doar pe o aventură validă după schemă (`schemaValid`: fără QA-S01).
  */
-export function checkContent({ fileName, dir }, data, { classification } = {}) {
+export function checkContent({ fileName, dir }, data, { classification, schemaValid = false } = {}) {
   if (data === null || typeof data !== "object" || Array.isArray(data)) return [];
   let content;
   try {
@@ -117,6 +121,7 @@ export function checkContent({ fileName, dir }, data, { classification } = {}) {
     ...checkAnswerMissions(content, { listKey }),
     ...checkMedia(content, { id: fileStem(fileName), dir }),
     ...checkGps(content, { classification }),
+    ...(schemaValid ? checkFlow(content, data, { listKey }) : []),
   ];
 }
 
@@ -138,9 +143,11 @@ const counts = (findings, level) => findings.filter((f) => f.level === level && 
  *             necesar regulilor care verifică discul (QA-M01, QA-M06);
  *   targets — numele fișierelor raportate (implicit toate). Nu schimbă regulile, doar raportarea.
  *
+ *   flow    — Map<fileName, findings[]> cu rezultatele QA-F00 (calculate de runQaFull); opțional.
+ *
  * Întoarce { results: [{ fileName, label, classification, findings, status }], summary }.
  */
-export function runQa(entries, { targets } = {}) {
+export function runQa(entries, { targets, flow } = {}) {
   const sorted = [...entries].sort((a, b) => a.fileName.localeCompare(b.fileName));
   let privateCount = 0;
   const checked = sorted.map((entry) => {
@@ -149,15 +156,21 @@ export function runQa(entries, { targets } = {}) {
     const isPrivate = classification === CLASSES.PRIVATE_LOCAL;
     const label = isPrivate ? `aventura privată #${++privateCount}` : entry.fileName;
     const id = data !== null && typeof data === "object" && !Array.isArray(data) ? data.id : undefined;
-    return { entry, fileName: entry.fileName, label, classification, isPrivate, id, data, findings };
+    const schemaValid = !findings.some((f) => f.ruleId === "QA-S01");
+    return { entry, fileName: entry.fileName, label, classification, isPrivate, id, data, findings, schemaValid };
   });
 
   const duplicates = checkDuplicateIds(checked);
   const wanted = targets ? new Set(targets) : null;
   const results = checked
     .filter((item) => !wanted || wanted.has(item.fileName))
-    .map(({ entry, fileName, label, classification, isPrivate, data, findings }) => {
-      const all = applyExceptions(fileName, [...findings, ...(duplicates.get(fileName) ?? []), ...checkContent(entry, data, { classification })]);
+    .map(({ entry, fileName, label, classification, isPrivate, data, findings, schemaValid }) => {
+      const all = applyExceptions(fileName, [
+        ...findings,
+        ...(duplicates.get(fileName) ?? []),
+        ...checkContent(entry, data, { classification, schemaValid }),
+        ...(flow?.get(fileName) ?? []),
+      ]);
       const safe = isPrivate
         ? all.map(({ subject, ...f }) => ({
           ...f,
@@ -181,4 +194,22 @@ export function runQa(entries, { targets } = {}) {
       failedFiles: results.filter((r) => r.status === "ERROR").length,
     },
   };
+}
+
+/**
+ * Toate regulile, inclusiv QA-F00: simularea traseului principal cu motorul real (asincronă, pentru că
+ * validatorul răspunsurilor este asincron — D-021). Simularea rulează doar pentru fișierele raportate,
+ * valide după schemă (QA-S01); restul este runQa, neschimbat. Folosit de scripts/qa-adventures.mjs.
+ */
+export async function runQaFull(entries, { targets } = {}) {
+  const wanted = targets ? new Set(targets) : null;
+  const flow = new Map();
+  for (const entry of entries) {
+    if (wanted && !wanted.has(entry.fileName)) continue;
+    const { data, findings } = checkFile(entry);
+    if (data === undefined || findings.some((f) => f.ruleId === "QA-S01")) continue;
+    const listKey = data.schemaVersion === SCHEMA_V2 ? "missions" : "challenges";
+    flow.set(entry.fileName, await simulateFlow(toAdventureV2(data), { listKey }));
+  }
+  return runQa(entries, { targets, flow });
 }

@@ -1,5 +1,5 @@
 // Adventure QA — Pasul 1 (QA-S01, QA-S02, QA-S03, clasificarea), Pasul 2 (QA-C02 – C05, QA-M01 – M06)
-// și Pasul 3 (QA-G02 – G07: GPS și structură).
+// Pasul 3 (QA-G02 – G07: GPS și structură) și Pasul 4 (QA-F00 – F05: flow / progresie).
 // Mutațiile folosesc numai date FICTIVE: fixture-ul tests/fixtures/adventure-v2-demo.json și aventuri
 // sintetice scrise în directoare temporare (cu fișiere media de test).
 // Testele nu conțin id-uri, texte sau date ale aventurilor reale: aventura publicată (D-080)
@@ -12,11 +12,15 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-import { runQa, checkFile, checkDuplicateIds } from "../scripts/adventure-qa/rules.mjs";
+import { runQa, runQaFull, checkFile, checkDuplicateIds } from "../scripts/adventure-qa/rules.mjs";
 import { classifyAdventure, CLASSES } from "../scripts/adventure-qa/classify.mjs";
 import { QA_EXCEPTIONS, findException } from "../scripts/adventure-qa/exceptions.mjs";
 import { MEDIA_EXTENSIONS } from "../scripts/adventure-qa/rules-media.mjs";
 import { checkGps, NEAR_ZERO_DEGREES } from "../scripts/adventure-qa/rules-gps.mjs";
+import { EVENT_PAYLOAD, IGNORED_MISSION_FLOW_FIELDS, FLOW_PATHS, playFlowPath, simulateFlow } from "../scripts/adventure-qa/rules-flow.mjs";
+import { EVENT_TYPES } from "../src/js/events.js";
+import { createGame } from "../src/js/game.js";
+import { createLocalValidator, withoutAnswers } from "../src/js/answers.js";
 import { toAdventureV2 } from "../src/js/schema.js";
 import { distanceMeters } from "../src/js/geo.js";
 import { PUBLISHED_REAL_ADVENTURES } from "./helpers/published-real-adventures.js";
@@ -829,4 +833,578 @@ test("QA-G07: o copie a demo-gps-brasov sub alt nume nu moștenește excepția D
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+/* ---------- Pasul 4 · QA-F00 – F05: flow / progresie ---------- */
+
+/** Aventură de flow sintetică: misiuni principale (RIDDLE / GO) și opțional reguli, secrete, obiecte. */
+const flowAdventure = (id, missions, extra = {}) => ({ schemaVersion: 2, id, demo: true, meta: { title: "Aventură flow de test QA" }, missions, ...extra });
+const MAIN3 = () => [RIDDLE("m-1"), RIDDLE("m-2"), RIDDLE("m-3")];
+const BONUS = (id, extra = {}) => RIDDLE(id, { track: "bonus", ...extra });
+const MSG = { narrator: { messages: { m: { text: "Mesaj de test." } } } };
+const SHOW = { action: "show_message", messageId: "m" };
+const END = { action: "complete_adventure" };
+const RULE = (id, on, where, ...actions) => ({ id, on, ...(where ? { where } : {}), do: actions.length ? actions : [SHOW] });
+const PARTNER = (extra = {}) => ({ id: "p-a", name: "Partener de test", category: "test", missionId: "m-p", verification: { method: "none" }, ...extra });
+const flowQa = (data, fileName = `${data.id}.json`) => runQa([entry(fileName, data)]).results[0];
+const flowQaFull = async (data, fileName = `${data.id}.json`) => (await runQaFull([entry(fileName, data)])).results[0];
+/** Findings ale unei reguli: [nivel, cale]. */
+const levels = (result, ruleId) => active(result, ruleId).map((f) => [f.level, f.path]);
+/** Regula `ruleId` a rulat pe vreunul dintre traseele simulării? (confirmare cu motorul real) */
+async function firesInEngine(data, ruleId) {
+  const content = toAdventureV2(data);
+  for (const path of FLOW_PATHS) {
+    const { game } = await playFlowPath(content, path);
+    if (Object.prototype.hasOwnProperty.call(game.getState().firedEvents, ruleId)) return true;
+  }
+  return false;
+}
+
+test("QA-F04: EVENT_PAYLOAD acoperă exact lista de evenimente a motorului (events.EVENT_TYPES)", () => {
+  assert.deepEqual(Object.keys(EVENT_PAYLOAD).sort(), [...EVENT_TYPES].sort());
+});
+
+test("QA-F: fixture-ul fictiv și aventurile din repository nu au findings de flow (inclusiv simularea QA-F00)", async () => {
+  assert.deepEqual(active(await flowQaFull(fixture(), FIXTURE_FILE), "QA-F"), []);
+  const names = readdirSync(ADVENTURES_DIR).filter((name) => name.endsWith(".json"));
+  const { results, summary } = await runQaFull(names.map((fileName) => ({ fileName, dir: ADVENTURES_DIR, text: readFileSync(join(ADVENTURES_DIR, fileName), "utf8") })));
+  assert.deepEqual(results.flatMap((r) => active(r, "QA-F").map((f) => `${r.label}: ${f.ruleId}`)), []);
+  assert.equal(summary.errors, 0);
+});
+
+/* QA-F00 */
+
+test("QA-F00: traseu liniar valid (ghicitori, „location”, variante, indicii) → toate cele trei trasee ajung la completed", async () => {
+  const data = flowAdventure("test-qa-f00-ok", [
+    GO("m-go", "l-a"),
+    RIDDLE("m-1", { choices: ["nord", "sud"] }),
+    RIDDLE("m-2", { hints: [] }),
+    RIDDLE("m-3", { locationId: "l-a" }),
+  ], { locations: [LOC("l-a")] });
+  assert.deepEqual(await simulateFlow(toAdventureV2(data)), []);
+  for (const path of FLOW_PATHS) {
+    const { game, visited, problems } = await playFlowPath(toAdventureV2(data), path);
+    assert.deepEqual(problems, [], path);
+    assert.equal(game.getState().status, "completed", path);
+    assert.deepEqual([...visited], ["m-go", "m-1", "m-2", "m-3"], path);
+  }
+  // Traseul „skip” chiar sare; „wrong-then-solve” face câte două încercări la misiunile cu răspuns.
+  assert.equal((await playFlowPath(toAdventureV2(data), "skip")).game.getState().missions["m-1"].status, "skipped");
+  assert.equal((await playFlowPath(toAdventureV2(data), "wrong-then-solve")).game.getState().missions["m-3"].attempts, 2);
+});
+
+test("QA-F00: complete_adventure prematur → ERROR „nu devine niciodată curentă” pentru misiunile rămase", async () => {
+  const data = flowAdventure("test-qa-f00-prematur", MAIN3(), { events: [RULE("r-end", "mission_completed", { missionId: "m-1" }, END)] });
+  const result = await flowQaFull(data);
+  const f00 = active(result, "QA-F00");
+  assert.deepEqual(f00.map((f) => [f.level, f.path]), [["error", "missions[1]"], ["error", "missions[2]"]]);
+  // Pe traseul „skip” regula nu rulează (mission_skipped, nu mission_completed).
+  assert.match(f00[0].message, /„m-2” nu devine niciodată curentă.*\(trasee: solve, wrong-then-solve\)/);
+  assert.equal(result.status, "ERROR");
+});
+
+test("QA-F00: excepție a motorului sau traseu care nu se încheie → ERROR (motor înlocuit doar în test)", async () => {
+  const content = toAdventureV2(flowAdventure("test-qa-f00-exceptie", MAIN3()));
+  const throwing = (options) => ({ ...createGame(options), next() { throw new Error("next: misiunea „m-2” este încă blocată."); } });
+  const thrown = await simulateFlow(content, { engine: throwing });
+  assert.equal(thrown.length, 1);
+  assert.equal(thrown[0].level, "error");
+  assert.match(thrown[0].message, /excepție la next\(\) \(misiunea curentă „m-1”\): „next: misiunea "m-2" este încă blocată\.” \(trasee: solve, skip, wrong-then-solve\)/);
+
+  const stuck = (options) => ({ ...createGame(options), next() {} });
+  const notCompleted = await simulateFlow(content, { engine: stuck });
+  assert.deepEqual(notCompleted.map((f) => f.message.replace(/ \(trasee.*/, "")), ["traseul principal nu ajunge la „completed” (stare finală: „playing”)"]);
+});
+
+test("QA-F00: caz limită — „location” fără confirmare manuală: simularea folosește „Sari peste” (QA-G02 raportează separat)", async () => {
+  const data = flowAdventure("test-qa-f00-fara-manual", [GO("m-go", "l-a"), RIDDLE("m-1")], {
+    locations: [LOC("l-a", BASE, { fallback: { instructions: "Text de test.", allowManualConfirmation: false } })],
+  });
+  const result = await flowQaFull(data);
+  assert.deepEqual(activeRules(result, "QA-F"), []);
+  assert.deepEqual(activeRules(result, "QA-G02"), ["QA-G02"]);
+  assert.equal((await playFlowPath(toAdventureV2(data), "solve")).game.getState().missions["m-go"].status, "skipped");
+});
+
+test("QA-F00: fără false positive — fail_mission la un răspuns greșit, aventură V1, schemă invalidă (simularea nu rulează)", async () => {
+  const failing = flowAdventure("test-qa-f00-fail", MAIN3(), { events: [RULE("r-fail", "answer_incorrect", { missionId: "m-1" }, { action: "fail_mission", missionId: "m-1" })] });
+  assert.deepEqual(activeRules(await flowQaFull(failing), "QA-F"), []);
+  assert.equal((await playFlowPath(toAdventureV2(failing), "wrong-then-solve")).game.getState().missions["m-1"].status, "failed");
+
+  const v1 = { id: "test-qa-f00-v1", title: "V1 de test", demo: true, challenges: [
+    { id: "c-1", title: "Unu", description: "Text de test.", answer: "sud", points: 10 },
+    { id: "c-2", title: "Doi", description: "Text de test.", answer: "nord", points: 10 },
+  ] };
+  assert.deepEqual(activeRules(await flowQaFull(v1), "QA-F"), []);
+
+  const invalid = flowAdventure("test-qa-f00-invalid", [RIDDLE("m-1", { initialStatus: "locked" })], { events: [RULE("r", "adventure_started", null, END)] });
+  const result = await flowQaFull(invalid);
+  assert.ok(activeRules(result, "QA-S01").length > 0);
+  assert.deepEqual(activeRules(result, "QA-F"), []);
+});
+
+test("QA-F00: aventură privată locală — mesajele nu expun id-urile misiunilor sau ale regulilor", async () => {
+  const data = flowAdventure("private-test-qa-f00", MAIN3(), { events: [RULE("r-end", "adventure_started", null, END)] });
+  const result = await flowQaFull(data, "private-test-qa-f00.json");
+  assert.equal(result.label, "aventura privată #1");
+  assert.deepEqual(activeRules(result, "QA-F").sort(), ["QA-F00", "QA-F00", "QA-F00", "QA-F03"]);
+  assert.doesNotMatch(active(result, "QA-F").map((f) => f.message).join(" "), /m-1|m-2|m-3|r-end/);
+});
+
+/* QA-F01 */
+
+test("QA-F01: fiecare câmp de flux ignorat pe o misiune → WARNING; after / join menționează D-062 (graph)", () => {
+  for (const key of IGNORED_MISSION_FLOW_FIELDS) {
+    const result = flowQa(flowAdventure(`test-qa-f01-${key.toLowerCase()}`, [RIDDLE("m-1"), RIDDLE("m-2", { [key]: key === "locked" ? true : ["m-1"] })]));
+    assert.deepEqual(levels(result, "QA-F01"), [["warning", `missions[1].${key}`]], key);
+    const message = active(result, "QA-F01")[0].message;
+    if (key === "after" || key === "join") assert.match(message, /PROPUS pentru settings\.progression „graph” \(D-062\).*„linear”/);
+    else assert.doesNotMatch(message, /D-062/);
+  }
+});
+
+test("QA-F01: epilogue / skip / final la nivel superior → WARNING; V1 (challenges) verificat la fel", () => {
+  const result = flowQa(flowAdventure("test-qa-f01-sus", MAIN3(), { epilogue: "x", skip: true, final: "m-3" }));
+  assert.deepEqual(levels(result, "QA-F01"), [["warning", "epilogue"], ["warning", "skip"], ["warning", "final"]]);
+  const v1 = { id: "test-qa-f01-v1", title: "V1", demo: true, challenges: [{ id: "c-1", title: "Unu", description: "Text de test.", answer: "sud", points: 1, dependsOn: [] }] };
+  assert.deepEqual(levels(flowQa(v1), "QA-F01"), [["warning", "challenges[0].dependsOn"]]);
+});
+
+test("QA-F01: fără false positive — alte câmpuri necunoscute (notes, _local) și câmpurile cunoscute nu sunt raportate", () => {
+  const data = flowAdventure("test-qa-f01-curat", [RIDDLE("m-1", { notes: "x", _local: { a: 1 }, initialStatus: "pending" }), RIDDLE("m-2")], {
+    ...MSG, notes: "x", finale: { missionId: "m-2", messageId: "m" },
+  });
+  assert.deepEqual(activeRules(flowQa(data), "QA-F"), []);
+});
+
+/* QA-F02 */
+
+test("QA-F02: o misiune principală, alta decât prima, cu initialStatus „pending” → WARNING", () => {
+  const result = flowQa(flowAdventure("test-qa-f02", [RIDDLE("m-1"), RIDDLE("m-2"), RIDDLE("m-3", { initialStatus: "pending" })]));
+  assert.deepEqual(levels(result, "QA-F02"), [["warning", "missions[2].initialStatus"]]);
+});
+
+test("QA-F02: nu se raportează prima misiune main (chiar după un bonus), bonusurile „pending” sau „locked” explicit", () => {
+  const data = flowAdventure("test-qa-f02-ok", [BONUS("b-1", { initialStatus: "pending" }), RIDDLE("m-1", { initialStatus: "pending" }), RIDDLE("m-2", { initialStatus: "locked" })]);
+  assert.deepEqual(activeRules(flowQa(data), "QA-F02"), []);
+  assert.deepEqual(activeRules(flowQa(flowAdventure("test-qa-f02-una", [RIDDLE("m-1")])), "QA-F"), []);
+});
+
+/* QA-F03 */
+
+test("QA-F03: valid — complete_adventure la închiderea ultimei misiuni main; lipsa lui nu este o problemă", () => {
+  for (const on of ["mission_completed", "mission_failed", "mission_skipped"]) {
+    assert.deepEqual(activeRules(flowQa(flowAdventure("test-qa-f03-ok", MAIN3(), { events: [RULE("r", on, { missionId: "m-3" }, END)] })), "QA-F"), [], on);
+  }
+  assert.deepEqual(activeRules(flowQa(flowAdventure("test-qa-f03-fara", MAIN3())), "QA-F"), []);
+  // adventure_completed: aventura este deja încheiată.
+  assert.deepEqual(activeRules(flowQa(flowAdventure("test-qa-f03-dupa", MAIN3(), { events: [RULE("r", "adventure_completed", null, END)] })), "QA-F03"), []);
+  // O singură misiune main, regulă fără filtru: închiderea ei este și ultima.
+  assert.deepEqual(activeRules(flowQa(flowAdventure("test-qa-f03-una", [RIDDLE("m-1")], { events: [RULE("r", "mission_completed", null, END)] })), "QA-F"), []);
+});
+
+test("QA-F03: ERROR pentru fiecare categorie de eveniment care încheie aventura înaintea traseului main", () => {
+  const cases = [
+    ["adventure_started", null],
+    ["mission_completed", { missionId: "m-1" }],
+    ["mission_failed", { missionId: "m-2" }],
+    ["mission_skipped", { missionId: "m-1" }],
+    ["mission_completed", null], // fără filtru: rulează la închiderea primei misiuni
+    ["mission_started", { missionId: "m-3" }], // ultima: F03.2, demonstrat cu motorul mai jos
+    ["mission_unlocked", { missionId: "m-2" }],
+    ["answer_incorrect", { missionId: "m-1" }],
+    ["hint_requested", { missionId: "m-2" }],
+  ];
+  for (const [on, where] of cases) {
+    const result = flowQa(flowAdventure("test-qa-f03-err", MAIN3(), { events: [RULE("r-end", on, where, END)] }));
+    assert.deepEqual(levels(result, "QA-F03"), [["error", "events[0].do[0]"]], `${on} ${JSON.stringify(where)}`);
+    assert.deepEqual(activeRules(result, "QA-F04"), [], `${on}: nu este o regulă moartă`);
+  }
+});
+
+test("QA-F03: finale_started — ERROR pe o misiune care nu este ultima; WARNING pe ultima sau doar prin start_finale", () => {
+  const finale = (missionId) => flowAdventure("test-qa-f03-finale", MAIN3(), { ...MSG, finale: { missionId, messageId: "m" }, events: [RULE("r", "finale_started", null, END)] });
+  assert.deepEqual(levels(flowQa(finale("m-2")), "QA-F03"), [["error", "events[0].do[0]"]]);
+  assert.deepEqual(levels(flowQa(finale("m-3")), "QA-F03"), [["warning", "events[0].do[0]"]]);
+  const viaAction = flowAdventure("test-qa-f03-start-finale", MAIN3(), {
+    events: [RULE("r-start", "mission_completed", { missionId: "m-3" }, { action: "start_finale" }), RULE("r", "finale_started", null, END)],
+  });
+  assert.deepEqual(levels(flowQa(viaAction), "QA-F03"), [["warning", "events[1].do[0]"]]);
+});
+
+/*
+ * Severitatea QA-F03 pentru ultima misiune principală, stabilită cu motorul real (createGame + API-urile
+ * folosite de interfață). „Jucabilă” = o stare salvată (commit) în care jocul este „playing”, misiunea
+ * este curentă și „pending”: doar atunci jucătorul poate acționa. Dacă motorul se schimbă, aceste teste
+ * cad și severitatea trebuie reevaluată.
+ */
+function engineRun(data) {
+  assert.deepEqual(checkFile(entry(`${data.id}.json`, data)).findings, [], "aventura de test este validă");
+  const content = toAdventureV2(data);
+  let clock = 0;
+  const game = createGame({ adventure: withoutAnswers(content), validator: createLocalValidator(content), now: () => (clock += 1000) });
+  const states = [];
+  game.subscribe((state) => states.push(state));
+  const playable = (id) => states.some((s) => s.status === "playing" && s.currentMissionId === id && s.missions[id].status === "pending");
+  return { game, playable, mission: (id) => game.getState().missions[id], fired: (ruleId) => Object.prototype.hasOwnProperty.call(game.getState().firedEvents, ruleId) };
+}
+/** Rezolvă misiunile m-1 și m-2 ca jucătorul (răspuns corect + Continuă). */
+async function solveFirstTwo(game) {
+  for (let i = 0; i < 2; i++) {
+    assert.deepEqual(await game.submitAnswer("sud"), { result: "correct" });
+    game.next();
+  }
+}
+const FINAL_LOC = (extra = {}) => LOC("l-f", north(500), { initialStatus: "unlocked", ...extra });
+const GO_FINAL = GO("m-3", "l-f", { points: 5 });
+
+test("QA-F03.1 (motor): finale_started pe ultima misiune — o partidă validă poate continua până la completed → WARNING", async () => {
+  const rule = RULE("r", "finale_started", null, END);
+  // Traseul obișnuit: ultima misiune devine curentă și aventura se încheie în aceeași tranzacție.
+  const usual = engineRun(flowAdventure("test-qa-f031-a", MAIN3(), { ...MSG, finale: { missionId: "m-3", messageId: "m" }, events: [rule] }));
+  usual.game.start();
+  await solveFirstTwo(usual.game);
+  assert.equal(usual.game.getState().status, "completed");
+  assert.equal(usual.mission("m-3").status, "pending");
+  assert.equal(usual.playable("m-3"), false);
+
+  // Configurație validă: ultima misiune este „location”, locația este vizibilă de la început, iar jucătorul
+  // ajunge acolo (GPS) înainte. Misiunea se rezolvă la deblocare (sosire deja înregistrată); finale_started
+  // se emite la next() chiar dacă misiunea este închisă → completed, cu toate misiunile principale închise.
+  const data = flowAdventure("test-qa-f031-b", [RIDDLE("m-1"), RIDDLE("m-2"), GO_FINAL], { ...MSG, locations: [FINAL_LOC()], finale: { missionId: "m-3", messageId: "m" }, events: [rule] });
+  assert.deepEqual(levels(flowQa(data), "QA-F03"), [["warning", "events[0].do[0]"]]);
+  const early = engineRun(data);
+  early.game.start();
+  const fix = early.game.reportPosition({ ...FINAL_LOC().coordinates, accuracy: 5 });
+  assert.deepEqual(fix.results.find((r) => r.locationId === "l-f").transitions, ["arrived"]);
+  assert.equal(early.mission("m-3").status, "locked", "sosirea nu închide o misiune încă blocată");
+  await solveFirstTwo(early.game);
+  assert.equal(early.fired("r"), true);
+  assert.equal(early.game.getState().status, "completed");
+  assert.equal(early.mission("m-3").status, "solved");
+  assert.equal(early.game.getState().locations["l-f"].arrivalSource, "gps");
+  assert.deepEqual(early.game.getProgressSummary().completedMissions, ["m-1", "m-2", "m-3"]);
+});
+
+test("QA-F03.2 (motor): mission_started pe ultima misiune — nicio partidă în care jucătorul o mai joacă → ERROR", async () => {
+  const where = { missionId: "m-3" };
+  // Cazul ERROR: regula rulează exact când m-3 devine curentă; aventura se încheie în aceeași tranzacție.
+  const data = flowAdventure("test-qa-f032-a", MAIN3(), { events: [RULE("r", "mission_started", where, END)] });
+  assert.deepEqual(levels(flowQa(data), "QA-F03"), [["error", "events[0].do[0]"]]);
+  const usual = engineRun(data);
+  usual.game.start();
+  await solveFirstTwo(usual.game);
+  assert.equal(usual.fired("r"), true);
+  assert.equal(usual.game.getState().status, "completed");
+  assert.equal(usual.mission("m-3").status, "pending");
+  assert.equal(usual.playable("m-3"), false);
+
+  // Contra-exemple încercate: niciunul nu dă o partidă în care regula rulează și m-3 este jucată și închisă.
+  // a) m-3 rezolvată înainte de a deveni curentă (sosire anticipată): mission_started nu se mai emite.
+  const early = engineRun(flowAdventure("test-qa-f032-b", [RIDDLE("m-1"), RIDDLE("m-2"), GO_FINAL], { locations: [FINAL_LOC()], events: [RULE("r", "mission_started", where, END)] }));
+  early.game.start();
+  early.game.reportPosition({ ...FINAL_LOC().coordinates, accuracy: 5 });
+  await solveFirstTwo(early.game);
+  assert.equal(early.mission("m-3").status, "solved");
+  assert.equal(early.fired("r"), false);
+  // b) m-3 deschisă de la început și rezolvată prin API înainte: nici atunci mission_started nu se emite.
+  const pending = engineRun(flowAdventure("test-qa-f032-c", [RIDDLE("m-1"), RIDDLE("m-2"), RIDDLE("m-3", { initialStatus: "pending" })], { events: [RULE("r", "mission_started", where, END)] }));
+  pending.game.start();
+  assert.deepEqual(await pending.game.submitMissionAnswer("m-3", "sud"), { result: "correct" });
+  await solveFirstTwo(pending.game);
+  assert.equal(pending.fired("r"), false);
+  // c) aceeași regulă închide m-3 (complete_mission): completed, dar m-3 nu a fost jucată (0 încercări, fără stare jucabilă).
+  const closed = engineRun(flowAdventure("test-qa-f032-d", MAIN3(), { events: [RULE("r", "mission_started", where, { action: "complete_mission", missionId: "m-3" }, END)] }));
+  closed.game.start();
+  await solveFirstTwo(closed.game);
+  assert.equal(closed.game.getState().status, "completed");
+  assert.equal(closed.mission("m-3").status, "solved");
+  assert.equal(closed.mission("m-3").attempts, 0);
+  assert.equal(closed.playable("m-3"), false);
+});
+
+test("QA-F03.3 (motor): answer_incorrect pe ultima misiune — răspunsul greșit nu o închide; partida poate continua normal → WARNING", async () => {
+  const where = { missionId: "m-3" };
+  // Comportamentul motorului la un răspuns greșit: misiunea rămâne „pending”, se emite answer_incorrect.
+  const plain = engineRun(flowAdventure("test-qa-f033-a", MAIN3(), { ...MSG, events: [RULE("r", "answer_incorrect", where)] }));
+  plain.game.start();
+  await solveFirstTwo(plain.game);
+  assert.deepEqual(await plain.game.submitAnswer("nord"), { result: "incorrect" });
+  assert.equal(plain.fired("r"), true);
+  assert.equal(plain.mission("m-3").status, "pending");
+  assert.deepEqual(await plain.game.submitAnswer("sud"), { result: "correct" });
+  plain.game.next();
+  assert.equal(plain.game.getState().status, "completed");
+
+  // Configurație validă cu complete_adventure: „o singură încercare la final” — m-3 a fost jucată,
+  // regula o închide (fail_mission), apoi încheie aventura → toate misiunile principale închise.
+  const data = flowAdventure("test-qa-f033-b", MAIN3(), { events: [RULE("r", "answer_incorrect", where, { action: "fail_mission", missionId: "m-3" }, END)] });
+  assert.deepEqual(levels(flowQa(data), "QA-F03"), [["warning", "events[0].do[1]"]]);
+  const strict = engineRun(data);
+  strict.game.start();
+  await solveFirstTwo(strict.game);
+  assert.equal(strict.playable("m-3"), true);
+  assert.deepEqual(await strict.game.submitAnswer("nord"), { result: "incorrect" });
+  assert.equal(strict.game.getState().status, "completed");
+  assert.equal(strict.mission("m-3").status, "failed");
+  assert.equal(strict.mission("m-3").attempts, 1);
+  // Răspuns corect din prima: regula nu rulează, finalul este cel obișnuit.
+  const lucky = engineRun(data);
+  lucky.game.start();
+  await solveFirstTwo(lucky.game);
+  assert.deepEqual(await lucky.game.submitAnswer("sud"), { result: "correct" });
+  lucky.game.next();
+  assert.equal(lucky.fired("r"), false);
+  assert.equal(lucky.game.getState().status, "completed");
+
+  // Pe o misiune care nu este ultima rămâne ERROR: m-3 nu mai devine curentă.
+  const middle = flowAdventure("test-qa-f033-c", MAIN3(), { events: [RULE("r", "answer_incorrect", { missionId: "m-2" }, { action: "fail_mission", missionId: "m-2" }, END)] });
+  assert.deepEqual(levels(flowQa(middle), "QA-F03"), [["error", "events[0].do[1]"]]);
+});
+
+/** Rezolvă m-1 (+ Continuă) și m-2; aventura se încheie în tranzacția lui m-2, deci next() este refuzat. */
+async function solveUntilM2(game) {
+  assert.deepEqual(await game.submitAnswer("sud"), { result: "correct" });
+  game.next();
+  assert.deepEqual(await game.submitAnswer("sud"), { result: "correct" });
+  assert.throws(() => game.next(), /nu este în desfășurare/);
+}
+
+test("QA-F03.4 (motor): mission_unlocked pe ultima misiune — ERROR dacă e cu răspuns; WARNING dacă e „location” (poate fi rezolvată prin sosire anticipată)", async () => {
+  const where = { missionId: "m-3" };
+  // Ultima misiune cu răspuns: deblocarea are loc în tranzacția care închide m-2; regula încheie aventura
+  // înainte ca m-3 să devină curentă, iar după aceea next() nu mai este permis.
+  const riddle = flowAdventure("test-qa-f034-a", MAIN3(), { events: [RULE("r", "mission_unlocked", where, END)] });
+  assert.deepEqual(levels(flowQa(riddle), "QA-F03"), [["error", "events[0].do[0]"]]);
+  const blocked = engineRun(riddle);
+  blocked.game.start();
+  assert.deepEqual(await blocked.game.submitAnswer("sud"), { result: "correct" });
+  blocked.game.next();
+  assert.equal(blocked.mission("m-3").status, "locked", "înainte de eveniment");
+  assert.deepEqual(await blocked.game.submitAnswer("sud"), { result: "correct" });
+  assert.equal(blocked.fired("r"), true);
+  assert.equal(blocked.game.getState().status, "completed");
+  assert.equal(blocked.game.getState().currentMissionId, "m-2");
+  assert.equal(blocked.mission("m-3").status, "pending");
+  assert.equal(blocked.playable("m-3"), false);
+  assert.throws(() => blocked.game.next(), /nu este în desfășurare/);
+  // Singura cale de a evita momentul deblocării — m-3 deschisă de la început — face regula moartă (QA-F04).
+  const open = flowAdventure("test-qa-f034-b", [RIDDLE("m-1"), RIDDLE("m-2"), RIDDLE("m-3", { initialStatus: "pending" })], { events: [RULE("r", "mission_unlocked", where, END)] });
+  assert.deepEqual(activeRules(flowQa(open), "QA-F0"), ["QA-F02", "QA-F04"]);
+
+  // Ultima misiune „location”, cu locația vizibilă de la început: jucătorul ajunge acolo (GPS) înainte.
+  // La închiderea lui m-2, m-3 se deblochează și se rezolvă în aceeași operație (sosirea era înregistrată),
+  // apoi regula încheie aventura → completed, cu toate misiunile principale închise.
+  const data = flowAdventure("test-qa-f034-c", [RIDDLE("m-1"), RIDDLE("m-2"), GO_FINAL], { locations: [FINAL_LOC()], events: [RULE("r", "mission_unlocked", where, END)] });
+  assert.deepEqual(levels(flowQa(data), "QA-F03"), [["warning", "events[0].do[0]"]]);
+  const early = engineRun(data);
+  early.game.start();
+  early.game.reportPosition({ ...FINAL_LOC().coordinates, accuracy: 5 });
+  assert.equal(early.mission("m-3").status, "locked", "sosirea nu închide o misiune încă blocată");
+  await solveUntilM2(early.game);
+  assert.equal(early.fired("r"), true);
+  assert.equal(early.game.getState().status, "completed");
+  assert.equal(early.mission("m-3").status, "solved");
+  assert.equal(early.game.getState().locations["l-f"].arrivalSource, "gps");
+  assert.deepEqual(early.game.getProgressSummary().completedMissions, ["m-1", "m-2", "m-3"]);
+  // Fără sosire anticipată, aceeași aventură se încheie înainte ca m-3 să devină curentă: QA-F00 (simularea,
+  // fără sosiri anticipate) o raportează separat ca ERROR — regula QA-F00 nu este schimbată aici.
+  const usual = engineRun(data);
+  usual.game.start();
+  await solveUntilM2(usual.game);
+  assert.equal(usual.game.getState().status, "completed");
+  assert.equal(usual.mission("m-3").status, "pending");
+  assert.deepEqual(levels(await flowQaFull(data), "QA-F00"), [["error", "missions[2]"]]);
+
+  // Pe o misiune care nu este ultima rămâne ERROR, inclusiv pentru „location”.
+  const middle = flowAdventure("test-qa-f034-d", [RIDDLE("m-1"), GO("m-2", "l-f"), RIDDLE("m-3")], { locations: [FINAL_LOC()], events: [RULE("r", "mission_unlocked", { missionId: "m-2" }, END)] });
+  assert.deepEqual(levels(flowQa(middle), "QA-F03"), [["error", "events[0].do[0]"]]);
+});
+
+test("QA-F03.5 (motor): hint_requested pe ultima misiune — indiciul nu o închide; partida poate continua normal → WARNING", async () => {
+  const where = { missionId: "m-3" };
+  // Comportamentul motorului la un indiciu: hintsUsed +1, se emite hint_requested, misiunea rămâne „pending”.
+  const plain = engineRun(flowAdventure("test-qa-f035-a", MAIN3(), { ...MSG, events: [RULE("r", "hint_requested", where)] }));
+  plain.game.start();
+  await solveFirstTwo(plain.game);
+  assert.equal(plain.mission("m-3").status, "pending", "înainte de eveniment");
+  assert.equal(typeof plain.game.requestHint("m-3"), "string");
+  assert.equal(plain.fired("r"), true);
+  assert.equal(plain.mission("m-3").status, "pending");
+  assert.equal(plain.mission("m-3").hintsUsed, 1);
+  assert.deepEqual(await plain.game.submitAnswer("sud"), { result: "correct" });
+  plain.game.next();
+  assert.equal(plain.game.getState().status, "completed");
+
+  // Configurație validă cu complete_adventure: m-3 este jucabilă, jucătorul cere un indiciu,
+  // regula o închide (fail_mission) și încheie aventura → toate misiunile principale închise.
+  const data = flowAdventure("test-qa-f035-b", MAIN3(), { events: [RULE("r", "hint_requested", where, { action: "fail_mission", missionId: "m-3" }, END)] });
+  assert.deepEqual(levels(flowQa(data), "QA-F03"), [["warning", "events[0].do[1]"]]);
+  const strict = engineRun(data);
+  strict.game.start();
+  await solveFirstTwo(strict.game);
+  assert.equal(strict.playable("m-3"), true);
+  strict.game.requestHint("m-3");
+  assert.equal(strict.game.getState().status, "completed");
+  assert.equal(strict.mission("m-3").status, "failed");
+  assert.equal(strict.mission("m-3").hintsUsed, 1);
+  // Fără indiciu: regula nu rulează, finalul este cel obișnuit.
+  const noHint = engineRun(data);
+  noHint.game.start();
+  await solveFirstTwo(noHint.game);
+  assert.deepEqual(await noHint.game.submitAnswer("sud"), { result: "correct" });
+  noHint.game.next();
+  assert.equal(noHint.fired("r"), false);
+  assert.equal(noHint.game.getState().status, "completed");
+
+  // Pe o misiune care nu este ultima rămâne ERROR: m-3 nu mai devine curentă.
+  const middle = flowAdventure("test-qa-f035-c", MAIN3(), { events: [RULE("r", "hint_requested", { missionId: "m-2" }, { action: "fail_mission", missionId: "m-2" }, END)] });
+  assert.deepEqual(levels(flowQa(middle), "QA-F03"), [["error", "events[0].do[1]"]]);
+});
+
+test("QA-F03: WARNING pentru declanșatori care depind de jucător (locație, secret, bonus, hint pe „location”)", () => {
+  const base = { locations: [LOC("l-a")], secrets: [{ id: "s-a", title: "Secret de test" }] };
+  const cases = [
+    [RULE("r", "player_arrived", { locationId: "l-a" }, END)],
+    [RULE("r", "location_completed", { locationId: "l-a" }, END)],
+    [RULE("r", "secret_discovered", { secretId: "s-a" }, END), RULE("r-d", "adventure_started", null, { action: "discover_secret", secretId: "s-a" })],
+    [RULE("r", "mission_completed", { missionId: "b-1" }, END), RULE("r-u", "adventure_started", null, { action: "unlock_mission", missionId: "b-1" })],
+  ];
+  for (const events of cases) {
+    const result = flowQa(flowAdventure("test-qa-f03-warn", [GO("m-go", "l-a"), ...MAIN3(), BONUS("b-1")], { ...base, events }));
+    assert.deepEqual(levels(result, "QA-F03"), [["warning", "events[0].do[0]"]], events[0].on);
+  }
+  const hintOnLocation = flowAdventure("test-qa-f03-hint-loc", [GO("m-go", "l-a", { hints: [{ text: "Indiciu de test." }] }), RIDDLE("m-1")], {
+    locations: [LOC("l-a")], events: [RULE("r", "hint_requested", { missionId: "m-go" }, END)],
+  });
+  assert.deepEqual(levels(flowQa(hintOnLocation), "QA-F03"), [["warning", "events[0].do[0]"]]);
+});
+
+test("QA-F03: o regulă moartă (QA-F04) nu este raportată și de QA-F03", () => {
+  const result = flowQa(flowAdventure("test-qa-f03-moarta", MAIN3(), { secrets: [{ id: "s-a", title: "S" }], events: [RULE("r", "mission_completed", { secretId: "s-a" }, END)] }));
+  assert.deepEqual(activeRules(result, "QA-F03"), []);
+  assert.deepEqual(activeRules(result, "QA-F04"), ["QA-F04"]);
+});
+
+/* QA-F04 */
+
+/** Cazurile invalide QA-F04: [nume, aventură, cale]. Fiecare este confirmat și cu motorul (regula „r” nu rulează). */
+const F04_INVALID = () => [
+  ["1 · cheie absentă din payload (secretId pe mission_completed)",
+    flowAdventure("t", MAIN3(), { ...MSG, secrets: [{ id: "s-a", title: "S" }], events: [RULE("r", "mission_completed", { secretId: "s-a" })] }), "events[0].where.secretId"],
+  ["1 · orice filtru pe adventure_started",
+    flowAdventure("t", MAIN3(), { ...MSG, locations: [LOC("l-a")], events: [RULE("r", "adventure_started", { locationId: "l-a" })] }), "events[0].where.locationId"],
+  ["1 · missionId pe player_arrived",
+    flowAdventure("t", [GO("m-go", "l-a"), RIDDLE("m-1")], { ...MSG, locations: [LOC("l-a")], events: [RULE("r", "player_arrived", { locationId: "l-a", missionId: "m-go" })] }), "events[0].where.missionId"],
+  ["2 · missionId + locationId incompatibile",
+    flowAdventure("t", [GO("m-go", "l-a"), RIDDLE("m-1", { locationId: "l-a" }), RIDDLE("m-2", { locationId: "l-b" })], {
+      ...MSG, locations: [LOC("l-a"), LOC("l-b", north(500))], events: [RULE("r", "mission_completed", { missionId: "m-1", locationId: "l-b" })] }), "events[0].where"],
+  ["2 · locationId pe o misiune fără locație",
+    flowAdventure("t", [GO("m-go", "l-a"), RIDDLE("m-1")], { ...MSG, locations: [LOC("l-a")], events: [RULE("r", "mission_completed", { missionId: "m-1", locationId: "l-a" })] }), "events[0].where"],
+  ["3 · mission_unlocked pe prima misiune main („pending”)",
+    flowAdventure("t", MAIN3(), { ...MSG, events: [RULE("r", "mission_unlocked", { missionId: "m-1" })] }), "events[0].on"],
+  ["3 · mission_unlocked pe un bonus „pending”",
+    flowAdventure("t", [...MAIN3(), BONUS("b-1", { initialStatus: "pending" })], { ...MSG, events: [RULE("r", "mission_unlocked", { missionId: "b-1" })] }), "events[0].on"],
+  ["4 · mission_started pe un bonus",
+    flowAdventure("t", [...MAIN3(), BONUS("b-1")], { ...MSG, events: [
+      RULE("r-u", "adventure_started", null, { action: "unlock_mission", missionId: "b-1" }), RULE("r", "mission_started", { missionId: "b-1" })] }), "events[1].on"],
+  ["4 · mission_started pe o locație fără misiuni main",
+    flowAdventure("t", [...MAIN3(), BONUS("b-1", { locationId: "l-a" })], { ...MSG, locations: [LOC("l-a")], events: [
+      RULE("r-u", "adventure_started", null, { action: "unlock_mission", missionId: "b-1" }), RULE("r", "mission_started", { locationId: "l-a" })] }), "events[1].on"],
+  ["5 · answer_incorrect pe o misiune „location”",
+    flowAdventure("t", [GO("m-go", "l-a"), RIDDLE("m-1")], { ...MSG, locations: [LOC("l-a")], events: [RULE("r", "answer_incorrect", { missionId: "m-go" })] }), "events[0].on"],
+  ["6 · hint_requested pe o misiune fără indicii",
+    flowAdventure("t", [RIDDLE("m-1", { hints: [] }), RIDDLE("m-2")], { ...MSG, events: [RULE("r", "hint_requested", { missionId: "m-1" })] }), "events[0].on"],
+  ["7 · finale_started cu alt missionId decât finale.missionId",
+    flowAdventure("t", MAIN3(), { ...MSG, finale: { missionId: "m-3", messageId: "m" }, events: [RULE("r", "finale_started", { missionId: "m-2" })] }), "events[0].where.missionId"],
+  ["7 · finale_started cu missionId, fără finale",
+    flowAdventure("t", MAIN3(), { ...MSG, events: [
+      RULE("r-s", "mission_completed", { missionId: "m-3" }, { action: "start_finale" }), RULE("r", "finale_started", { missionId: "m-3" })] }), "events[1].where.missionId"],
+  ["8 · secret_discovered fără discover_secret",
+    flowAdventure("t", MAIN3(), { ...MSG, secrets: [{ id: "s-a", title: "S" }], events: [RULE("r", "secret_discovered", { secretId: "s-a" })] }), "events[0].on"],
+  ["8 · discover_secret doar într-o regulă moartă",
+    flowAdventure("t", MAIN3(), { ...MSG, secrets: [{ id: "s-a", title: "S" }], events: [
+      RULE("r-mort", "mission_unlocked", { missionId: "m-1" }, { action: "discover_secret", secretId: "s-a" }), RULE("r", "secret_discovered", { secretId: "s-a" })] }),
+    ["events[0].on", "events[1].on"]], // „r-mort” (subregula 3) și, prin ea, „r”
+  ["9 · partner_unlocked fără unlock_partner",
+    flowAdventure("t", [RIDDLE("m-1"), RIDDLE("m-p", { type: "partner", partnerId: "p-a" })], { ...MSG, partners: [PARTNER()], events: [RULE("r", "partner_unlocked", { partnerId: "p-a" })] }), "events[0].on"],
+  ["9 · unlock_partner pe un partener deja „unlocked”",
+    flowAdventure("t", [RIDDLE("m-1"), RIDDLE("m-p", { type: "partner", partnerId: "p-a" })], { ...MSG, partners: [PARTNER({ initialStatus: "unlocked" })], events: [
+      RULE("r-u", "adventure_started", null, { action: "unlock_partner", partnerId: "p-a" }), RULE("r", "partner_unlocked", { partnerId: "p-a" })] }), "events[1].on"],
+];
+
+test("QA-F04: fiecare subregulă — ERROR pe calea așteptată; confirmat cu motorul: regula nu rulează pe niciun traseu", async () => {
+  for (const [name, data, path] of F04_INVALID()) {
+    const result = flowQa({ ...data, id: "test-qa-f04" }, "test-qa-f04.json");
+    assert.deepEqual(activeRules(result, "QA-S01"), [], `${name}: schema validă`);
+    assert.deepEqual(levels(result, "QA-F04"), [path].flat().map((p) => ["error", p]), name);
+    assert.equal(await firesInEngine(data, "r"), false, `${name}: motorul nu rulează regula`);
+  }
+});
+
+test("QA-F04: perechile valide nu sunt raportate și chiar rulează în motor", async () => {
+  const valid = [
+    ["missionId pe mission_completed", flowAdventure("t", MAIN3(), { ...MSG, events: [RULE("r", "mission_completed", { missionId: "m-1" })] })],
+    ["missionId + locationId compatibile", flowAdventure("t", [GO("m-go", "l-a"), RIDDLE("m-1", { locationId: "l-a" })], {
+      ...MSG, locations: [LOC("l-a")], events: [RULE("r", "mission_completed", { missionId: "m-1", locationId: "l-a" })] })],
+    ["mission_unlocked pe a doua misiune main", flowAdventure("t", MAIN3(), { ...MSG, events: [RULE("r", "mission_unlocked", { missionId: "m-2" })] })],
+    ["mission_started pe o misiune main", flowAdventure("t", MAIN3(), { ...MSG, events: [RULE("r", "mission_started", { missionId: "m-3" })] })],
+    ["answer_incorrect pe o ghicitoare", flowAdventure("t", MAIN3(), { ...MSG, events: [RULE("r", "answer_incorrect", { missionId: "m-2" })] })],
+    ["hint_requested pe o misiune cu indicii", flowAdventure("t", MAIN3(), { ...MSG, events: [RULE("r", "hint_requested", { missionId: "m-2" })] })],
+    ["finale_started = finale.missionId", flowAdventure("t", MAIN3(), { ...MSG, finale: { missionId: "m-3", messageId: "m" }, events: [RULE("r", "finale_started", { missionId: "m-3" })] })],
+    ["secret_discovered cu discover_secret", flowAdventure("t", MAIN3(), { ...MSG, secrets: [{ id: "s-a", title: "S" }], events: [
+      RULE("r-d", "mission_completed", { missionId: "m-1" }, { action: "discover_secret", secretId: "s-a" }), RULE("r", "secret_discovered", { secretId: "s-a" })] })],
+    ["partner_unlocked cu unlock_partner", flowAdventure("t", [RIDDLE("m-1"), RIDDLE("m-p", { type: "partner", partnerId: "p-a" })], { ...MSG, partners: [PARTNER()], events: [
+      RULE("r-u", "mission_started", { missionId: "m-p" }, { action: "unlock_partner", partnerId: "p-a" }), RULE("r", "partner_unlocked", { partnerId: "p-a" })] })],
+  ];
+  for (const [name, data] of valid) {
+    const result = flowQa({ ...data, id: "test-qa-f04-ok" }, "test-qa-f04-ok.json");
+    assert.deepEqual(activeRules(result, "QA-S01"), [], `${name}: schema validă`);
+    assert.deepEqual(activeRules(result, "QA-F"), [], name);
+    assert.equal(await firesInEngine(data, "r"), true, `${name}: motorul rulează regula`);
+  }
+});
+
+test("QA-F04: caz limită — hint_requested pe o misiune „location” cu indicii și answer_incorrect fără filtru nu sunt raportate", () => {
+  // requestHint nu verifică tipul misiunii: motorul poate emite evenimentul (prin API, nu din interfață).
+  const data = flowAdventure("test-qa-f04-hint-loc", [GO("m-go", "l-a", { hints: [{ text: "Indiciu de test." }] }), RIDDLE("m-1")], {
+    ...MSG, locations: [LOC("l-a")], events: [RULE("r", "hint_requested", { missionId: "m-go" })],
+  });
+  assert.deepEqual(activeRules(flowQa(data), "QA-F04"), []);
+  // Fără filtru: answer_incorrect într-o aventură care are și ghicitori → poate rula.
+  const mixed = flowAdventure("test-qa-f04-fara-filtru", [GO("m-go", "l-a"), RIDDLE("m-1")], { ...MSG, locations: [LOC("l-a")], events: [RULE("r", "answer_incorrect", null)] });
+  assert.deepEqual(activeRules(flowQa(mixed), "QA-F04"), []);
+});
+
+/* QA-F05 */
+
+test("QA-F05: bonus / secret „locked” fără unlock_mission → WARNING; cu unlock → PASS", () => {
+  const without = flowAdventure("test-qa-f05", [...MAIN3(), BONUS("b-1"), RIDDLE("s-1", { type: "secret", track: "secret" })]);
+  assert.deepEqual(levels(flowQa(without), "QA-F05"), [["warning", "missions[3]"], ["warning", "missions[4]"]]);
+  const withUnlock = flowAdventure("test-qa-f05-ok", [...MAIN3(), BONUS("b-1")], { events: [RULE("r", "mission_completed", { missionId: "m-1" }, { action: "unlock_mission", missionId: "b-1" })] });
+  assert.deepEqual(activeRules(flowQa(withUnlock), "QA-F"), []);
+  // Un bonus care începe „pending” nu are nevoie de deblocare.
+  assert.deepEqual(activeRules(flowQa(flowAdventure("test-qa-f05-pending", [...MAIN3(), BONUS("b-1", { initialStatus: "pending" })])), "QA-F05"), []);
+});
+
+test("QA-F05: deblocarea doar dintr-o regulă moartă (QA-F04) → WARNING; complete_mission nu deblochează", () => {
+  const deadOnly = flowAdventure("test-qa-f05-mort", [...MAIN3(), BONUS("b-1")], { events: [RULE("r", "mission_unlocked", { missionId: "m-1" }, { action: "unlock_mission", missionId: "b-1" })] });
+  assert.deepEqual(levels(flowQa(deadOnly), "QA-F05"), [["warning", "missions[3]"]]);
+  const completeOnly = flowAdventure("test-qa-f05-complete", [...MAIN3(), BONUS("b-1")], { events: [RULE("r", "mission_completed", { missionId: "m-1" }, { action: "complete_mission", missionId: "b-1" })] });
+  assert.deepEqual(levels(flowQa(completeOnly), "QA-F05"), [["warning", "missions[3]"]]);
+});
+
+test("QA-F05: secret fără discover_secret și obiect fără collect_item → WARNING; cu acțiunea → PASS", () => {
+  const data = flowAdventure("test-qa-f05-entitati", MAIN3(), { secrets: [{ id: "s-a", title: "S" }], items: [{ id: "o-a", name: "Obiect de test" }] });
+  assert.deepEqual(levels(flowQa(data), "QA-F05"), [["warning", "items[0]"], ["warning", "secrets[0]"]]);
+  data.events = [RULE("r", "mission_completed", { missionId: "m-2" }, { action: "discover_secret", secretId: "s-a" }, { action: "collect_item", itemId: "o-a" })];
+  assert.deepEqual(activeRules(flowQa(data), "QA-F"), []);
+});
+
+test("QA-F05: fără analiză de graf — un ciclu indirect (b-1 ↔ b-2) NU este raportat în această etapă", () => {
+  const cycle = flowAdventure("test-qa-f05-ciclu", [...MAIN3(), BONUS("b-1"), BONUS("b-2")], { events: [
+    RULE("r-1", "mission_completed", { missionId: "b-1" }, { action: "unlock_mission", missionId: "b-2" }),
+    RULE("r-2", "mission_completed", { missionId: "b-2" }, { action: "unlock_mission", missionId: "b-1" }),
+  ] });
+  assert.deepEqual(activeRules(flowQa(cycle), "QA-F"), []);
 });

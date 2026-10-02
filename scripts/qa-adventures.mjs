@@ -14,7 +14,8 @@
  * Fișierul cerut și --public-only filtrează doar raportul; regulile rămân aceleași.
  *
  * Exit code: 0 = fără erori (și fără avertismente cu --strict); 1 = probleme găsite; 2 = utilizare greșită.
- * Regulile stau în scripts/adventure-qa/rules.mjs; scriptul doar citește fișierele și afișează rezultatul.
+ * Regulile stau în scripts/adventure-qa/rules.mjs (inclusiv QA-F00, simularea traseului cu motorul real);
+ * scriptul doar citește fișierele și afișează rezultatul.
  * Nu afișează texte de poveste sau răspunsuri; aventurile private apar ca „aventura privată #N”.
  * Fără dependențe; nu modifică niciun fișier.
  */
@@ -23,7 +24,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { runQa } from "./adventure-qa/rules.mjs";
+import { runQaFull } from "./adventure-qa/rules.mjs";
 import { CLASSES, classifyAdventure } from "./adventure-qa/classify.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -70,7 +71,7 @@ if (args.file !== null) {
 if (args.publicOnly) reported = reported.filter((name) => classifyAdventure(name, undefined) !== CLASSES.PRIVATE_LOCAL);
 const targets = reported;
 
-const { results, summary } = runQa(entries, { targets });
+const { results, summary } = await runQaFull(entries, { targets });
 
 console.log(`Adventure QA — ${summary.files} ${summary.files === 1 ? "fișier" : "fișiere"}${args.publicOnly ? " (fără aventurile private locale)" : ""}${args.strict ? " · --strict" : ""}\n`);
 const width = Math.max(0, ...results.map((r) => r.label.length));
