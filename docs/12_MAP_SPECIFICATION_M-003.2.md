@@ -142,11 +142,12 @@ M-003.1 are o singură funcție care decide starea afișată: `describeLocation(
 
 | `quality` | `fix` | Marker jucător | Cerc de acuratețe | Text sub hartă (în afara hărții, generat de `app.js`) |
 | --- | --- | --- | --- | --- |
-| `valid` | prezent | punct albastru plin, 16 px, contur alb 3 px | raza = `accuracy`, umplere 10% | „Poziția ta · precizie ~N m” |
-| `uncertain` (și `weak`) | prezent | punct albastru **gol** (doar contur) | contur **punctat**, umplere 6% | „Semnal GPS slab — poziția de pe hartă poate fi greșită cu ~N m” |
+| `valid` | prezent | punct albastru plin, 16 px, contur alb 3 px | raza = `accuracy`, umplere 10% | „Poziția ta este afișată pe hartă.” (peste 1000 m: „Poziția ta · precizie foarte slabă”) |
+| `uncertain` (și `weak`) | prezent | punct albastru **gol** (doar contur) | contur **punctat**, umplere 6% | „Semnal GPS slab — poziția de pe hartă poate fi greșită” (peste 1000 m: „Semnal GPS slab — precizie foarte slabă”) |
 | `none` | prezent | punct **gri**, gol, cu eticheta „ultima poziție” | **fără cerc** | „Ultima poziție primită — GPS-ul nu transmite acum poziția” *(D-049-C2)* |
 | `none` | `null` | niciun marker | niciun cerc | după `locationDisplay` (§7) |
 
+- Din 2026-10-02 (D-049-F, amendamentul ulterior din `04_DECISIONS_LOG.md`), precizia în metri nu mai apare în textul de sub hartă: o arată indicatorul GPS de peste hartă (HUD, §8), ca „±N m” (valoarea `accuracy` rotunjită la metru).
 - Punctul gri este strict o **afișare** a datei pe care `location.js` o reține deja. Nu schimbă `quality`, nu produce evenimente și nu apare în joc.
 - Fix cu coordonate nedesenabile (nefinite sau în afara intervalelor): nu se desenează nimic (validare de intrare, nu regulă GPS). `console.warn` o singură dată.
 - `accuracy` nefinită sau negativă: fără cerc.
@@ -273,17 +274,18 @@ Harta există doar pe `screen-play` și doar dacă aventura are **cel puțin o l
 
 | `locationDisplay` | Marker | Text sub hartă | „Centrează pe mine” |
 | --- | --- | --- | --- |
-| `gps-off` | — | „Poziția ta nu apare pe hartă: locația nu este activată (butonul „Activează locația” este mai jos).” | dezactivat |
+| `gps-off` | — | „Poziția ta nu apare pe hartă: locația nu este activată.” | dezactivat |
 | `gps-unavailable` / `gps-permission-denied` | — | „Poziția ta nu apare pe hartă. Folosește indicațiile obiectivului și „Am ajuns”.” | dezactivat |
 | `gps-searching` | — | „Caut poziția…” | dezactivat |
 | `gps-error` fără fix reținut | — | „Poziția nu poate fi determinată acum.” | dezactivat |
 | `gps-error` cu fix reținut | punct gri (§2.3) | „Ultima poziție primită — GPS-ul nu transmite acum poziția” | activ |
 | `gps-uncertain` | punct gol + cerc punctat | „Semnal GPS slab — …” | activ |
-| `gps-ready` | punct plin + cerc | „Poziția ta · precizie ~N m” | activ |
+| `gps-ready` | punct plin + cerc | „Poziția ta este afișată pe hartă.” | activ |
 | nicio locație vizibilă și niciun fix | **placeholder**, fără Leaflet, fără tile-uri | „Harta apare când ai un obiectiv sau când locația este activă.” | dezactivat |
 
 - Textul de sub hartă **nu** este `aria-live`. Panoul „📍 Locația ta” rămâne sursa anunțurilor GPS.
-- Panoul „📍 Locația ta” și cardul „Obiectiv” rămân neschimbate.
+- Panoul „📍 Locația ta” și cardul „Obiectiv” rămân neschimbate. Excepție (2026-10-02, D-049-F amendată): în joc, cât timp indicatorul GPS de pe hartă este afișat (§8), panoul nu mai dublează starea scurtă și butoanele de activare — „Activează locația” / „Reîncearcă” din panou sunt ascunse, iar activarea și reîncercarea se fac din HUD („Activează” / „Încearcă din nou”); `#location-status` rămâne regiunea de status (ascunsă doar vizual); explicațiile și „Oprește locația” rămân vizibile. Pe ecranul de start și fără hartă panoul este complet, ca înainte.
+- Indicatorul GPS (HUD), pe stări: `gps-off` → 0 bare + „Activează” (`tracker.start()`); `gps-searching` → 0 bare, căutare discretă; `gps-ready` / `gps-uncertain` → bare din `accuracy` + „±N m”; `gps-error` / `gps-permission-denied` → 0 bare + „Încearcă din nou” (`tracker.retry()`); `gps-unavailable` → 0 bare, fără buton.
 
 ---
 
@@ -298,8 +300,9 @@ Revizuit la 2026-10-01 (D-049-F revizuită — TASK 4 / U1, map-first):
 - Atribuirea OpenStreetMap rămâne permanent vizibilă și **neacoperită de card** (D-046, criteriul 25).
 - **Deschis (U1b):** cardul poate acoperi parțial harta, inclusiv obiectivul, pe ecrane mici; încadrarea care ține cont de card nu este decisă (o soluție care ar schimba contractul D-047 cere o decizie separată).
 - *Formularea anterioară (înlocuită la 2026-10-01):* „Poziție: în `screen-play`, imediat după cardul `#objective` (cu «Am ajuns»), înaintea formularului de răspuns. Lățime 100% din `.container` (max. 40rem); înălțime `clamp(200px, 40vh, 360px)`; minimum 200 px.” Conturul `#1f3a2e` 2 px și colțurile rotunjite rămân (pe telefon, fără contur lateral).
-- „Centrează pe mine” și „Vezi obiectivele” sunt **în afara hărții**, pe un rând sub ea (≥ 48 px), împreună cu textele despre poziție / GPS. Nu acoperă harta, atribuirea sau alte controale.
-- Pe hartă stau doar: zoom +/- (sus-stânga), atribuirea (jos-dreapta, permanentă), eticheta obiectivului curent și, la erori, bannerul de tile-uri (sus).
+- „Centrează pe mine” și „Vezi obiectivele” sunt **în afara hărții**, pe un rând sub ea (≥ 48 px), împreună cu textele despre poziție / GPS. Nu acoperă harta, atribuirea sau alte controale. *Amendament ulterior (2026-10-02, D-049-F în `04_DECISIONS_LOG.md`):* informațiile GPS **operaționale** pot fi afișate compact peste hartă prin indicatorul GPS (HUD, mai jos); explicațiile și detaliile complete despre locație rămân în afara hărții.
+- Indicatorul GPS (HUD, `#gps-hud`): compact, sus-dreapta, peste hartă — icon satelit (SVG decorativ), 5 bare, „±N m” și, când este cazul, butonul „Activează” sau „Încearcă din nou”. Este element frate al `#map-container` în `#map-stage` (ca și cardul obiectivului), **nu** în containerul Leaflet; nu este control Leaflet și nici container pentru elemente de gameplay; contractul `map.js` (D-047) nu se schimbă. Este pur vizual: consumă starea existentă (`locationDisplay` și `accuracy` din ultima observație). Barele sunt o aproximare vizuală din `accuracy` (browserul nu oferă puterea semnalului), cu praguri doar de afișare (`DEFAULT_GPS_HUD` în `defaults.js`: ≤ 5 m → 5, ≤ 10 m → 4, ≤ 20 m → 3, ≤ 40 m → 2, peste → 1; fără poziție sau precizie necunoscută → 0), separate de pragurile de joc și de limita cercului de 1000 m.
+- Pe hartă stau doar: zoom +/- (sus-stânga), atribuirea (jos-dreapta, permanentă), eticheta obiectivului curent, indicatorul GPS (sus-dreapta) și, la erori, bannerul de tile-uri (sus, sub indicatorul GPS și la dreapta zoom-ului).
 - Harta este ascunsă pe start / încărcare / eroare / final *(D-049-K)*. Se creează la prima nevoie și se distruge la ieșirea din joc.
 
 ---
@@ -309,6 +312,7 @@ Revizuit la 2026-10-01 (D-049-F revizuită — TASK 4 / U1, map-first):
 - Container: `role="region"`, `aria-label="Harta aventurii"`, `aria-describedby` → textul de sub hartă. Harta e focalizabilă, iar săgețile mută harta.
 - Butoane `<button>` reale, text vizibil, `disabled` + motiv în text.
 - Markerii locațiilor sunt focalizabili, cu `aria-label` (§3.2). Markerul jucătorului și cercurile au `aria-hidden`.
+- Indicatorul GPS (§8) **nu** este `aria-live`: are un text accesibil (ex. „Locație activă, precizie aproximativă 12 metri.”, „Locația nu este activă.”), citit când jucătorul ajunge la el; anunțurile GPS rămân în panoul „📍 Locația ta”. Butoanele lui sunt `<button>` reale; informația nu stă doar în culoare (numărul de bare, „±N m”, textul). Animația de căutare se oprește cu `prefers-reduced-motion`.
 - **Harta nu este singura sursă de informație:** numele obiectivului, starea, instrucțiunile de rezervă și „Am ajuns” rămân în cardul obiectivului. Jocul se poate juca integral fără hartă.
 - Stările se disting și prin formă, simbol, mărime și text, nu doar prin culoare. Contururi albe pentru lumină puternică. Focus `3px solid #d98e04`.
 - `prefers-reduced-motion: reduce` → `zoomAnimation`, `fadeAnimation`, `markerZoomAnimation` false.
@@ -387,7 +391,7 @@ export const DEFAULT_MAP_VIEW = Object.freeze({
 | **D-049-C2** | Ultima poziție reținută de `location.js` cu `quality: none` se afișează ca punct gri „ultima poziție”, fără cerc. Comportament de afișare, nu stare GPS | APROBAT |
 | **D-049-D** | Raza efectivă vine din motor (`game.getLocation().radiusMeters`, obținută din `geo.js`). `map-model.js` / `map.js` nu aplică valori implicite | **APROBAT — R2** (`effectiveRadius` aditiv în `geo.js`, expus de `game.js` ca `radiusMeters`; §4.1) |
 | **D-049-E** | La schimbarea obiectivului: o singură recentrare, chiar dacă utilizatorul făcuse pan. Fix-urile ulterioare actualizează doar markerul (§5.1) | APROBAT |
-| **D-049-F** | *Revizuită 2026-10-01 (TASK 4 / U1):* harta este suprafața principală, înaintea conținutului misiunii; cardul obiectivului este suprapus peste hartă (element soră, nu în containerul Leaflet); harta rămâne montată și inactivă sub overlay-ul puzzle-ului; atribuirea OSM neacoperită; înălțime responsive; butoanele sub hartă. U1b (card vs. obiectiv) rămâne deschis. *Anterior:* harta după cardul obiectivului, înălțime `clamp(200px, 40vh, 360px)` | APROBAT (revizuit) |
+| **D-049-F** | *Revizuită 2026-10-01 (TASK 4 / U1):* harta este suprafața principală, înaintea conținutului misiunii; cardul obiectivului este suprapus peste hartă (element soră, nu în containerul Leaflet); harta rămâne montată și inactivă sub overlay-ul puzzle-ului; atribuirea OSM neacoperită; înălțime responsive; butoanele sub hartă. U1b (card vs. obiectiv) rămâne deschis. *Anterior:* harta după cardul obiectivului, înălțime `clamp(200px, 40vh, 360px)`. *Amendament ulterior (2026-10-02, `04_DECISIONS_LOG.md`):* indicatorul GPS compact (HUD) poate fi afișat peste hartă (§8); harta nu devine container pentru controale Leaflet sau elemente de gameplay | APROBAT (revizuit) |
 | **D-049-G** | „Centrează pe mine” = o singură centrare, fără mod de urmărire continuă în V1 | APROBAT |
 | **D-049-H** | Locațiile `visible: false` (`locked`, inclusiv cele ascunse) nu se desenează niciodată | APROBAT |
 | **D-049-I** | Cercul de acuratețe nu se desenează peste 1000 m. Limită doar de desen, fără efect asupra jocului | APROBAT |

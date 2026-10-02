@@ -426,6 +426,33 @@ a:focus-visible,
   margin: 0.5rem 0 0;
 }
 
+/* În joc, cât timp HUD-ul de pe hartă este vizibil, panoul nu dublează informația operațională:
+   starea scurtă și butoanele de activare stau în HUD. #location-status rămâne regiunea de status
+   (ascunsă doar vizual, nu cu display:none); explicațiile și „Oprește locația” rămân vizibile. */
+.location-panel[data-hud="on"] {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.location-panel[data-hud="on"] .location-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.location-panel[data-hud="on"] #btn-location-start,
+.location-panel[data-hud="on"] #btn-location-retry,
+.location-panel[data-hud="on"][data-state="gps-ready"] #location-detail {
+  display: none;
+}
+
 .location-panel .button-secondary {
   width: 100%;
   margin-top: 0.75rem;
@@ -535,7 +562,7 @@ a:focus-visible,
   right: 0.5rem;
   bottom: 1.5rem;
   z-index: 1;
-  max-height: calc(100% - 3.5rem);
+  max-height: calc(100% - 5rem); /* sus rămâne loc pentru indicatorul GPS (HUD) */
   overflow-y: auto;
   margin: 0;
   padding: 0.625rem 0.75rem;
@@ -553,6 +580,134 @@ a:focus-visible,
 
 .map-stage[data-map="on"] .objective .button-primary {
   padding-block: 0.5rem;
+}
+
+/* Indicatorul GPS peste hartă (HUD — D-049-F, amendamentul din 2026-10-02): compact, sus-dreapta,
+   departe de zoom-ul Leaflet (sus-stânga) și de atribuirea OSM (jos-dreapta). Informația nu stă
+   doar în culoare: numărul de bare, „±X m”, butonul și textul accesibil o repetă. */
+.gps-hud {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2; /* peste hartă (izolată) și peste cardul obiectivului */
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  max-width: calc(100% - 5rem); /* nu ajunge până la butoanele de zoom */
+  min-height: 2.25rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #c9c4b5;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  color: #1a1a1a;
+  font-size: 0.875rem;
+  line-height: 1;
+  --gps-hud-tone: #5f5f5f;
+}
+
+.gps-hud:focus-visible {
+  outline: 3px solid #d98e04;
+  outline-offset: 2px;
+}
+
+.gps-hud[data-tone="good"] { --gps-hud-tone: #1d6b36; }
+.gps-hud[data-tone="fair"] { --gps-hud-tone: #a37800; }
+.gps-hud[data-tone="weak"] { --gps-hud-tone: #c75a00; }
+.gps-hud[data-tone="poor"] { --gps-hud-tone: #b42318; }
+
+.gps-hud__icon {
+  flex: none;
+  color: #5f5f5f;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.gps-hud__icon .gps-hud__wave {
+  fill: none;
+}
+
+.gps-hud[data-state="gps-ready"] .gps-hud__icon,
+.gps-hud[data-state="gps-uncertain"] .gps-hud__icon,
+.gps-hud[data-state="gps-searching"] .gps-hud__icon {
+  color: #1f3a2e;
+}
+
+.gps-hud[data-state="gps-permission-denied"] .gps-hud__icon {
+  color: #8a1c1c;
+}
+
+/* Căutare: doar undele pulsează, discret. Fără animație cu prefers-reduced-motion (mai jos). */
+.gps-hud[data-state="gps-searching"] .gps-hud__wave {
+  animation: gps-hud-search 1.6s ease-in-out infinite;
+}
+
+@keyframes gps-hud-search {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.gps-hud__bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+}
+
+.gps-hud__bar {
+  width: 4px;
+  border-radius: 1px;
+  background: #d6d2c6;
+}
+
+.gps-hud__bar:nth-child(1) { height: 4px; }
+.gps-hud__bar:nth-child(2) { height: 7px; }
+.gps-hud__bar:nth-child(3) { height: 10px; }
+.gps-hud__bar:nth-child(4) { height: 13px; }
+.gps-hud__bar:nth-child(5) { height: 16px; }
+
+.gps-hud__bar.is-on {
+  background: var(--gps-hud-tone);
+}
+
+.gps-hud__accuracy {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gps-hud__button {
+  min-height: 2rem;
+  padding: 0.25rem 0.75rem;
+  border: 2px solid #1f3a2e;
+  border-radius: 999px;
+  background: #1f3a2e;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gps-hud__button:hover {
+  background: #2c5242;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gps-hud__wave {
+    animation: none !important;
+  }
+}
+
+/* Bannerul „fundal indisponibil” (map.js) stă sub HUD și la dreapta zoom-ului, ca să nu se acopere. */
+.map-stage[data-map="on"] .oe-map-banner {
+  top: 3.25rem;
+  left: 3.75rem;
+  right: 0.5rem;
+  border: 2px solid #8a1c1c;
+  border-radius: 0.375rem;
 }
 
 /* Telefon: harta pe toată lățimea ecranului. */

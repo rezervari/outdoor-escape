@@ -73,3 +73,20 @@ export const DEFAULT_MAP_VIEW = Object.freeze({
   accuracyCircleMax: 1000, // m — peste această precizie cercul nu se desenează (limită DOAR de desen)
   tileErrorThreshold: 3, // erori consecutive de tile, fără nicio reușită, până la mesajul „fundal indisponibil”
 });
+
+/*
+ * Indicatorul GPS de peste hartă (HUD — D-049-F, amendamentul din 2026-10-02).
+ * Praguri STRICT de afișare: numărul de bare desenate din `accuracy` (metri). Nu sunt
+ * „puterea semnalului” (browserul nu o oferă) și nu au nicio legătură cu pragurile de joc
+ * (`settings.gps.maxAccuracy`, raza, histerezisul) sau cu `accuracyCircleMax`.
+ * Ordinea contează: primul prag pe care precizia nu îl depășește dă numărul de bare.
+ */
+export const DEFAULT_GPS_HUD = Object.freeze({
+  levels: Object.freeze([
+    Object.freeze({ maxAccuracy: 5, bars: 5, tone: "good" }),
+    Object.freeze({ maxAccuracy: 10, bars: 4, tone: "good" }),
+    Object.freeze({ maxAccuracy: 20, bars: 3, tone: "fair" }),
+    Object.freeze({ maxAccuracy: 40, bars: 2, tone: "weak" }),
+  ]),
+  fallback: Object.freeze({ bars: 1, tone: "poor" }), // precizie peste ultimul prag
+});

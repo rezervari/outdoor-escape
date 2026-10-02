@@ -76,6 +76,27 @@
           <div id="map-container" class="map-container" role="region" aria-label="Harta aventurii"
                aria-describedby="map-caption" hidden></div>
 
+          <!-- Indicatorul GPS (D-049-F, amendamentul din 2026-10-02): compact, peste hartă, sus-dreapta.
+               Frate al containerului, NU în Leaflet. Pur vizual: starea vine din location.js (app.js).
+               Nu este regiune live: anunțurile rămân în #location-status. -->
+          <div id="gps-hud" class="gps-hud" role="group" aria-label="Locația ta" data-state="gps-off"
+               data-tone="none" tabindex="-1" hidden>
+            <svg class="gps-hud__icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+              <rect x="9" y="9" width="6" height="6" rx="1" transform="rotate(45 12 12)" />
+              <path d="M7.8 7.8 4.6 4.6M16.2 16.2l3.2 3.2" />
+              <rect x="1.5" y="3.4" width="6" height="3" rx="0.6" transform="rotate(-45 4.5 4.9)" />
+              <rect x="16.5" y="17.6" width="6" height="3" rx="0.6" transform="rotate(-45 19.5 19.1)" />
+              <path class="gps-hud__wave" d="M16.5 3.5a4 4 0 0 1 4 4M16.5 0.8a6.7 6.7 0 0 1 6.7 6.7" />
+            </svg>
+            <span class="gps-hud__bars" aria-hidden="true">
+              <span class="gps-hud__bar"></span><span class="gps-hud__bar"></span><span class="gps-hud__bar"></span><span class="gps-hud__bar"></span><span class="gps-hud__bar"></span>
+            </span>
+            <span id="gps-hud-accuracy" class="gps-hud__accuracy" aria-hidden="true" hidden></span>
+            <span id="gps-hud-text" class="visually-hidden"></span>
+            <button type="button" class="gps-hud__button" id="btn-gps-hud-start" aria-label="Activează locația" hidden>Activează</button>
+            <button type="button" class="gps-hud__button" id="btn-gps-hud-retry" aria-label="Încearcă din nou activarea locației" hidden>Încearcă din nou</button>
+          </div>
+
           <!-- Obiectivul misiunii curente (viewModel.objective). Stările vin din motor. -->
           <div id="objective" class="objective" hidden aria-live="polite" tabindex="-1">
             <p class="objective-title"><strong id="objective-name"></strong></p>

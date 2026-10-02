@@ -33,8 +33,8 @@ import { createLocationTracker, describeLocation, LocationDisplay } from "./loca
 import { buildMapModel } from "./map-model.js";
 import { createMap } from "./map.js";
 import { buildViewModel, View, NextKind } from "./view-model.js";
-import { describePlayUi, CardAction, Layer, openLayers, planHistorySync, planBack } from "./play-ui.js";
-import { DEFAULT_MAP_TILES, DEFAULT_MAP_VIEW } from "./defaults.js";
+import { describePlayUi, CardAction, Layer, openLayers, planHistorySync, planBack, describeGpsHud, GpsHudAction } from "./play-ui.js";
+import { DEFAULT_MAP_TILES, DEFAULT_MAP_VIEW, DEFAULT_GPS_HUD } from "./defaults.js";
 import { renderMediaList, renderViewerContent, viewerTitle, pauseMedia } from "./media-ui.js";
 import { processGameEvents } from "./message-engine.js";
 import { createInbox } from "./inbox.js";
@@ -197,12 +197,12 @@ function setupGameUi(game, storage, inbox) {
       ],
       [LocationDisplay.PERMISSION_DENIED]: [
         "Accesul la locație a fost refuzat.",
-        "Îl poți permite din setările browserului pentru acest site, apoi apasă „Reîncearcă”. Poți continua și fără GPS, cu „Am ajuns”.",
+        "Îl poți permite din setările browserului pentru acest site, apoi încearcă din nou. Poți continua și fără GPS, cu „Am ajuns”.",
       ],
       [LocationDisplay.SEARCHING]: ["Caut poziția…", "Poate dura până la un minut, mai ales între clădiri."],
       [LocationDisplay.ERROR]: [
         "⚠️ Poziția nu poate fi determinată acum.",
-        "Ieși într-un loc mai deschis sau apasă „Reîncearcă”. Poți continua cu „Am ajuns”.",
+        "Ieși într-un loc mai deschis sau încearcă din nou. Poți continua cu „Am ajuns”.",
       ],
       [LocationDisplay.UNCERTAIN]: [
         "⚠️ Semnal GPS slab",
@@ -249,7 +249,7 @@ function setupGameUi(game, storage, inbox) {
     if (!arrived) {
       if (!allowManual) note = "Sosirea se confirmă doar prin GPS.";
       else if (display === LocationDisplay.READY) note = "GPS-ul confirmă automat sosirea. Dacă ești acolo și nu se confirmă, apasă „Am ajuns”.";
-      else if (display === LocationDisplay.OFF) note = "Activează locația (mai jos) pentru confirmare automată sau apasă „Am ajuns” când ajungi.";
+      else if (display === LocationDisplay.OFF) note = "Activează locația pentru confirmare automată sau apasă „Am ajuns” când ajungi.";
       else note = "GPS-ul nu poate confirma acum poziția. Dacă ești la obiectiv, apasă „Am ajuns”.";
     }
     $("objective-gps-note").textContent = note;
@@ -306,24 +306,21 @@ function setupGameUi(game, storage, inbox) {
   }
 
   // Textul de sub hartă (§7). Nu este aria-live: anunțurile GPS rămân în panoul „Locația ta”.
+  // Precizia în metri nu se mai repetă aici: o arată indicatorul GPS de pe hartă (HUD).
   function mapCaption(model) {
     const { fix } = model.player;
     const display = locationDisplay();
-    const accuracy = fix && Number.isFinite(fix.accuracy) ? Math.round(fix.accuracy) : null;
-    const veryWeak = accuracy !== null && fix.accuracy > DEFAULT_MAP_VIEW.accuracyCircleMax;
+    const veryWeak = fix && Number.isFinite(fix.accuracy) && fix.accuracy > DEFAULT_MAP_VIEW.accuracyCircleMax;
     if (fix && display === LocationDisplay.READY) {
-      return veryWeak ? `Poziția ta · precizie foarte slabă (~${accuracy} m)` : `Poziția ta · precizie ~${accuracy} m`;
+      return veryWeak ? "Poziția ta · precizie foarte slabă" : "Poziția ta este afișată pe hartă.";
     }
     if (fix && display === LocationDisplay.UNCERTAIN) {
-      if (veryWeak) return `Semnal GPS slab — precizie foarte slabă (~${accuracy} m)`;
-      return accuracy !== null
-        ? `Semnal GPS slab — poziția de pe hartă poate fi greșită cu ~${accuracy} m`
-        : "Semnal GPS slab — poziția de pe hartă poate fi greșită";
+      return veryWeak ? "Semnal GPS slab — precizie foarte slabă" : "Semnal GPS slab — poziția de pe hartă poate fi greșită";
     }
     if (fix) return "Ultima poziție primită — GPS-ul nu transmite acum poziția";
     switch (display) {
       case LocationDisplay.OFF:
-        return "Poziția ta nu apare pe hartă: locația nu este activată (butonul „Activează locația” este mai jos).";
+        return "Poziția ta nu apare pe hartă: locația nu este activată.";
       case LocationDisplay.SEARCHING:
         return "Caut poziția…";
       case LocationDisplay.ERROR:
@@ -340,6 +337,7 @@ function setupGameUi(game, storage, inbox) {
       destroyMap();
       $("map-stage").dataset.map = "off";
       setStatus("status-map", hasMapLocations ? "inactivă" : "inactivă (aventura nu are locații)");
+      renderGpsHud(); // fără hartă: HUD ascuns, panoul „Locația ta” revine la forma completă
       return;
     }
     panel.hidden = false;
@@ -391,6 +389,50 @@ function setupGameUi(game, storage, inbox) {
     $("map-center-note").hidden = !note;
     $("map-panel").querySelector(".map-actions").hidden = Boolean(mapFailure) || !map;
     setStatus("status-map", mapFailure ? `indisponibilă (${mapFailure})` : map ? "activă" : "în așteptare (fără obiective vizibile sau poziție)");
+    renderGpsHud();
+  }
+
+  /*
+   * Indicatorul GPS de peste hartă (HUD — D-049-F, amendamentul din 2026-10-02). Pur vizual:
+   * starea vine din locationDisplay() și din ultima observație a adaptorului (play-ui.js →
+   * describeGpsHud), redesenat doar când se redesenează harta (abonarea existentă la tracker).
+   * Nu este regiune live: textul accesibil se citește când jucătorul ajunge la indicator, iar
+   * anunțurile rămân în #location-status. Apare doar cât timp harta există; atunci panoul
+   * „Locația ta” nu mai dublează starea scurtă și butoanele de activare.
+   */
+  const GPS_HUD_TEXTS = {
+    [LocationDisplay.OFF]: "Locația nu este activă.",
+    [LocationDisplay.SEARCHING]: "Se caută locația.",
+    [LocationDisplay.ERROR]: "Poziția nu poate fi determinată acum.",
+    [LocationDisplay.PERMISSION_DENIED]: "Accesul la locație a fost refuzat.",
+    [LocationDisplay.UNAVAILABLE]: "Locația nu este disponibilă în acest browser.",
+  };
+
+  function gpsHudText(hud) {
+    const precision = hud.accuracy === null ? "precizie necunoscută" : `precizie aproximativă ${hud.accuracy} metri`;
+    if (hud.state === LocationDisplay.READY) return `Locație activă, ${precision}.`;
+    if (hud.state === LocationDisplay.UNCERTAIN) return `Locație activă, semnal GPS slab, ${precision}.`;
+    return GPS_HUD_TEXTS[hud.state] || GPS_HUD_TEXTS[LocationDisplay.OFF];
+  }
+
+  function renderGpsHud() {
+    const box = $("gps-hud");
+    const shown = Boolean(map) && isPlaying();
+    $("location-panel").dataset.hud = shown ? "on" : "off";
+    const focused = box.contains(document.activeElement) ? document.activeElement : null;
+    box.hidden = !shown;
+    if (!shown) return;
+    const hud = describeGpsHud(locationDisplay(), tracker.getState().fix, DEFAULT_GPS_HUD);
+    box.dataset.state = hud.state;
+    box.dataset.tone = hud.tone;
+    box.querySelectorAll(".gps-hud__bar").forEach((bar, index) => bar.classList.toggle("is-on", index < hud.bars));
+    $("gps-hud-accuracy").textContent = hud.accuracy === null ? "" : `±${hud.accuracy} m`;
+    $("gps-hud-accuracy").hidden = hud.accuracy === null;
+    $("gps-hud-text").textContent = gpsHudText(hud);
+    $("btn-gps-hud-start").hidden = hud.action !== GpsHudAction.START;
+    $("btn-gps-hud-retry").hidden = hud.action !== GpsHudAction.RETRY;
+    // Butonul apăsat a dispărut (ex. căutarea a pornit): focusul rămâne în indicator, nu pe <body>.
+    if (focused && focused !== box && focused.hidden) box.focus();
   }
 
   $("btn-map-center").addEventListener("click", () => {
@@ -1191,6 +1233,9 @@ function setupGameUi(game, storage, inbox) {
   $("btn-location-start").addEventListener("click", () => tracker.start());
   $("btn-location-retry").addEventListener("click", () => tracker.retry());
   $("btn-location-stop").addEventListener("click", () => tracker.stop());
+  // Indicatorul GPS de pe hartă folosește același adaptor (niciun al doilea watchPosition).
+  $("btn-gps-hud-start").addEventListener("click", () => tracker.start());
+  $("btn-gps-hud-retry").addEventListener("click", () => tracker.retry());
 
   // „Am ajuns”: același mecanism de sosire ca GPS-ul (game.confirmArrival → arrive → evenimente).
   // Nu se păstrează nicio stare locală: motorul notifică (subscribe → render), iar cardul

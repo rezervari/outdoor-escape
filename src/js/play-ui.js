@@ -137,3 +137,58 @@ export function describePlayUi(viewModel, { dismissedMissionId = null, hintConfi
     isFinish: Boolean(next && next.kind === NextKind.FINISH),
   };
 }
+
+/** Acțiunea butonului din indicatorul GPS: metoda existentă a adaptorului location.js. */
+export const GpsHudAction = Object.freeze({
+  START: "start", // tracker.start()
+  RETRY: "retry", // tracker.retry()
+});
+
+/**
+ * Valorile `LocationDisplay` (location.js) folosite de indicator — aceleași șiruri, ca traducerea
+ * din map-model.js (D-049-C); modulul rămâne fără alte importuri.
+ */
+const GPS_OFF = "gps-off";
+const GPS_SEARCHING = "gps-searching";
+const GPS_ERROR = "gps-error";
+const GPS_PERMISSION_DENIED = "gps-permission-denied";
+const GPS_UNCERTAIN = "gps-uncertain";
+const GPS_READY = "gps-ready";
+
+/**
+ * Numărul de bare (0–5) și tonul lor, DOAR din `accuracy`.
+ *   hud — pragurile de afișare (app.js: DEFAULT_GPS_HUD din defaults.js)
+ */
+export function gpsHudLevel(accuracy, hud) {
+  if (typeof accuracy !== "number" || !Number.isFinite(accuracy) || accuracy < 0) return { bars: 0, tone: "none" };
+  const level = hud.levels.find((l) => accuracy <= l.maxAccuracy) || hud.fallback;
+  return { bars: level.bars, tone: level.tone };
+}
+
+/**
+ * Indicatorul GPS de peste hartă (HUD — D-049-F, amendamentul din 2026-10-02). Pur vizual:
+ * traduce starea afișată existentă (describeLocation → LocationDisplay) și precizia ultimei
+ * observații reținute de location.js. Nu introduce o a doua stare GPS și nu decide nimic
+ * despre joc. Textele sunt în app.js.
+ *   display — LocationDisplay (app.js: locationDisplay())
+ *   fix     — tracker.getState().fix (sau null)
+ *   hud     — pragurile de afișare (DEFAULT_GPS_HUD), separate de pragurile de joc
+ */
+export function describeGpsHud(display, fix, hud) {
+  const located = display === GPS_READY || display === GPS_UNCERTAIN;
+  const accuracy = located && fix && typeof fix.accuracy === "number" && Number.isFinite(fix.accuracy) && fix.accuracy >= 0
+    ? Math.round(fix.accuracy)
+    : null;
+  const { bars, tone } = located ? gpsHudLevel(fix ? fix.accuracy : NaN, hud) : { bars: 0, tone: "none" };
+  let action = null;
+  if (display === GPS_OFF) action = GpsHudAction.START;
+  else if (display === GPS_PERMISSION_DENIED || display === GPS_ERROR) action = GpsHudAction.RETRY;
+  return {
+    state: display,
+    bars,
+    tone,
+    accuracy, // metri rotunjiți, sau null (fără poziție / precizie necunoscută)
+    searching: display === GPS_SEARCHING,
+    action, // gps-unavailable: niciun buton (API indisponibil sau context nesigur)
+  };
+}

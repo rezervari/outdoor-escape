@@ -378,6 +378,8 @@ Făcut pe o copie locală servită prin HTTP (`localhost`), cu fixture-ul copiat
 | L10 | Timeout simulat → eroare + „Reîncearcă”; o poziție ulterioară → „GPS activ” |
 | L11 | Refresh în joc → progresul se restaurează; urmărirea **nu** pornește singură |
 
+Notă (2026-10-02, indicatorul GPS / HUD — D-049-F amendată): verificările de mai sus descriu panoul „📍 Locația ta” la M-003.1. Etichetele butoanelor depind acum de context: pe ecranul de start și fără hartă, panoul afișează „Activează locația” / „Reîncearcă”; în joc, cât timp harta (și HUD-ul de peste ea) este afișată, butoanele din panou sunt ascunse, iar butonul vizibil este în HUD: „Activează” (`gps-off`) sau „Încearcă din nou” (`gps-permission-denied`, `gps-error`); precizia apare în HUD ca „±N m”. Contractul HUD-ului este acoperit de `tests/gps-hud.test.js`.
+
 ### 24.3 Manual pe telefon — `https://rezervari.github.io/outdoor-escape/src/` (după publicare)
 
 | ID | Pași | Rezultat așteptat |
@@ -572,7 +574,7 @@ Harta ca suprafață principală, cardul peste hartă, atribuirea OSM, „Vezi o
 | FT2-B4 | La fiecare locație: precizia raportată, distanța aproximativă la sosire, condițiile | date notate (secțiunea 15); fără prag numeric | OBL |
 | FT2-B5 | După sosire: ieșire din rază și reintrare | nicio dublare de puncte sau de evenimente (histerezis) | OBL |
 | FT2-B6 | Semnal slab (lângă sau în clădire) | „Semnal GPS slab” peste 60 m; nicio sosire falsă; „Am ajuns” disponibil | OBL |
-| FT2-B7 | Permisiune refuzată, apoi „Reîncearcă” | mesaj clar; obiectivele pe hartă fără jucător; „Am ajuns” rezolvă misiunea (H13, D-006) | OBL |
+| FT2-B7 | Permisiune refuzată, apoi „Încearcă din nou” din indicatorul GPS de pe hartă (în joc; pe ecranul de start butonul din panou este „Reîncearcă”) | mesaj clar; obiectivele pe hartă fără jucător; „Am ajuns” rezolvă misiunea (H13, D-006) | OBL |
 | FT2-B8 | Reîncărcare pe traseu, online | progresul restaurat; GPS-ul se reactivează manual (D-045) | OPȚ |
 | FT2-B9 | Nicio coordonată a jucătorului în `localStorage` (consola prin USB / ADB) | D-043 respectată | OBL pe Android (consola prin USB / ADB, D-031); N/A pe iPhone (fără Mac) |
 | FT2-C1 | Tile-uri OSM și atribuire | H2 | OBL |
