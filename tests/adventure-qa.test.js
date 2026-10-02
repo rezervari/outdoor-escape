@@ -1,5 +1,5 @@
 // Adventure QA — Pasul 1 (QA-S01, QA-S02, QA-S03, clasificarea), Pasul 2 (QA-C02 – C05, QA-M01 – M06)
-// Pasul 3 (QA-G02 – G07: GPS și structură) și Pasul 4 (QA-F00 – F05: flow / progresie).
+// Pasul 3 (QA-G02 – G07: GPS și structură), Pasul 4 (QA-F00 – F05: flow / progresie) și QA-F08 (final / epilog).
 // Mutațiile folosesc numai date FICTIVE: fixture-ul tests/fixtures/adventure-v2-demo.json și aventuri
 // sintetice scrise în directoare temporare (cu fișiere media de test).
 // Testele nu conțin id-uri, texte sau date ale aventurilor reale: aventura publicată (D-080)
@@ -21,6 +21,7 @@ import { EVENT_PAYLOAD, IGNORED_MISSION_FLOW_FIELDS, FLOW_PATHS, playFlowPath, s
 import { EVENT_TYPES } from "../src/js/events.js";
 import { createGame } from "../src/js/game.js";
 import { createLocalValidator, withoutAnswers } from "../src/js/answers.js";
+import { buildViewModel } from "../src/js/view-model.js";
 import { toAdventureV2 } from "../src/js/schema.js";
 import { distanceMeters } from "../src/js/geo.js";
 import { PUBLISHED_REAL_ADVENTURES } from "./helpers/published-real-adventures.js";
@@ -1407,4 +1408,115 @@ test("QA-F05: fără analiză de graf — un ciclu indirect (b-1 ↔ b-2) NU est
     RULE("r-2", "mission_completed", { missionId: "b-2" }, { action: "unlock_mission", missionId: "b-1" }),
   ] });
   assert.deepEqual(activeRules(flowQa(cycle), "QA-F"), []);
+});
+
+/* ---------- QA-F08: contractul narativ al finalului ---------- */
+
+const FINALE = (finale, extra = {}) => flowAdventure("test-qa-f08", MAIN3(), { ...MSG, ...(finale === undefined ? {} : { finale }), ...extra });
+
+test("QA-F08 (motor): finale.missionId produce doar finale_started; finale.messageId este epilogul, la orice încheiere", async () => {
+  // Finalul pe prima misiune: finale_started la start, jocul continuă normal, epilogul apare la sfârșit.
+  const early = engineRun(FINALE({ missionId: "m-1", messageId: "m" }));
+  early.game.start();
+  assert.notEqual(early.game.getState().finaleStartedAt, null);
+  await solveFirstTwo(early.game);
+  assert.deepEqual(await early.game.submitAnswer("sud"), { result: "correct" });
+  early.game.next();
+  assert.equal(early.game.getState().status, "completed");
+  assert.equal(buildViewModel({ content: early.game.content, state: early.game.getState() }).story.epilogue, "Mesaj de test.");
+  // Fără messageId: aceeași încheiere, fără epilog.
+  const silent = engineRun(FINALE({ missionId: "m-3" }));
+  silent.game.start();
+  await solveFirstTwo(silent.game);
+  await silent.game.submitAnswer("sud");
+  silent.game.next();
+  assert.equal(silent.game.getState().status, "completed");
+  assert.equal(buildViewModel({ content: silent.game.content, state: silent.game.getState() }).story.epilogue, null);
+});
+
+test("QA-F08.1: finale pe ultima misiune main → fără finding (și cu un bonus după ea; fixture-ul fictiv)", () => {
+  assert.deepEqual(activeRules(flowQa(FINALE({ missionId: "m-3", messageId: "m" })), "QA-F"), []);
+  const withBonus = flowAdventure("test-qa-f08-bonus", [...MAIN3(), BONUS("b-1", { initialStatus: "pending" })], { ...MSG, finale: { missionId: "m-3", messageId: "m" } });
+  assert.deepEqual(activeRules(flowQa(withBonus), "QA-F08"), []);
+  assert.deepEqual(activeRules(flowQa(fixture(), FIXTURE_FILE), "QA-F08"), []);
+});
+
+test("QA-F08.1: finale pe prima sau pe o misiune intermediară → WARNING pe finale.missionId", () => {
+  for (const missionId of ["m-1", "m-2"]) {
+    const result = flowQa(FINALE({ missionId, messageId: "m" }));
+    assert.deepEqual(levels(result, "QA-F08"), [["warning", "finale.missionId"]], missionId);
+    assert.match(active(result, "QA-F08")[0].message, new RegExp(`„${missionId}” nu este ultima misiune principală \\(„m-3”\\)`));
+    assert.equal(result.status, "WARNING");
+    // Fără complete_adventure, nu este o finalizare prematură: QA-F00 / QA-F03 nu raportează nimic.
+    assert.deepEqual(activeRules(result, "QA-F03"), []);
+  }
+});
+
+test("QA-F08.2: finale {} / doar missionId / doar messageId → WARNING (niciodată ERROR)", () => {
+  const cases = [
+    [{}, [["warning", "finale"]]],
+    [{ missionId: "m-3" }, [["warning", "finale.messageId"]]],
+    [{ messageId: "m" }, [["warning", "finale.missionId"]]],
+    // Fără messageId și nu pe ultima misiune: cele două probleme sunt raportate separat.
+    [{ missionId: "m-1" }, [["warning", "finale.messageId"], ["warning", "finale.missionId"]]],
+  ];
+  for (const [finale, expected] of cases) {
+    const result = flowQa(FINALE(finale));
+    assert.deepEqual(activeRules(result, "QA-S01"), [], `${JSON.stringify(finale)}: schema validă`);
+    assert.deepEqual(levels(result, "QA-F08"), expected, JSON.stringify(finale));
+  }
+});
+
+test("QA-F08.2: finale absent → WARNING doar pentru published-real; demo, private-local și anomaly → fără F08", () => {
+  const publishedId = PUBLISHED_REAL_ADVENTURES[0];
+  const published = (finale) => runQa([entry(`${publishedId}.json`, flowAdventure(publishedId, MAIN3(), { ...MSG, ...(finale ? { finale } : {}) }))]).results[0];
+  assert.equal(published().classification, CLASSES.PUBLISHED_REAL);
+  assert.deepEqual(levels(published(), "QA-F08"), [["warning", "finale"]]);
+  assert.deepEqual(activeRules(published({ missionId: "m-3", messageId: "m" }), "QA-F08"), []);
+
+  const demo = flowQa(FINALE(undefined));
+  assert.equal(demo.classification, CLASSES.PUBLIC_DEMO);
+  assert.deepEqual(activeRules(demo, "QA-F"), []);
+  const privateLocal = runQa([entry("private-test-qa-f08.json", flowAdventure("private-test-qa-f08", MAIN3()))]).results[0];
+  assert.equal(privateLocal.classification, CLASSES.PRIVATE_LOCAL);
+  assert.deepEqual(activeRules(privateLocal, "QA-F08"), []);
+  const anomaly = runQa([entry("test-qa-f08-anomalie.json", { ...flowAdventure("test-qa-f08-anomalie", MAIN3()), demo: false })]).results[0];
+  assert.equal(anomaly.classification, CLASSES.ANOMALY);
+  assert.deepEqual(activeRules(anomaly, "QA-F08"), []);
+});
+
+test("QA-F08.3: start_finale fără finale → WARNING; cu finale sau într-o regulă moartă (QA-F04) → fără F08", () => {
+  const startFinale = (on, where) => RULE("r-sf", on, where, { action: "start_finale" });
+  const without = flowQa(FINALE(undefined, { events: [startFinale("mission_completed", { missionId: "m-3" })] }));
+  assert.deepEqual(levels(without, "QA-F08"), [["warning", "events[0].do[0]"]]);
+  assert.match(active(without, "QA-F08")[0].message, /„r-sf” folosește start_finale, dar aventura nu are finale/);
+
+  const withFinale = flowQa(FINALE({ missionId: "m-3", messageId: "m" }, { events: [startFinale("mission_completed", { missionId: "m-3" })] }));
+  assert.deepEqual(activeRules(withFinale, "QA-F"), []);
+  // Regula nu poate rula (mission_unlocked pe prima misiune, „pending”): o raportează doar QA-F04.
+  const dead = flowQa(FINALE(undefined, { events: [startFinale("mission_unlocked", { missionId: "m-1" })] }));
+  assert.deepEqual(activeRules(dead, "QA-F"), ["QA-F04"]);
+});
+
+test("QA-F08: referințele invalide rămân la QA-S01, fără duplicare F08", () => {
+  const invalid = [
+    { missionId: "m-lipsa", messageId: "m" },
+    { missionId: "m-3", messageId: "lipsa" },
+    { missionId: "m-1", messageId: "lipsa" }, // ar fi și „nu este ultima”, dar schema este invalidă
+    null,
+  ];
+  for (const finale of invalid) {
+    const result = flowQa(FINALE(finale));
+    assert.ok(activeRules(result, "QA-S01").length > 0, JSON.stringify(finale));
+    assert.deepEqual(activeRules(result, "QA-F08"), [], JSON.stringify(finale));
+  }
+  const bonus = flowQa(flowAdventure("test-qa-f08-bonus-final", [...MAIN3(), BONUS("b-1")], { ...MSG, finale: { missionId: "b-1", messageId: "m" } }));
+  assert.match(active(bonus, "QA-S01").map((f) => f.message).join(" "), /finale\.missionId trebuie să fie o misiune principală/);
+  assert.deepEqual(activeRules(bonus, "QA-F08"), []);
+});
+
+test("QA-F08: aventură privată locală — mesajele nu expun id-urile misiunilor", () => {
+  const result = runQa([entry("private-test-qa-f08b.json", flowAdventure("private-test-qa-f08b", MAIN3(), { ...MSG, finale: { missionId: "m-1", messageId: "m" } }))]).results[0];
+  assert.deepEqual(levels(result, "QA-F08"), [["warning", "finale.missionId"]]);
+  assert.doesNotMatch(active(result, "QA-F08")[0].message, /m-1|m-3/);
 });

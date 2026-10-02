@@ -7,8 +7,8 @@
  *   QA-C02 – QA-C05  misiunile cu răspuns (rules-content.mjs);
  *   QA-M01 – QA-M06  media (rules-media.mjs);
  *   QA-G02 – QA-G07  GPS și structură (rules-gps.mjs);
- *   QA-F00 – QA-F05  flow / progresie (rules-flow.mjs); QA-F00 (simularea cu motorul real) este
- *                    asincron și rulează doar prin runQaFull.
+ *   QA-F00 – QA-F05, QA-F08  flow / progresie și final (rules-flow.mjs); QA-F00 (simularea cu
+ *                    motorul real) este asincron și rulează doar prin runQaFull.
  *
  * Funcțiile întorc findings structurate
  *   { ruleId, level: "error" | "warning", path, message, subject?, waived? }
@@ -105,7 +105,7 @@ export function redact(message) {
  * Regulile de conținut, media (Pasul 2), GPS (Pasul 3) și flow (Pasul 4, statice) pentru un fișier cu JSON citibil.
  * Rulează pe forma normalizată folosită de motor (toAdventureV2); dacă structura este atât de
  * greșită încât normalizarea eșuează, QA-S01 raportează deja problema și regulile sunt sărite.
- * `classification` (classify.mjs) decide regula coordonatelor: QA-G06 sau QA-G07.
+ * `classification` (classify.mjs) decide regula coordonatelor (QA-G06 sau QA-G07) și finalul obligatoriu (QA-F08).
  * Regulile de flow rulează doar pe o aventură validă după schemă (`schemaValid`: fără QA-S01).
  */
 export function checkContent({ fileName, dir }, data, { classification, schemaValid = false } = {}) {
@@ -121,7 +121,7 @@ export function checkContent({ fileName, dir }, data, { classification, schemaVa
     ...checkAnswerMissions(content, { listKey }),
     ...checkMedia(content, { id: fileStem(fileName), dir }),
     ...checkGps(content, { classification }),
-    ...(schemaValid ? checkFlow(content, data, { listKey }) : []),
+    ...(schemaValid ? checkFlow(content, data, { listKey, classification }) : []),
   ];
 }
 

@@ -8,6 +8,9 @@
  *   QA-F04  regulă de evenimente care nu poate rula niciodată (determinist)            (error)
  *   QA-F05  conținut opțional evident inaccesibil: misiuni bonus / secrete, obiecte,
  *           secrete fără nicio cale de obținere                                        (warning)
+ *   QA-F08  contractul narativ al finalului: finale.missionId pe ultima misiune main,
+ *           finale complet (missionId + messageId), finale prezent la aventura publicată,
+ *           start_finale doar cu finale                                                (warning)
  *
  * Sursa de adevăr este motorul (game.js, events.js):
  * - progresia liniară: misiunile `main`, în ordinea din listă; închiderea uneia o deschide pe
@@ -27,6 +30,7 @@
 import { createGame, GameStatus, ChallengeStatus, MissionStatus } from "../../src/js/game.js";
 import { createLocalValidator, withoutAnswers, answersMatch } from "../../src/js/answers.js";
 import { ANSWER_MISSION_TYPES } from "../../src/js/schema.js";
+import { CLASSES } from "./classify.mjs";
 
 /**
  * Câmpurile fiecărui eveniment emis de game.js (doar cele care pot apărea în `where`:
@@ -247,13 +251,56 @@ function checkCompleteAdventure(content, dead, add) {
   });
 }
 
-/* ---------- QA-F01 – QA-F05 (statice) ---------- */
+/* ---------- QA-F08 ---------- */
+
+/**
+ * Contractul narativ al finalului, așa cum îl folosește motorul (game.js, view-model.js):
+ * - finale.missionId: singurul efect este finale_started, emis când misiunea devine curentă;
+ *   pe altă misiune decât ultima main, „finalul” începe înaintea misiunilor de după ea;
+ * - finale.messageId: epilogul de pe ecranul de rezultat (afișat la orice încheiere);
+ * - start_finale: emite finale_started; fără finale, fără missionId și fără epilog.
+ * Referințele invalide (misiune / mesaj inexistent, misiune non-main) sunt erori de schemă (QA-S01),
+ * iar regulile QA-F rulează doar pe aventuri valide, deci nu se dublează. Încheierea prematură
+ * rămâne la QA-F00 / QA-F03; regulile moarte (QA-F04) nu sunt raportate și aici.
+ */
+function checkFinale(content, { classification, dead, add }) {
+  const { finale } = content;
+  if (!finale) {
+    if (classification === CLASSES.PUBLISHED_REAL) {
+      add("QA-F08", "warning", "finale", "aventura publicată nu are finale: finale_started nu se emite la o misiune, iar ecranul de rezultat nu are epilog.", "finale");
+    }
+    content.events.forEach((rule, index) => {
+      if (dead.has(index)) return;
+      rule.do.forEach((action, a) => {
+        if (action.action !== "start_finale") return;
+        add("QA-F08", "warning", `events[${index}].do[${a}]`, `regula „${rule.id}” folosește start_finale, dar aventura nu are finale: finale_started se emite fără missionId, iar ecranul de rezultat nu are epilog.`, `events.${rule.id}.start_finale`);
+      });
+    });
+    return;
+  }
+  const hasMission = finale.missionId !== undefined;
+  const hasMessage = finale.messageId !== undefined;
+  if (!hasMission && !hasMessage) {
+    add("QA-F08", "warning", "finale", "finale nu are nici missionId, nici messageId: finale_started nu se emite la o misiune, iar ecranul de rezultat nu are epilog.", "finale");
+    return;
+  }
+  if (!hasMission) add("QA-F08", "warning", "finale.missionId", "finale nu are missionId: finale_started nu se emite la pornirea unei misiuni (doar prin start_finale).", "finale.missionId");
+  if (!hasMessage) add("QA-F08", "warning", "finale.messageId", "finale nu are messageId: ecranul de rezultat nu afișează niciun epilog.", "finale.messageId");
+  const main = content.missions.filter((m) => m.track === "main");
+  const last = main[main.length - 1];
+  if (hasMission && last && finale.missionId !== last.id) {
+    add("QA-F08", "warning", "finale.missionId", `finale.missionId „${finale.missionId}” nu este ultima misiune principală („${last.id}”): finale_started se emite când ea devine curentă, înaintea misiunilor principale de după ea.`, "finale.missionId");
+  }
+}
+
+/* ---------- QA-F01 – QA-F05, QA-F08 (statice) ---------- */
 
 /**
  * content — aventura normalizată; data — JSON-ul din fișier (QA-F01 citește câmpurile așa cum sunt scrise);
- * listKey — „missions” (V2) sau „challenges” (V1). Întoarce findings { ruleId, level, path, message, subject }.
+ * listKey — „missions” (V2) sau „challenges” (V1); classification — clasa fișierului (classify.mjs, pentru QA-F08).
+ * Întoarce findings { ruleId, level, path, message, subject }.
  */
-export function checkFlow(content, data, { listKey = "missions" } = {}) {
+export function checkFlow(content, data, { listKey = "missions", classification } = {}) {
   const findings = [];
   const add = (ruleId, level, path, message, subject) => findings.push({ ruleId, level, path, message, subject });
 
@@ -308,6 +355,9 @@ export function checkFlow(content, data, { listKey = "missions" } = {}) {
     if (discoverable.has(secret.id)) return;
     add("QA-F05", "warning", `secrets[${index}]`, `secretul „${secret.id}” nu se poate descoperi: nicio acțiune discover_secret (într-o regulă care poate rula) nu îl produce.`, `secrets.${secret.id}`);
   });
+
+  // QA-F08
+  checkFinale(content, { classification, dead, add });
   return findings;
 }
 
