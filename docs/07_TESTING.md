@@ -804,3 +804,39 @@ Observații:
 - dispozitive hibride (pointer principal fin + ecran tactil: conform codului, un deget mută harta, ca înainte — neverificat) și schimbarea pointerului după crearea hărții (`matchMedia` este citit o singură dată);
 - emularea de telefon din DevTools (secțiunea 12.3): se așteaptă pointer `coarse`, deci drag-ul cu mouse-ul nu mai mută harta (după reîncărcarea paginii cu emularea activă) — neverificat;
 - cititor de ecran real (VoiceOver / TalkBack).
+
+## 32. M7-C — Bara de progres (antetul ecranului de joc)
+
+Antetul ecranului de joc („Provocarea X din Y” + scor) primește o bară de progres: partea completată (verdele de succes `#1d6b36`, pe pista `#d6d2c6` — culori existente) și procentul deasupra, care urmează capătul părții completate. Valoarea: misiunile principale închise (rezolvate / sărite / eșuate — `isMissionClosed` din motor) din totalul lor — `viewModel.progress.missionsClosed / missionTotal`, normalizată o singură dată de `progressPercent` / `clampPercent` (`play-ui.js`) la un întreg 0–100 (0 % doar fără nicio misiune închisă, 100 % doar cu toate închise; valoare invalidă → bara ascunsă, fără `NaN`). `app.js` (`renderProgress`, din `renderPlay`) scrie această valoare o dată: `--progress` (lățimea părții completate și poziția etichetei), textul „N%” (doar vizual, `aria-hidden`) și `aria-valuenow` (`role="progressbar"`, 0–100, fără regiune live). Tranziție de 0,3 s pe lățime / poziție, oprită cu `prefers-reduced-motion: reduce`. Motorul nu se schimbă. În `src/sw.js` se mărește doar `CACHE_VERSION` (`v14` → `v15`, fișiere existente modificate, niciun modul nou).
+
+### 32.1 Automat — `npm test`
+
+| Fișier | Acoperă |
+| --- | --- |
+| `tests/progress-bar.test.js` | `clampPercent` / `progressPercent`: 0 %, intermediar (25 / 50 / 75, 33 / 67), 100 %, sub 0 → 0 %, peste 100 → 100 %, capetele (0,4 → 1 %, 99,6 → 99 %), valori invalide → `null` (niciodată `NaN`), monotonie pentru totaluri 1–60; `missionsClosed` din motorul real (demo-vertical-slice 0 → 25 → 50 → 75 → 100; misiuni sărite / eșuate în V1; misiunile bonus / secrete nu contează; reîncărcare); `renderProgress` din `app.js`, rulat pe elemente simulate, la fiecare schimbare din joc: aceeași valoare în `--progress`, text și `aria-valuenow`, bara ascunsă la valoare invalidă; verificări în sursă: structura și semantica din `index.html`, `--progress` pentru lățime și etichetă, culorile din paletă, reduced motion. Sursele se citesc cu terminațiile de linie normalizate (verificat și pe o clonă CRLF) |
+
+La 2026-10-03: `npm test` — 597 de teste, 593 PASS, 4 sărite (aventurile private, D-080), 0 FAIL; `tests/progress-bar.test.js` — 22/22 PASS. `npm run qa` — 0 erori, 4 avertismente, 7 excepții declarate (preexistente).
+
+### 32.2 Browser — emulare (nu este validare fizică)
+
+Verificat la 2026-10-03 în browserul din aplicația desktop Claude (Chromium), server local (`localhost:8000`). Pașii PB-3 și PB-4 au setat valorile-limită direct în DOM-ul paginii de test (`--progress` și textul etichetei), doar pentru măsurarea geometriei.
+
+| ID | Pași | Rezultat așteptat | Rezultat |
+| --- | --- | --- | --- |
+| PB-1 | `demo-vertical-slice`, 360×640: „Începe aventura”, „Am ajuns”, puzzle 1, „Continuă”, „Am ajuns”, puzzle 2 | 0 → 25 → 50 → 75 → 100 %; partea completată, eticheta și `aria-valuenow` identice la fiecare pas; 100 % înainte de „Vezi rezultatul” | PASS |
+| PB-2 | `brasov-centrul-vechi` (V1, fără hartă), 360×640: „Sari peste” ×3; apoi reîncărcare | 0 → 33 → 67 → 100 %; după reîncărcare, direct 100 % | PASS |
+| PB-3 | 320×568, 375×667, 414×896, 768×1024, 1280×800 — valorile 0 / 1 / 50 / 99 / 100 % (la 320: și 2 / 98 %) | eticheta în container, deasupra capătului părții completate, sub primul rând al antetului, deasupra pistei; fără derulare orizontală | PASS |
+| PB-4 | Desktop (panoul aplicației) și 360×640: aspect | bara pe toată lățimea antetului, eticheta discretă (0,75rem, `#3f4a44`); la 0 % eticheta la început, la 100 % aliniată la dreapta, fără tăiere | PASS |
+| PB-5 | Regula `prefers-reduced-motion: reduce` | prezentă și interpretată de browser (`.progress-label, .progress-fill { transition: none }`) | PASS (regula); efectul vizual NETESTAT (fără emulare reduced motion) |
+
+### 32.3 Limitare cunoscută — „Am ajuns” la 360×640 (criteriul 27 din `12_MAP_SPECIFICATION_M-003.2.md`, H9)
+
+Antetul crește cu 26 px (44,6 → 70,6 px; rândul barei: 0,25rem spațiu + 0,875rem etichetă + 0,5rem pistă). Înălțimea hărții (`calc(100dvh - 11rem)`) nu a fost modificată (în afara scope-ului M7-C), deci scena hărții și cardul obiectivului coboară cu 26 px. La 360×640, cu harta activă: înainte, „Am ajuns” avea marginea de jos la 650,8 px (37 din 48 px vizibili — criteriul era deja depășit cu ~11 px, de la butonul „Mesaje”); după, la 676,8 px (11 din 48 px vizibili). Butonul rămâne accesibil prin derulare (D-006). Corecția (de exemplu `11rem` → `12,625rem` în cele două declarații ale `.map-stage[data-map="on"]`) așteaptă decizia proprietarului.
+
+### 32.4 Netestat încă
+
+- service worker-ul / offline cu `v15`: browserul din aplicație nu poate descărca scripturi de service worker (eroare de mediu, și pentru alte scripturi);
+- efectul vizual al `prefers-reduced-motion` (emulare indisponibilă);
+- telefon real (Android / iPhone), versiunea publicată pe GitHub Pages (D-031; după publicare);
+- cititor de ecran real (VoiceOver / TalkBack): anunțarea `progressbar`;
+- modul forced-colors (Windows High Contrast): pista și partea completată folosesc doar `background` (ca barele HUD-ului GPS), deci în acest mod rămâne vizibil doar textul „N%”.

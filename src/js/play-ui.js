@@ -192,3 +192,31 @@ export function describeGpsHud(display, fix, hud) {
     action, // gps-unavailable: niciun buton (API indisponibil sau context nesigur)
   };
 }
+
+/* ---------- Bara de progres (M7-C) ---------- */
+
+/**
+ * Normalizează un procent pentru afișare: întreg între 0 și 100. Rotunjirea nu ajunge la capete
+ * decât dacă valoarea chiar este acolo (0,4 → 1, 99,6 → 99): bara nu pare goală după primul pas
+ * și nu pare completă înainte de final. Valoare nenumerică sau nefinită → null (nu se afișează).
+ */
+export function clampPercent(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  if (value <= 0) return 0;
+  if (value >= 100) return 100;
+  return Math.min(99, Math.max(1, Math.round(value)));
+}
+
+/**
+ * Procentul barei de progres, din viewModel.progress: misiunile principale închise (`missionsClosed`)
+ * din total (`missionTotal`). Singura valoare folosită de app.js pentru lățimea părții completate,
+ * poziția etichetei, textul „N%” și aria-valuenow. null = nu există o valoare validă (bara rămâne
+ * ascunsă, ca înainte de M7-C); fără NaN.
+ */
+export function progressPercent(progress) {
+  const closed = progress ? progress.missionsClosed : undefined;
+  const total = progress ? progress.missionTotal : undefined;
+  if (typeof closed !== "number" || !Number.isFinite(closed)) return null;
+  if (typeof total !== "number" || !Number.isFinite(total) || total <= 0) return null;
+  return clampPercent((closed / total) * 100);
+}

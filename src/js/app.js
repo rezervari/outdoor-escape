@@ -33,7 +33,7 @@ import { createLocationTracker, describeLocation, LocationDisplay } from "./loca
 import { buildMapModel } from "./map-model.js";
 import { createMap } from "./map.js";
 import { buildViewModel, View, NextKind } from "./view-model.js";
-import { describePlayUi, CardAction, Layer, openLayers, planHistorySync, planBack, describeGpsHud, GpsHudAction } from "./play-ui.js";
+import { describePlayUi, CardAction, Layer, openLayers, planHistorySync, planBack, describeGpsHud, GpsHudAction, progressPercent } from "./play-ui.js";
 import { DEFAULT_MAP_TILES, DEFAULT_MAP_VIEW, DEFAULT_GPS_HUD } from "./defaults.js";
 import { renderMediaList, renderViewerContent, viewerTitle, pauseMedia } from "./media-ui.js";
 import { processGameEvents } from "./message-engine.js";
@@ -478,6 +478,7 @@ function setupGameUi(game, storage, inbox) {
     const isLocationMission = challenge.type === "location"; // se rezolvă doar la sosire
 
     $("challenge-progress").textContent = `Provocarea ${index + 1} din ${total}`;
+    renderProgress(viewModel.progress);
     $("current-score").textContent = String(game.getSummary().score);
     $("challenge-title").textContent = challenge.title;
     $("challenge-description").textContent = challenge.briefing;
@@ -509,6 +510,20 @@ function setupGameUi(game, storage, inbox) {
     renderObjective(viewModel);
     showScreen("screen-play");
     renderPuzzle(viewModel); // după card și ecran: focusul (deschidere / închidere) are unde să meargă
+  }
+
+  /**
+   * Bara de progres (M7-C). O singură valoare (progressPercent, din viewModel.progress) pentru lățimea
+   * părții completate și poziția etichetei (--progress), textul „N%” și aria-valuenow. Fără o valoare
+   * validă, bara rămâne ascunsă (ca înainte de M7-C).
+   */
+  function renderProgress(progress) {
+    const percent = progressPercent(progress);
+    $("progress-meter").hidden = percent === null;
+    if (percent === null) return;
+    $("progress-meter").style.setProperty("--progress", `${percent}%`);
+    $("progress-label").textContent = `${percent}%`;
+    $("progress-track").setAttribute("aria-valuenow", String(percent));
   }
 
   /**

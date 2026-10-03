@@ -211,6 +211,9 @@ export function buildViewModel({ content, state, mediaBaseUrl = null }) {
     total: main.length,
     hintsUsed: deriveProgress(content, state).hintsUsed,
   };
+  // Misiunile principale închise (rezolvate / sărite / eșuate — isMissionClosed din motor): baza barei
+  // de progres (M7-C). Calculată o singură dată; procentul afișat se derivă din ea în play-ui.js.
+  const missionsClosed = main.filter((m) => isMissionClosed(state.missions[m.id]?.status)).length;
   const base = {
     status: state.status,
     view: View.INTRO,
@@ -220,7 +223,7 @@ export function buildViewModel({ content, state, mediaBaseUrl = null }) {
     puzzle: null,
     next: null,
     actions: { confirmArrival: false, submitAnswer: false, requestHint: false, skip: false, continue: false },
-    progress: { missionIndex: null, missionTotal: main.length, stops: buildStops(content, state, null) },
+    progress: { missionIndex: null, missionTotal: main.length, missionsClosed, stops: buildStops(content, state, null) },
     summary,
     story: buildStory(content, state),
     items: buildItems(content, state),
@@ -282,6 +285,6 @@ export function buildViewModel({ content, state, mediaBaseUrl = null }) {
     puzzle,
     next,
     actions,
-    progress: { missionIndex: index, missionTotal: main.length, stops: buildStops(content, state, objective?.locationId ?? mission.locationId ?? null) },
+    progress: { missionIndex: index, missionTotal: main.length, missionsClosed, stops: buildStops(content, state, objective?.locationId ?? mission.locationId ?? null) },
   };
 }

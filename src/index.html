@@ -67,6 +67,16 @@
       <div class="play-header">
         <p id="challenge-progress" class="progress"></p>
         <p class="score">Scor: <strong id="current-score">0</strong></p>
+        <!-- Bara de progres (M7-C): o singură valoare (play-ui.js: progressPercent, din viewModel.progress)
+             dă lățimea părții completate, poziția procentului și aria-valuenow. Procentul de deasupra
+             este doar vizual: valoarea semantică este în role="progressbar" (fără regiune live). -->
+        <div id="progress-meter" class="progress-meter" hidden>
+          <span id="progress-label" class="progress-label" aria-hidden="true"></span>
+          <div id="progress-track" class="progress-track" role="progressbar" aria-label="Progresul aventurii"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+        </div>
       </div>
       <!-- Harta (M-003.2): suprafața principală a ecranului de joc (TASK 4, U1).
            Apare numai pentru aventurile cu locații. Cardul obiectivului stă PESTE hartă,

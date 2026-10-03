@@ -191,6 +191,53 @@ button:disabled {
   font-weight: 700;
 }
 
+/* Bara de progres (M7-C): un rând propriu în antet, pe toată lățimea. app.js scrie procentul o singură
+   dată, ca --progress; lățimea părții completate și poziția etichetei folosesc aceeași valoare. */
+.progress-meter {
+  --progress: 0%;
+  position: relative;
+  flex: 1 1 100%;
+  min-width: 0;
+  padding-top: 0.875rem; /* rândul etichetei */
+}
+
+/* Eticheta urmează capătul părții completate și rămâne mereu în container: punctul ei de ancorare
+   alunecă odată cu progresul (stânga la 0 %, centru la 50 %, dreapta la 100 %). */
+.progress-label {
+  position: absolute;
+  top: 0;
+  left: var(--progress);
+  transform: translateX(calc(-1 * var(--progress)));
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #3f4a44;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: left 0.3s ease, transform 0.3s ease;
+}
+
+.progress-track {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: #d6d2c6;
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: var(--progress);
+  height: 100%;
+  background: #1d6b36;
+  transition: width 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-label,
+  .progress-fill {
+    transition: none;
+  }
+}
+
 label {
   display: block;
   margin: 1rem 0 0.25rem;
